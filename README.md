@@ -13,6 +13,46 @@ A self-improving AI agent with a built-in learning loop — it creates skills fr
 
 Use any model you want — OpenRouter, OpenAI, Nous Portal, your own endpoint, and many others. Switch with `eternal model` — no code changes, no lock-in.
 
+## Packs — the one thing Claude Code has that Hermes doesn't
+
+Eternal ships three extension systems that don't package together: skills
+(markdown instructions), plugins (Python tools and hooks), and MCP servers.
+Shipping "everything for working with X" therefore meant three separate
+installs, with nothing telling the user they needed all three.
+
+A **pack** is one directory with one `eternal-pack.yaml` that carries all
+three:
+
+```yaml
+name: n8n-kit
+version: 1.0.0
+description: Everything for working with n8n
+
+skills:
+  - skills/n8n-workflow-patterns
+plugins:
+  - plugins/n8n-tools
+mcp_servers:
+  n8n:
+    command: npx
+    args: ["-y", "n8n-mcp"]
+```
+
+```bash
+eternal pack create my-kit      # scaffold
+eternal pack install ./my-kit   # preview, confirm, install all three
+eternal pack list
+eternal pack remove my-kit      # replays the receipt
+```
+
+Install writes a receipt to `ETERNAL_HOME/packs/<name>.json` recording the
+exact paths created and config keys added, and `remove` replays it — so it
+never deletes something the pack did not install. Skills are namespaced under
+the pack name, so two packs can ship a same-named skill without collision.
+`--dry-run` writes nothing; conflicts refuse unless `--force`; and MCP env
+vars with secret-looking names are stripped and reported rather than
+installed.
+
 ## What ETERNAL changes
 
 - Rebranded end to end: the CLI is `eternal`, config lives in `~/.eternal`, environment variables are `ETERNAL_*`.
