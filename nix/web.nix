@@ -1,9 +1,9 @@
-# nix/web.nix — Hermes Web Dashboard (Vite/React) frontend build
-{ pkgs, hermesNpmLib, ... }:
+# nix/web.nix — Eternal Web Dashboard (Vite/React) frontend build
+{ pkgs, eternalNpmLib, ... }:
 let
-  # @hermes/shared ships as a file: workspace dep of web, so its source
+  # @eternal/shared ships as a file: workspace dep of web, so its source
   # must be in the filtered src tree too.
-  npm = hermesNpmLib.mkNpmPassthru {
+  npm = eternalNpmLib.mkNpmPassthru {
     dirs = [
       "web"
       "apps/shared"
@@ -14,7 +14,7 @@ let
   version = packageJson.version;
 in
 pkgs.buildNpmPackage (npm // {
-  pname = "hermes-web";
+  pname = "eternal-web";
   inherit version;
 
   doCheck = false;
@@ -24,7 +24,7 @@ pkgs.buildNpmPackage (npm // {
     # The workspace root's node_modules/ is at ../node_modules/.
     cd web
     node ../node_modules/typescript/bin/tsc -b
-    # outDir in vite.config.ts points to ../hermes_cli/web_dist for the
+    # outDir in vite.config.ts points to ../eternal_cli/web_dist for the
     # monorepo layout.  Override with --outDir dist for the nix build.
     node ../node_modules/vite/bin/vite.js build --outDir dist
 

@@ -2,11 +2,11 @@
 
 from unittest.mock import MagicMock, patch
 
-from cli import HermesCLI
+from cli import EternalCLI
 
 
-def _make_cli() -> HermesCLI:
-    cli_obj = HermesCLI.__new__(HermesCLI)
+def _make_cli() -> EternalCLI:
+    cli_obj = EternalCLI.__new__(EternalCLI)
     cli_obj.config = {}
     cli_obj.console = MagicMock()
     cli_obj.agent = None

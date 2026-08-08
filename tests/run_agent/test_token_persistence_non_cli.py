@@ -75,9 +75,9 @@ def test_session_search_lazily_opens_db_when_entrypoint_did_not_pass_one(monkeyp
         def __new__(cls):
             return sentinel_db
 
-    hermes_state = ModuleType("hermes_state")
-    hermes_state.SessionDB = FakeSessionDB
-    monkeypatch.setitem(sys.modules, "hermes_state", hermes_state)
+    eternal_state = ModuleType("eternal_state")
+    eternal_state.SessionDB = FakeSessionDB
+    monkeypatch.setitem(sys.modules, "eternal_state", eternal_state)
 
     session_search_mod = ModuleType("tools.session_search_tool")
 
@@ -89,9 +89,9 @@ def test_session_search_lazily_opens_db_when_entrypoint_did_not_pass_one(monkeyp
     monkeypatch.setitem(sys.modules, "tools.session_search_tool", session_search_mod)
 
     agent = _make_agent(None, platform="acp")
-    result = json.loads(agent._invoke_tool("session_search", {"query": "Hermes"}, "task-id"))
+    result = json.loads(agent._invoke_tool("session_search", {"query": "Eternal"}, "task-id"))
 
     assert result["success"] is True
     assert captured["db"] is sentinel_db
-    assert captured["query"] == "Hermes"
+    assert captured["query"] == "Eternal"
     assert agent._session_db is sentinel_db

@@ -15,9 +15,9 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
-from hermes_cli import lifecycle, plugins as plugin_api
-from hermes_cli.observability import relay_runtime, relay_shared_metrics
-from hermes_cli.plugins import PluginManager
+from eternal_cli import lifecycle, plugins as plugin_api
+from eternal_cli.observability import relay_runtime, relay_shared_metrics
+from eternal_cli.plugins import PluginManager
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -260,7 +260,7 @@ mode = "test"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
     return plugins_toml
 
 
@@ -282,7 +282,7 @@ def test_manifest_fields():
 
 
 def test_nemo_relay_plugin_is_discoverable_as_bundled_plugin(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes_test"))
+    monkeypatch.setenv("ETERNAL_HOME", str(tmp_path / "eternal_test"))
 
     manager = PluginManager()
     manager.discover_and_load()
@@ -310,16 +310,16 @@ def test_nemo_relay_plugin_exports_core_managed_llm_and_tool_events(
 
     fake = _FakeNemoRelay()
     plugin = _fresh_plugin(monkeypatch, fake)
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATOF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATOF_OUTPUT_DIRECTORY", str(tmp_path / "atof"))
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATOF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATOF_OUTPUT_DIRECTORY", str(tmp_path / "atof"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
 
     base = {
         "session_id": "s1",
         "task_id": "t1",
         "turn_id": "turn-1",
-        "telemetry_schema_version": "hermes.observer.v1",
+        "telemetry_schema_version": "eternal.observer.v1",
     }
     plugin.on_session_start(**base, model="demo-model", platform="cli")
     coordinator = relay_runtime.SESSION_COORDINATOR
@@ -364,7 +364,7 @@ def test_nemo_relay_plugin_exports_core_managed_llm_and_tool_events(
     assert event_names.count("tool.call") == 1
     assert event_names.count("tool.call_end") == 1
     assert "scope.pop" in event_names
-    assert (tmp_path / "atif" / "hermes-atif-s1.json").exists()
+    assert (tmp_path / "atif" / "eternal-atif-s1.json").exists()
 
 
 def test_shared_metrics_and_rich_plugin_share_one_core_session(
@@ -374,14 +374,14 @@ def test_shared_metrics_and_rich_plugin_share_one_core_session(
     from agent import relay_llm
 
     fake = _FakeNemoRelay()
-    hermes_home = tmp_path / "hermes-home"
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
+    eternal_home = tmp_path / "eternal-home"
+    monkeypatch.setenv("ETERNAL_HOME", str(eternal_home))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
     monkeypatch.setenv(
-        "HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif")
+        "ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif")
     )
     monkeypatch.setattr(
-        "hermes_cli.config.read_raw_config",
+        "eternal_cli.config.read_raw_config",
         lambda: {"telemetry": {"shared_metrics": {"enabled": True}}},
     )
     plugin = _fresh_plugin(monkeypatch, fake)
@@ -449,7 +449,7 @@ def test_shared_metrics_and_rich_plugin_share_one_core_session(
         index
         for index, item in enumerate(fake.events)
         if item[0] == "subscribers.register"
-        and item[1].startswith("hermes.nemo_relay.shared_metrics.")
+        and item[1].startswith("eternal.nemo_relay.shared_metrics.")
     )
     register_atif = next(
         index for index, item in enumerate(fake.events) if item[0] == "atif.register"
@@ -462,13 +462,13 @@ def test_shared_metrics_and_rich_plugin_share_one_core_session(
     assert not plugin_runtime.sessions
     assert relay_runtime.get_session_handle("s1") is None
     packages = list(
-        (hermes_home / "telemetry" / "shared_metrics" / "outbox").glob("*.json")
+        (eternal_home / "telemetry" / "shared_metrics" / "outbox").glob("*.json")
     )
     assert len(packages) == 1
     package = json.loads(packages[0].read_text(encoding="utf-8"))
-    assert package["metrics"][0]["name"] == "hermes.model_call.count"
+    assert package["metrics"][0]["name"] == "eternal.model_call.count"
     assert package["metrics"][0]["value"] == 1
-    assert (tmp_path / "atif" / "hermes-atif-s1.json").exists()
+    assert (tmp_path / "atif" / "eternal-atif-s1.json").exists()
 
 
 def test_nemo_relay_plugin_emits_approval_marks(monkeypatch):
@@ -479,8 +479,8 @@ def test_nemo_relay_plugin_emits_approval_marks(monkeypatch):
     plugin.on_post_approval_response(session_id="s1", approval_id="approval-1", approved=True)
 
     mark_names = [event[1] for event in fake.events if event[0] == "scope.event"]
-    assert "hermes.approval.request" in mark_names
-    assert "hermes.approval.response" in mark_names
+    assert "eternal.approval.request" in mark_names
+    assert "eternal.approval.response" in mark_names
 
 
 def test_nemo_relay_plugin_metadata_promotes_trajectory_and_subagent_ids(monkeypatch):
@@ -491,7 +491,7 @@ def test_nemo_relay_plugin_metadata_promotes_trajectory_and_subagent_ids(monkeyp
         session_id="parent-session",
         task_id="task-1",
         turn_id="turn-1",
-        telemetry_schema_version="hermes.observer.v1",
+        telemetry_schema_version="eternal.observer.v1",
     )
     plugin.on_subagent_start(
         parent_session_id="parent-session",
@@ -500,7 +500,7 @@ def test_nemo_relay_plugin_metadata_promotes_trajectory_and_subagent_ids(monkeyp
         child_session_id="child-session",
         child_subagent_id="child-sa",
         child_role="leaf",
-        telemetry_schema_version="hermes.observer.v1",
+        telemetry_schema_version="eternal.observer.v1",
     )
     plugin.on_subagent_stop(
         parent_session_id="parent-session",
@@ -508,15 +508,15 @@ def test_nemo_relay_plugin_metadata_promotes_trajectory_and_subagent_ids(monkeyp
         child_session_id="child-session",
         child_role="leaf",
         child_status="completed",
-        telemetry_schema_version="hermes.observer.v1",
+        telemetry_schema_version="eternal.observer.v1",
     )
 
-    turn_mark = next(event for event in fake.events if event[0] == "scope.event" and event[1] == "hermes.turn.start")
+    turn_mark = next(event for event in fake.events if event[0] == "scope.event" and event[1] == "eternal.turn.start")
     turn_metadata = turn_mark[2]["metadata"]
     assert turn_metadata["session_id"] == "parent-session"
     assert turn_metadata["trajectory_id"] == "parent-session"
 
-    start_mark = next(event for event in fake.events if event[0] == "scope.event" and event[1] == "hermes.subagent.start")
+    start_mark = next(event for event in fake.events if event[0] == "scope.event" and event[1] == "eternal.subagent.start")
     start_metadata = start_mark[2]["metadata"]
     assert start_metadata["parent_session_id"] == "parent-session"
     assert start_metadata["parent_trajectory_id"] == "parent-session"
@@ -525,7 +525,7 @@ def test_nemo_relay_plugin_metadata_promotes_trajectory_and_subagent_ids(monkeyp
     assert start_metadata["child_subagent_id"] == "child-sa"
     assert start_metadata["child_role"] == "leaf"
 
-    stop_mark = next(event for event in fake.events if event[0] == "scope.event" and event[1] == "hermes.subagent.stop")
+    stop_mark = next(event for event in fake.events if event[0] == "scope.event" and event[1] == "eternal.subagent.stop")
     assert stop_mark[2]["metadata"]["child_status"] == "completed"
 
 
@@ -540,7 +540,7 @@ def test_nemo_relay_plugin_reuses_core_parented_child_scope_for_embedded_atif(mo
         child_session_id="child-session",
         child_subagent_id="child-sa",
         child_role="leaf",
-        telemetry_schema_version="hermes.observer.v1",
+        telemetry_schema_version="eternal.observer.v1",
     )
     runtime = plugin._get_runtime()
     assert runtime is not None
@@ -585,7 +585,7 @@ def test_nemo_relay_plugin_reuses_core_parented_child_scope_for_embedded_atif(mo
     stop_mark_index = next(
         index
         for index, event in enumerate(fake.events)
-        if event[0] == "scope.event" and event[1] == "hermes.subagent.stop"
+        if event[0] == "scope.event" and event[1] == "eternal.subagent.stop"
     )
     assert child_close_index < stop_mark_index
 
@@ -593,8 +593,8 @@ def test_nemo_relay_plugin_reuses_core_parented_child_scope_for_embedded_atif(mo
 def test_nemo_relay_plugin_skips_embedded_child_atif_file_by_default(tmp_path, monkeypatch):
     fake = _FakeNemoRelay()
     plugin = _fresh_plugin(monkeypatch, fake)
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
 
     plugin.on_session_start(session_id="parent-session")
     plugin.on_subagent_start(
@@ -608,16 +608,16 @@ def test_nemo_relay_plugin_skips_embedded_child_atif_file_by_default(tmp_path, m
     plugin.on_session_end(session_id="parent-session")
     plugin.on_session_finalize(session_id="parent-session")
 
-    assert (tmp_path / "atif" / "hermes-atif-parent-session.json").exists()
-    assert not (tmp_path / "atif" / "hermes-atif-child-session.json").exists()
+    assert (tmp_path / "atif" / "eternal-atif-parent-session.json").exists()
+    assert not (tmp_path / "atif" / "eternal-atif-child-session.json").exists()
 
 
 def test_nemo_relay_plugin_can_write_embedded_child_atif_file_in_all_mode(tmp_path, monkeypatch):
     fake = _FakeNemoRelay()
     plugin = _fresh_plugin(monkeypatch, fake)
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_SUBAGENT_EXPORT_MODE", "all")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_SUBAGENT_EXPORT_MODE", "all")
 
     plugin.on_session_start(session_id="parent-session")
     plugin.on_subagent_start(
@@ -631,8 +631,8 @@ def test_nemo_relay_plugin_can_write_embedded_child_atif_file_in_all_mode(tmp_pa
     plugin.on_session_end(session_id="parent-session")
     plugin.on_session_finalize(session_id="parent-session")
 
-    assert (tmp_path / "atif" / "hermes-atif-parent-session.json").exists()
-    assert (tmp_path / "atif" / "hermes-atif-child-session.json").exists()
+    assert (tmp_path / "atif" / "eternal-atif-parent-session.json").exists()
+    assert (tmp_path / "atif" / "eternal-atif-child-session.json").exists()
 
 
 def test_nemo_relay_plugin_can_initialize_plugins_toml(tmp_path, monkeypatch):
@@ -659,7 +659,7 @@ output_directory = "{atif_dir}"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     plugin.on_session_start(session_id="s1")
 
@@ -683,7 +683,7 @@ enabled = true
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     plugin.on_session_start(session_id="s1")
     plugin.on_session_finalize(session_id="s1", reason="shutdown")
@@ -700,8 +700,8 @@ def test_nemo_relay_plugin_activates_and_owns_dynamic_plugins(tmp_path, monkeypa
     fake = _FakeNemoRelay()
     plugin = _fresh_plugin(monkeypatch, fake)
     _enable_dynamic_plugin(tmp_path, monkeypatch)
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
 
     plugin.on_session_start(session_id="s1")
     runtime = plugin._get_runtime()
@@ -972,7 +972,7 @@ mode = "test"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     with caplog.at_level("ERROR"):
         plugin.on_session_start(session_id="s1")
@@ -981,7 +981,7 @@ mode = "test"
     initialize = next(event for event in fake.events if event[0] == "plugin.initialize")
     assert initialize[1] == {"version": 1}
     assert "does not expose the CLI lifecycle resolver" in caplog.text
-    assert "Use Hermes-owned [[dynamic_plugins]]" in caplog.text
+    assert "Use Eternal-owned [[dynamic_plugins]]" in caplog.text
 
 
 def test_nemo_relay_explicit_dynamic_paths_resolve_from_plugins_toml(tmp_path, monkeypatch):
@@ -1002,7 +1002,7 @@ environment_ref = "../environments/worker-fixture"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     plugin.on_session_start(session_id="s1")
 
@@ -1021,11 +1021,11 @@ environment_ref = "../environments/worker-fixture"
     runtime.shutdown()
 
 
-def test_relay_tool_request_rewrite_precedes_hermes_authorization_boundary(
+def test_relay_tool_request_rewrite_precedes_eternal_authorization_boundary(
     tmp_path,
     monkeypatch,
 ):
-    from hermes_cli.middleware import apply_tool_request_middleware
+    from eternal_cli.middleware import apply_tool_request_middleware
 
     fake = _FakeNemoRelay()
     plugin = _fresh_plugin(monkeypatch, fake)
@@ -1058,13 +1058,13 @@ def test_nemo_relay_plugin_activates_without_duplicate_execution_hooks(
 
         def register_middleware(self, name, callback):
             del callback
-            fake.events.append(("hermes.register_middleware", name))
+            fake.events.append(("eternal.register_middleware", name))
 
     plugin.register(_Context())
 
     event_names = [event[0] for event in fake.events]
     assert "plugin.activate_dynamic" in event_names
-    assert "hermes.register_middleware" not in event_names
+    assert "eternal.register_middleware" not in event_names
     assert not {
         "pre_api_request",
         "post_api_request",
@@ -1105,7 +1105,7 @@ dynamic_plugins = [{ kind = "rust_dynamic", manifest_ref = "missing-id" }]
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     with caplog.at_level("WARNING"):
         plugin.on_session_start(session_id="s1")
@@ -1135,7 +1135,7 @@ manifest_ref = "{(tmp_path / "invalid" / "relay-plugin.toml").as_posix()}"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     with caplog.at_level("WARNING"):
         plugin.on_session_start(session_id="s1")
@@ -1221,8 +1221,8 @@ def test_nemo_relay_plugin_continues_shutdown_after_atif_export_failure(
     )
     plugin = _fresh_plugin(monkeypatch, fake)
     _enable_dynamic_plugin(tmp_path, monkeypatch)
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "atif"))
     plugin.on_session_start(session_id="s1")
     runtime = plugin._get_runtime()
     assert runtime is not None
@@ -1251,7 +1251,7 @@ enabled = true
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     plugin.on_session_start(session_id="parent")
     plugin.on_session_start(session_id="child")
@@ -1277,7 +1277,7 @@ enabled = true
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     async def _drive() -> None:
         plugin.on_session_start(session_id="s1")
@@ -1326,7 +1326,7 @@ enabled = true
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
 
     plugin.on_session_start(session_id="s1")
     plugin.on_session_finalize(session_id="s1", reason="shutdown")
@@ -1357,9 +1357,9 @@ output_directory = "{(tmp_path / "managed-atif").as_posix()}"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "direct-atif"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "direct-atif"))
 
     plugin.on_session_start(session_id="s1")
     plugin.on_session_finalize(session_id="s1", reason="shutdown")
@@ -1368,7 +1368,7 @@ output_directory = "{(tmp_path / "managed-atif").as_posix()}"
     assert "plugin.initialize" in event_names
     assert "plugin.clear" in event_names
     assert "atif.register" not in event_names
-    assert not (tmp_path / "direct-atif" / "hermes-atif-s1.json").exists()
+    assert not (tmp_path / "direct-atif" / "eternal-atif-s1.json").exists()
 
 
 def test_nemo_relay_plugin_keeps_direct_atif_when_plugins_toml_init_fails(tmp_path, monkeypatch):
@@ -1395,9 +1395,9 @@ output_directory = "{(tmp_path / "managed-atif").as_posix()}"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "direct-atif"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATIF_OUTPUT_DIRECTORY", str(tmp_path / "direct-atif"))
 
     plugin.on_session_start(session_id="s1")
     plugin.on_session_finalize(session_id="s1", reason="shutdown")
@@ -1406,7 +1406,7 @@ output_directory = "{(tmp_path / "managed-atif").as_posix()}"
     assert "plugin.initialize.failed" in event_names
     assert "plugin.clear" not in event_names
     assert "atif.register" in event_names
-    assert (tmp_path / "direct-atif" / "hermes-atif-s1.json").exists()
+    assert (tmp_path / "direct-atif" / "eternal-atif-s1.json").exists()
 
 
 def test_nemo_relay_plugin_retries_plugins_toml_after_fallback_only_session_and_clears_direct_atof(
@@ -1441,9 +1441,9 @@ output_directory = "{(tmp_path / "managed-atof").as_posix()}"
 """,
         encoding="utf-8",
     )
-    monkeypatch.setenv("HERMES_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATOF_ENABLED", "1")
-    monkeypatch.setenv("HERMES_NEMO_RELAY_ATOF_OUTPUT_DIRECTORY", str(tmp_path / "direct-atof"))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_PLUGINS_TOML", str(plugins_toml))
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATOF_ENABLED", "1")
+    monkeypatch.setenv("ETERNAL_NEMO_RELAY_ATOF_OUTPUT_DIRECTORY", str(tmp_path / "direct-atof"))
 
     plugin.on_session_start(session_id="s1")
     plugin.on_session_finalize(session_id="s1", reason="shutdown")

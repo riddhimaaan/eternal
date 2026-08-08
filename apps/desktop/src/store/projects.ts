@@ -5,8 +5,8 @@ import {
   NO_PROJECT_ID,
   type SidebarProjectTree
 } from '@/app/chat/sidebar/projects/workspace-groups'
-import type { HermesGitBaseBranch, HermesGitBranch } from '@/global'
-import { getHermesConfig, type HermesGateway } from '@/hermes'
+import type { EternalGitBaseBranch, EternalGitBranch } from '@/global'
+import { getEternalConfig, type EternalGateway } from '@/eternal'
 import { translateNow } from '@/i18n'
 import { desktopDefaultCwd, isDesktopFsRemoteMode, selectDesktopPaths, writeDesktopFileText } from '@/lib/desktop-fs'
 import { desktopGit } from '@/lib/desktop-git'
@@ -17,7 +17,7 @@ import { setSidebarAgentsGrouped } from '@/store/layout'
 import { notify } from '@/store/notifications'
 import { $activeGatewayProfile, requestFreshSession } from '@/store/profile'
 import { $selectedStoredSessionId, $sessions, sessionMatchesStoredId, workspaceCwdForNewSession } from '@/store/session'
-import type { ProjectInfo, ProjectsPayload } from '@/types/hermes'
+import type { ProjectInfo, ProjectsPayload } from '@/types/eternal'
 
 // First-class, per-profile Projects (named, multi-folder workspaces). State is
 // served by the live gateway's `projects.*` JSON-RPC methods, which wrap the
@@ -136,7 +136,7 @@ export const $reposScanning = atom(false)
 // chats land there, exactly as selecting a profile does.
 export const ALL_PROJECTS = '__all_projects__'
 
-const PROJECT_SCOPE_KEY = 'hermes.desktop.projectScope'
+const PROJECT_SCOPE_KEY = 'eternal.desktop.projectScope'
 
 export const $projectScope = persistentAtom<string>(PROJECT_SCOPE_KEY, ALL_PROJECTS, {
   decode: raw => raw || ALL_PROJECTS,
@@ -296,14 +296,14 @@ async function gatewayRequest<T>(method: string, params: Record<string, unknown>
   }
 
   if (!gateway) {
-    throw new Error('Hermes gateway is not connected')
+    throw new Error('Eternal gateway is not connected')
   }
 
   return gateway.request<T>(method, params)
 }
 
 async function gatewayRequestOn<T>(
-  gateway: HermesGateway,
+  gateway: EternalGateway,
   method: string,
   params: Record<string, unknown> = {}
 ): Promise<T> {
@@ -311,7 +311,7 @@ async function gatewayRequestOn<T>(
 }
 
 interface ActiveProjectsContext {
-  gateway: HermesGateway
+  gateway: EternalGateway
   profile: string
 }
 
@@ -324,7 +324,7 @@ async function activeProjectsContext(): Promise<ActiveProjectsContext> {
   }
 
   if (!gateway || gateway !== activeGateway() || profile !== ($activeGatewayProfile.get() || 'default')) {
-    throw new Error('Active Hermes profile changed while connecting')
+    throw new Error('Active Eternal profile changed while connecting')
   }
 
   return { gateway, profile }
@@ -355,7 +355,7 @@ interface ProjectTreePayload {
 
 let projectTreeRefreshGeneration = 0
 
-async function refreshProjectTreeOn(gateway: HermesGateway): Promise<void> {
+async function refreshProjectTreeOn(gateway: EternalGateway): Promise<void> {
   const generation = ++projectTreeRefreshGeneration
 
   if (activeGateway() === gateway) {
@@ -466,8 +466,8 @@ interface RepoScanState {
   runningSignature?: string
 }
 
-const repoScanStates = new WeakMap<HermesGateway, RepoScanState>()
-const scanningGatewayGenerations = new WeakMap<HermesGateway, number>()
+const repoScanStates = new WeakMap<EternalGateway, RepoScanState>()
+const scanningGatewayGenerations = new WeakMap<EternalGateway, number>()
 
 function syncReposScanning(): void {
   const gateway = activeGateway()
@@ -500,7 +500,7 @@ export async function scanAndRecordRepos(force = false): Promise<void> {
   let generation: number | undefined
 
   try {
-    const policy = repoDiscoveryPolicyFromConfig(await getHermesConfig(context.profile))
+    const policy = repoDiscoveryPolicyFromConfig(await getEternalConfig(context.profile))
     const signature = repoDiscoveryPolicySignature(policy)
 
     if (!force && (state.completedSignature === signature || state.runningSignature === signature)) {
@@ -935,7 +935,7 @@ export function refreshWorktrees(): void {
 }
 
 // Spin up a fresh worktree the lightest way (`git worktree add -b`) under the
-// repo, returning where Hermes should start working. Git is the source of
+// repo, returning where Eternal should start working. Git is the source of
 // truth; the caller starts a session in the returned path.
 export async function startWorkInRepo(
   repoPath: string,
@@ -955,7 +955,7 @@ export async function startWorkInRepo(
 
 // Local branches for the composer's "convert a branch into a worktree" picker.
 // Empty on a remote backend / non-repo (the Electron probe can't run).
-export async function listRepoBranches(repoPath: string): Promise<HermesGitBranch[]> {
+export async function listRepoBranches(repoPath: string): Promise<EternalGitBranch[]> {
   const git = desktopGit()
 
   if (!git?.branchList || !repoPath) {
@@ -968,7 +968,7 @@ export async function listRepoBranches(repoPath: string): Promise<HermesGitBranc
 // Local + remote-tracking branches for the base-branch picker in the
 // new-worktree dialog. The remote default (origin/HEAD) is flagged so the
 // UI can preselect it. Empty on a remote backend / non-repo.
-export async function listBaseBranches(repoPath: string): Promise<HermesGitBaseBranch[]> {
+export async function listBaseBranches(repoPath: string): Promise<EternalGitBaseBranch[]> {
   const git = desktopGit()
 
   if (!git?.baseBranchList || !repoPath) {
@@ -1045,14 +1045,14 @@ export async function removeWorktreePath(
 // Reveal a project/worktree path in the OS file manager (git-GUI standard).
 export async function revealPath(path: null | string): Promise<void> {
   if (path) {
-    await window.hermesDesktop?.revealPath?.(path)
+    await window.eternalDesktop?.revealPath?.(path)
   }
 }
 
 // Copy a path to the clipboard (git-GUI standard).
 export async function copyPath(path: null | string): Promise<void> {
   if (path) {
-    await window.hermesDesktop?.writeClipboard?.(path)
+    await window.eternalDesktop?.writeClipboard?.(path)
   }
 }
 

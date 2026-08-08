@@ -27,34 +27,34 @@ def _stringify_filter_value(value: Any) -> str:
 
 
 def _resolve_profile_path(path_value: Any) -> Optional[Path]:
-    """Resolve a user path, mapping ~/.hermes to the active profile home."""
+    """Resolve a user path, mapping ~/.eternal to the active profile home."""
     if not isinstance(path_value, str):
         return None
     raw = os.path.expandvars(path_value.strip())
     if not raw:
         return None
-    from hermes_constants import get_hermes_home
+    from eternal_constants import get_eternal_home
 
-    hermes_home = get_hermes_home()
-    if raw == "~/.hermes":
-        return hermes_home
-    if raw.startswith("~/.hermes/"):
-        return hermes_home / raw.removeprefix("~/.hermes/")
+    eternal_home = get_eternal_home()
+    if raw == "~/.eternal":
+        return eternal_home
+    if raw.startswith("~/.eternal/"):
+        return eternal_home / raw.removeprefix("~/.eternal/")
     path = Path(raw).expanduser()
     if path.is_absolute():
         return path
-    return hermes_home / path
+    return eternal_home / path
 
 
 def _resolve_script_path(script_value: Any) -> tuple[Optional[Path], Optional[str]]:
-    """Resolve a route script under HERMES_HOME/scripts."""
+    """Resolve a route script under ETERNAL_HOME/scripts."""
     if not isinstance(script_value, str) or not script_value.strip():
         return None, "script path is empty"
-    from hermes_constants import get_hermes_home
+    from eternal_constants import get_eternal_home
 
-    scripts_root = (get_hermes_home() / "scripts").resolve()
+    scripts_root = (get_eternal_home() / "scripts").resolve()
     raw_text = os.path.expandvars(script_value.strip())
-    if raw_text == "~/.hermes" or raw_text.startswith("~/.hermes/"):
+    if raw_text == "~/.eternal" or raw_text.startswith("~/.eternal/"):
         mapped = _resolve_profile_path(raw_text)
         candidate = mapped.resolve() if mapped is not None else scripts_root
     else:
@@ -296,7 +296,7 @@ class WebhookRouteProcessor:
             return False, None
         if (
             transformed.get("[SILENT]") is True
-            or transformed.get("__hermes_ignore__") is True
+            or transformed.get("__eternal_ignore__") is True
         ):
             return False, None
         return True, transformed

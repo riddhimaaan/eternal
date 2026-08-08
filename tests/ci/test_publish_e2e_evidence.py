@@ -70,7 +70,7 @@ def test_render_and_replace_evidence_uses_validated_attachment_urls():
         [_mod.EvidenceFile("shot.png", "new screenshot: shot.png")],
         {"shot.png": "https://github.com/user-attachments/assets/12345678-1234-1234-1234-123456789abc"},
     )
-    body = "before\n<!-- hermes-e2e-evidence:start -->\npending\n<!-- hermes-e2e-evidence:end -->\nafter"
+    body = "before\n<!-- eternal-e2e-evidence:start -->\npending\n<!-- eternal-e2e-evidence:end -->\nafter"
 
     result = _mod.replace_evidence_marker(body, evidence)
 
@@ -155,7 +155,7 @@ def test_upload_evidence_reports_gh_image_error(tmp_path, monkeypatch, capsys):
 def test_publish_marks_evidence_upload_failure_in_pr_comment(tmp_path, monkeypatch):
     comment = {
         "id": 123,
-        "body": "before\n<!-- hermes-e2e-evidence:start -->\npending\n<!-- hermes-e2e-evidence:end -->\nafter",
+        "body": "before\n<!-- eternal-e2e-evidence:start -->\npending\n<!-- eternal-e2e-evidence:end -->\nafter",
     }
     updates = []
 
@@ -201,16 +201,16 @@ def test_publish_marks_evidence_upload_failure_in_pr_comment(tmp_path, monkeypat
             "github-token",
             "PATCH",
             {
-                "body": "before\n<!-- hermes-e2e-evidence:start -->\n<sub>inline evidence upload failed.</sub>\n\n<pre>Failed to upload shot.png: bad &lt;response&gt;</pre>\n<!-- hermes-e2e-evidence:end -->\nafter"
+                "body": "before\n<!-- eternal-e2e-evidence:start -->\n<sub>inline evidence upload failed.</sub>\n\n<pre>Failed to upload shot.png: bad &lt;response&gt;</pre>\n<!-- eternal-e2e-evidence:end -->\nafter"
             },
         )
     ]
 
 
 def test_find_review_comment_requires_the_evidence_marker():
-    pending = "<!-- hermes-ci-review-bot -->\n<!-- hermes-e2e-evidence:start -->\npending\n<!-- hermes-e2e-evidence:end -->"
+    pending = "<!-- eternal-ci-review-bot -->\n<!-- eternal-e2e-evidence:start -->\npending\n<!-- eternal-e2e-evidence:end -->"
 
-    assert _mod._find_review_comment([{"body": "<!-- hermes-ci-review-bot --> no evidence"}]) is None
+    assert _mod._find_review_comment([{"body": "<!-- eternal-ci-review-bot --> no evidence"}]) is None
     assert _mod._find_review_comment([{"body": pending, "id": 123}]) == {"body": pending, "id": 123}
 
 

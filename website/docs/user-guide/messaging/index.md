@@ -1,14 +1,14 @@
 ---
 sidebar_position: 1
 title: "Messaging Gateway"
-description: "Chat with Hermes from Telegram, Discord, Slack, WhatsApp, Signal, SMS, Email, Home Assistant, Mattermost, Matrix, DingTalk, Yuanbao, Microsoft Teams, LINE, Raft, Webhooks, or any OpenAI-compatible frontend via the API server — architecture and setup overview"
+description: "Chat with Eternal from Telegram, Discord, Slack, WhatsApp, Signal, SMS, Email, Home Assistant, Mattermost, Matrix, DingTalk, Yuanbao, Microsoft Teams, LINE, Raft, Webhooks, or any OpenAI-compatible frontend via the API server — architecture and setup overview"
 ---
 
 # Messaging Gateway
 
-Chat with Hermes from Telegram, Discord, Slack, WhatsApp, Signal, SMS, Email, Home Assistant, Mattermost, Matrix, DingTalk, Feishu/Lark, WeCom, Weixin, BlueBubbles (iMessage), QQ, Yuanbao, Microsoft Teams, LINE, ntfy, or your browser. The gateway is a single background process that connects to all your configured platforms, handles sessions, runs cron jobs, and delivers voice messages.
+Chat with Eternal from Telegram, Discord, Slack, WhatsApp, Signal, SMS, Email, Home Assistant, Mattermost, Matrix, DingTalk, Feishu/Lark, WeCom, Weixin, BlueBubbles (iMessage), QQ, Yuanbao, Microsoft Teams, LINE, ntfy, or your browser. The gateway is a single background process that connects to all your configured platforms, handles sessions, runs cron jobs, and delivers voice messages.
 
-For the full voice feature set — including CLI microphone mode, spoken replies in messaging, and Discord voice-channel conversations — see [Voice Mode](/user-guide/features/voice-mode) and [Use Voice Mode with Hermes](/guides/use-voice-mode-with-hermes).
+For the full voice feature set — including CLI microphone mode, spoken replies in messaging, and Discord voice-channel conversations — see [Voice Mode](/user-guide/features/voice-mode) and [Use Voice Mode with Eternal](/guides/use-voice-mode-with-eternal).
 
 :::tip
 Bots need both a model provider and tool providers (TTS, web). A [Nous Portal](/integrations/nous-portal) subscription bundles all of them.
@@ -49,7 +49,7 @@ Bots need both a model provider and tool providers (TTS, web). A [Nous Portal](/
 
 ```mermaid
 flowchart TB
-    subgraph Gateway["Hermes Gateway"]
+    subgraph Gateway["Eternal Gateway"]
         subgraph Adapters["Platform adapters"]
             tg[Telegram]
             dc[Discord]
@@ -110,7 +110,7 @@ Each platform adapter receives messages, routes them through a per-chat session 
 
 ## Intentional Silence Tokens
 
-For group chats, hooks, and automation flows, Hermes supports explicit silence tokens. If the agent's final response is exactly one supported token, the gateway suppresses outbound delivery and sends nothing to the chat.
+For group chats, hooks, and automation flows, Eternal supports explicit silence tokens. If the agent's final response is exactly one supported token, the gateway suppresses outbound delivery and sends nothing to the chat.
 
 Supported tokens:
 
@@ -121,7 +121,7 @@ Supported tokens:
 
 Whitespace and case are normalized, but the whole final response must be the token. A sentence like "Use `[SILENT]` when nothing changed" is delivered normally.
 
-Silence is a delivery decision only. Hermes keeps the assistant silence turn in the session transcript, so the conversation still alternates normally:
+Silence is a delivery decision only. Eternal keeps the assistant silence turn in the session transcript, so the conversation still alternates normally:
 
 ```text
 user: side-channel chatter
@@ -129,14 +129,14 @@ assistant: [SILENT]   # stored, not delivered
 user: next message
 ```
 
-Failed turns still surface as errors; Hermes does not hide failures just because the text resembles a silence token.
+Failed turns still surface as errors; Eternal does not hide failures just because the text resembles a silence token.
 
 ## Quick Setup
 
 The easiest way to configure messaging platforms is the interactive wizard:
 
 ```bash
-hermes gateway setup        # Interactive setup for all messaging platforms
+eternal gateway setup        # Interactive setup for all messaging platforms
 ```
 
 This walks you through configuring each platform with arrow-key selection, shows which platforms are already configured, and offers to start/restart the gateway when done.
@@ -144,14 +144,14 @@ This walks you through configuring each platform with arrow-key selection, shows
 ## Gateway Commands
 
 ```bash
-hermes gateway              # Run in foreground
-hermes gateway setup        # Configure messaging platforms interactively
-hermes gateway install      # Install as a user service (Linux) / launchd service (macOS)
-sudo hermes gateway install --system   # Linux only: install a boot-time system service
-hermes gateway start        # Start the default service
-hermes gateway stop         # Stop the default service
-hermes gateway status       # Check default service status
-hermes gateway status --system         # Linux only: inspect the system service explicitly
+eternal gateway              # Run in foreground
+eternal gateway setup        # Configure messaging platforms interactively
+eternal gateway install      # Install as a user service (Linux) / launchd service (macOS)
+sudo eternal gateway install --system   # Linux only: install a boot-time system service
+eternal gateway start        # Start the default service
+eternal gateway stop         # Stop the default service
+eternal gateway status       # Check default service status
+eternal gateway status --system         # Linux only: inspect the system service explicitly
 ```
 
 ### Optional Linux event-loop watchdog
@@ -160,7 +160,7 @@ A systemd-managed gateway can opt into process recovery when Python's asyncio
 event loop stops receiving scheduling time. This covers whole-process stalls
 that also prevent platform-specific liveness tasks from running:
 
-```yaml title="~/.hermes/config.yaml"
+```yaml title="~/.eternal/config.yaml"
 gateway:
   systemd_watchdog_seconds: 120
 ```
@@ -168,11 +168,11 @@ gateway:
 Regenerate the service unit after changing this setting:
 
 ```bash
-hermes gateway install --force
+eternal gateway install --force
 ```
 
 A positive value makes the generated unit use `Type=notify`,
-`NotifyAccess=main`, and the matching `WatchdogSec`. Hermes sends heartbeats
+`NotifyAccess=main`, and the matching `WatchdogSec`. Eternal sends heartbeats
 only while its event loop is making timely progress; systemd restarts the
 process when they stop. The default `0` keeps the existing `Type=simple`
 behavior. This setting is Linux/systemd-only and does not treat an ordinary
@@ -203,7 +203,7 @@ platform network disconnect as an event-loop failure.
 | `/rollback [number]` | List or restore filesystem checkpoints |
 | `/background <prompt>` | Run a prompt in a separate background session |
 | `/reload-mcp` | Reload MCP servers from config |
-| `/update` | Update Hermes Agent to the latest version |
+| `/update` | Update Eternal Agent to the latest version |
 | `/help` | Show available commands |
 | `/<skill-name>` | Invoke any installed skill |
 
@@ -238,7 +238,7 @@ old behavior: in-flight responses are lost on crash).
 
 **By default sessions never auto-reset** — context lives until you `/reset`
 manually or context compression kicks in. If you want automatic resets, opt in
-with the `session_reset` section in `~/.hermes/config.yaml`:
+with the `session_reset` section in `~/.eternal/config.yaml`:
 
 ```yaml
 session_reset:
@@ -263,7 +263,7 @@ guard. Set it to `0` to disable the cutoff (any live process blocks reset, the
 old behavior), or raise it if you run legitimate multi-day jobs whose liveness
 should keep the conversation open.
 
-Configure per-platform overrides in `~/.hermes/gateway.json`:
+Configure per-platform overrides in `~/.eternal/gateway.json`:
 
 ```json
 {
@@ -307,11 +307,11 @@ Instead of manually configuring user IDs, unknown users receive a one-time pairi
 ```bash
 # The user sees: "Pairing code: XKGH5N7P"
 # You approve them with:
-hermes pairing approve telegram XKGH5N7P
+eternal pairing approve telegram XKGH5N7P
 
 # Other pairing commands:
-hermes pairing list          # View pending + approved users
-hermes pairing revoke telegram 123456789  # Remove access
+eternal pairing list          # View pending + approved users
+eternal pairing revoke telegram 123456789  # Remove access
 ```
 
 Pairing codes expire after 1 hour, are rate-limited, and use cryptographic randomness.
@@ -374,13 +374,13 @@ display:
   busy_ack_enabled: true   # set to false to suppress the ⚡/⏳/⏩ chat reply entirely
 ```
 
-The first time you message a busy agent on any platform, Hermes appends a one-line reminder to the busy-ack explaining the knob (`"💡 First-time tip — …"`). The reminder fires once per install — a flag under `onboarding.seen.busy_input_prompt` latches it. Delete that key to see the tip again.
+The first time you message a busy agent on any platform, Eternal appends a one-line reminder to the busy-ack explaining the knob (`"💡 First-time tip — …"`). The reminder fires once per install — a flag under `onboarding.seen.busy_input_prompt` latches it. Delete that key to see the tip again.
 
 If you find the busy acknowledgment noisy, set `display.busy_ack_enabled: false`. Input handling is unchanged; only the confirmation message is hidden.
 
 ## Tool Progress Notifications
 
-Control how much tool activity is displayed in `~/.hermes/config.yaml`:
+Control how much tool activity is displayed in `~/.eternal/config.yaml`:
 
 ```yaml
 display:
@@ -395,7 +395,7 @@ display:
 
 ### Message timestamps in model context
 
-Off by default. When enabled, Hermes prepends a human-readable timestamp
+Off by default. When enabled, Eternal prepends a human-readable timestamp
 (e.g. `[Tue 2026-04-28 13:40:53 CEST]`) onto each **user** message *in the
 model's context* so the agent knows when messages were sent — useful for
 temporal reasoning ("you asked this morning…", noticing a long gap). It is
@@ -428,7 +428,7 @@ Run a prompt in a separate background session so the agent works on it independe
 /background Check all servers in the cluster and report any that are down
 ```
 
-Hermes confirms immediately:
+Eternal confirms immediately:
 
 ```
 🔄 Background task started: "Check all servers in the cluster..."
@@ -446,7 +446,7 @@ Each `/background` prompt spawns a **separate agent instance** that runs asynchr
 
 ### Background Process Notifications
 
-When the agent running a background session uses `terminal(background=true)` to start long-running processes (servers, builds, etc.), the gateway can push status updates to your chat. Control this with `display.background_process_notifications` in `~/.hermes/config.yaml`:
+When the agent running a background session uses `terminal(background=true)` to start long-running processes (servers, builds, etc.), the gateway can push status updates to your chat. Control this with `display.background_process_notifications` in `~/.eternal/config.yaml`:
 
 ```yaml
 display:
@@ -463,7 +463,7 @@ display:
 You can also set this via environment variable:
 
 ```bash
-HERMES_BACKGROUND_NOTIFICATIONS=result
+ETERNAL_BACKGROUND_NOTIFICATIONS=result
 ```
 
 ### Use Cases
@@ -482,73 +482,73 @@ Background tasks on messaging platforms are fire-and-forget — you don't need t
 ### Linux (systemd)
 
 ```bash
-hermes gateway install               # Install as user service
-hermes gateway start                 # Start the service
-hermes gateway stop                  # Stop the service
-hermes gateway status                # Check status
-journalctl --user -u hermes-gateway -f  # View logs
+eternal gateway install               # Install as user service
+eternal gateway start                 # Start the service
+eternal gateway stop                  # Stop the service
+eternal gateway status                # Check status
+journalctl --user -u eternal-gateway -f  # View logs
 
 # Enable lingering (keeps running after logout)
 sudo loginctl enable-linger $USER
 
 # Or install a boot-time system service that still runs as your user
-sudo hermes gateway install --system
-sudo hermes gateway start --system
-sudo hermes gateway status --system
-journalctl -u hermes-gateway -f
+sudo eternal gateway install --system
+sudo eternal gateway start --system
+sudo eternal gateway status --system
+journalctl -u eternal-gateway -f
 ```
 
 Use the user service on laptops and dev boxes. Use the system service on VPS or headless hosts that should come back at boot without relying on systemd linger.
 
 :::danger Don't add a custom `ExecStopPost` kill drop-in
-The unit Hermes installs already shuts the gateway down cleanly with `KillMode=mixed` + `KillSignal=SIGTERM`, and uses `Restart=always` with `RestartForceExitStatus` so updates and `/restart` respawn correctly. Do **not** add a systemd drop-in such as `ExecStopPost=/bin/kill -9 $MAINPID` — `ExecStopPost` fires on *every* stop, including clean restarts, so it `SIGKILL`s the freshly spawned instance before it stabilizes and `Restart=always` immediately respawns it. The result is an infinite restart loop (and, on Telegram, a flood of restart messages). If you've added such a drop-in, remove it: `systemctl --user edit hermes-gateway` (or `sudo systemctl edit hermes-gateway` for a system service) and delete the `ExecStopPost` line, then `systemctl --user daemon-reload`.
+The unit Eternal installs already shuts the gateway down cleanly with `KillMode=mixed` + `KillSignal=SIGTERM`, and uses `Restart=always` with `RestartForceExitStatus` so updates and `/restart` respawn correctly. Do **not** add a systemd drop-in such as `ExecStopPost=/bin/kill -9 $MAINPID` — `ExecStopPost` fires on *every* stop, including clean restarts, so it `SIGKILL`s the freshly spawned instance before it stabilizes and `Restart=always` immediately respawns it. The result is an infinite restart loop (and, on Telegram, a flood of restart messages). If you've added such a drop-in, remove it: `systemctl --user edit eternal-gateway` (or `sudo systemctl edit eternal-gateway` for a system service) and delete the `ExecStopPost` line, then `systemctl --user daemon-reload`.
 :::
 
 :::tip Headless VMs: user service + linger avoids root prompts
-A system service needs root for every restart — including the automatic gateway restart at the end of `hermes update`. When `hermes update` runs as a non-root user, it tries passwordless `sudo systemctl`; if that's unavailable, it skips the restart and prints the manual `sudo systemctl restart hermes-gateway` command (it never blocks on an interactive password prompt).
+A system service needs root for every restart — including the automatic gateway restart at the end of `eternal update`. When `eternal update` runs as a non-root user, it tries passwordless `sudo systemctl`; if that's unavailable, it skips the restart and prints the manual `sudo systemctl restart eternal-gateway` command (it never blocks on an interactive password prompt).
 
 For a headless VM you never log into, a **user** service with lingering enabled gives you the same start-at-boot behavior with zero root involvement:
 
 ```bash
-hermes gateway install          # user service
+eternal gateway install          # user service
 sudo loginctl enable-linger $USER   # one-time: start at boot, survive logout
 ```
 
-After that, `hermes update` can restart the gateway without any privileges. If you prefer to keep the system service, either run updates with `sudo hermes update`, or grant the service account passwordless sudo for systemctl, e.g. in `sudo visudo -f /etc/sudoers.d/hermes-gateway`:
+After that, `eternal update` can restart the gateway without any privileges. If you prefer to keep the system service, either run updates with `sudo eternal update`, or grant the service account passwordless sudo for systemctl, e.g. in `sudo visudo -f /etc/sudoers.d/eternal-gateway`:
 
 ```
-hermes ALL=(root) NOPASSWD: /usr/bin/systemctl --no-ask-password reset-failed hermes-gateway*, /usr/bin/systemctl --no-ask-password start hermes-gateway*, /usr/bin/systemctl --no-ask-password restart hermes-gateway*
+eternal ALL=(root) NOPASSWD: /usr/bin/systemctl --no-ask-password reset-failed eternal-gateway*, /usr/bin/systemctl --no-ask-password start eternal-gateway*, /usr/bin/systemctl --no-ask-password restart eternal-gateway*
 ```
 :::
 
-Avoid keeping both the user and system gateway units installed at once unless you really mean to. Hermes will warn if it detects both because start/stop/status behavior gets ambiguous.
+Avoid keeping both the user and system gateway units installed at once unless you really mean to. Eternal will warn if it detects both because start/stop/status behavior gets ambiguous.
 
 :::info Multiple installations
-If you run multiple Hermes installations on the same machine (with different `HERMES_HOME` directories), each gets its own systemd service name. The default `~/.hermes` uses `hermes-gateway`; other installations use `hermes-gateway-<hash>`. The `hermes gateway` commands automatically target the correct service for your current `HERMES_HOME`.
+If you run multiple Eternal installations on the same machine (with different `ETERNAL_HOME` directories), each gets its own systemd service name. The default `~/.eternal` uses `eternal-gateway`; other installations use `eternal-gateway-<hash>`. The `eternal gateway` commands automatically target the correct service for your current `ETERNAL_HOME`.
 :::
 
 ### macOS (launchd)
 
 ```bash
-hermes gateway install               # Install as launchd agent
-hermes gateway start                 # Start the service
-hermes gateway stop                  # Stop the service
-hermes gateway status                # Check status
-tail -f ~/.hermes/logs/gateway.log   # View logs
+eternal gateway install               # Install as launchd agent
+eternal gateway start                 # Start the service
+eternal gateway stop                  # Stop the service
+eternal gateway status                # Check status
+tail -f ~/.eternal/logs/gateway.log   # View logs
 ```
 
-The generated plist lives at `~/Library/LaunchAgents/ai.hermes.gateway.plist`. It includes three environment variables:
+The generated plist lives at `~/Library/LaunchAgents/ai.eternal.gateway.plist`. It includes three environment variables:
 
 - **PATH** — your full shell PATH at install time, with the venv `bin/` and `node_modules/.bin` prepended. This ensures user-installed tools (Node.js, ffmpeg, etc.) are available to gateway subprocesses like the WhatsApp bridge.
 - **VIRTUAL_ENV** — points to the Python virtualenv so tools can resolve packages correctly.
-- **HERMES_HOME** — scopes the gateway to your Hermes installation.
+- **ETERNAL_HOME** — scopes the gateway to your Eternal installation.
 
 :::tip PATH changes after install
-launchd plists are static — if you install new tools (e.g. a new Node.js version via nvm, or ffmpeg via Homebrew) after setting up the gateway, run `hermes gateway install` again to capture the updated PATH. The gateway will detect the stale plist and reload automatically.
+launchd plists are static — if you install new tools (e.g. a new Node.js version via nvm, or ffmpeg via Homebrew) after setting up the gateway, run `eternal gateway install` again to capture the updated PATH. The gateway will detect the stale plist and reload automatically.
 :::
 
 :::info Multiple installations
-Like the Linux systemd service, each `HERMES_HOME` directory gets its own launchd label. The default `~/.hermes` uses `ai.hermes.gateway`; other installations use `ai.hermes.gateway-<suffix>`.
+Like the Linux systemd service, each `ETERNAL_HOME` directory gets its own launchd label. The default `~/.eternal` uses `ai.eternal.gateway`; other installations use `ai.eternal.gateway-<suffix>`.
 :::
 
 ## Platform-Specific Toolsets
@@ -557,31 +557,31 @@ Each platform has its own toolset:
 
 | Platform | Toolset | Capabilities |
 |----------|---------|--------------|
-| CLI | `hermes-cli` | Full access |
-| Telegram | `hermes-telegram` | Full tools including terminal |
-| Discord | `hermes-discord` | Full tools including terminal |
-| WhatsApp | `hermes-whatsapp` | Full tools including terminal |
-| WhatsApp Cloud API | `hermes-whatsapp` | Full tools including terminal (shares toolset with the Baileys bridge) |
-| Slack | `hermes-slack` | Full tools including terminal |
-| Google Chat | `hermes-google_chat` | Full tools including terminal |
-| Signal | `hermes-signal` | Full tools including terminal |
-| SMS | `hermes-sms` | Full tools including terminal |
-| Email | `hermes-email` | Full tools including terminal |
-| Home Assistant | `hermes-homeassistant` | Full tools + HA device control (ha_list_entities, ha_get_state, ha_call_service, ha_list_services) |
-| Mattermost | `hermes-mattermost` | Full tools including terminal |
-| Matrix | `hermes-matrix` | Full tools including terminal |
-| DingTalk | `hermes-dingtalk` | Full tools including terminal |
-| Feishu/Lark | `hermes-feishu` | Full tools including terminal |
-| WeCom | `hermes-wecom` | Full tools including terminal |
-| WeCom Callback | `hermes-wecom-callback` | Full tools including terminal |
-| Weixin | `hermes-weixin` | Full tools including terminal |
-| BlueBubbles | `hermes-bluebubbles` | Full tools including terminal |
-| QQBot | `hermes-qqbot` | Full tools including terminal |
-| Yuanbao | `hermes-yuanbao` | Full tools including terminal |
-| Microsoft Teams | `hermes-teams` | Full tools including terminal |
-| API Server | `hermes-api-server` | Full tools (drops `clarify`, `text_to_speech` — programmatic access doesn't have an interactive user) |
-| Webhooks | `hermes-webhook` | Full tools including terminal |
-| Raft | `hermes-raft` | Wake-only channel; agent uses Raft CLI for message I/O |
+| CLI | `eternal-cli` | Full access |
+| Telegram | `eternal-telegram` | Full tools including terminal |
+| Discord | `eternal-discord` | Full tools including terminal |
+| WhatsApp | `eternal-whatsapp` | Full tools including terminal |
+| WhatsApp Cloud API | `eternal-whatsapp` | Full tools including terminal (shares toolset with the Baileys bridge) |
+| Slack | `eternal-slack` | Full tools including terminal |
+| Google Chat | `eternal-google_chat` | Full tools including terminal |
+| Signal | `eternal-signal` | Full tools including terminal |
+| SMS | `eternal-sms` | Full tools including terminal |
+| Email | `eternal-email` | Full tools including terminal |
+| Home Assistant | `eternal-homeassistant` | Full tools + HA device control (ha_list_entities, ha_get_state, ha_call_service, ha_list_services) |
+| Mattermost | `eternal-mattermost` | Full tools including terminal |
+| Matrix | `eternal-matrix` | Full tools including terminal |
+| DingTalk | `eternal-dingtalk` | Full tools including terminal |
+| Feishu/Lark | `eternal-feishu` | Full tools including terminal |
+| WeCom | `eternal-wecom` | Full tools including terminal |
+| WeCom Callback | `eternal-wecom-callback` | Full tools including terminal |
+| Weixin | `eternal-weixin` | Full tools including terminal |
+| BlueBubbles | `eternal-bluebubbles` | Full tools including terminal |
+| QQBot | `eternal-qqbot` | Full tools including terminal |
+| Yuanbao | `eternal-yuanbao` | Full tools including terminal |
+| Microsoft Teams | `eternal-teams` | Full tools including terminal |
+| API Server | `eternal-api-server` | Full tools (drops `clarify`, `text_to_speech` — programmatic access doesn't have an interactive user) |
+| Webhooks | `eternal-webhook` | Full tools including terminal |
+| Raft | `eternal-raft` | Wake-only channel; agent uses Raft CLI for message I/O |
 
 ## Operating a multi-platform gateway
 
@@ -611,7 +611,7 @@ The breaker does **not** auto-resume — it stays open until you run `/platform 
 
 When an adapter is paused, check:
 
-1. **Gateway log** (`~/.hermes/logs/gateway.log` or the systemd / launchd unit log). Search for the platform name and `circuit breaker`, `paused`, or `disabled`. The trip event includes the failure count and the last error.
+1. **Gateway log** (`~/.eternal/logs/gateway.log` or the systemd / launchd unit log). Search for the platform name and `circuit breaker`, `paused`, or `disabled`. The trip event includes the failure count and the last error.
 2. **`/platform list`** output — shows the current state and last reason.
 3. **The provider's status page** (Telegram bot API status, Discord status, etc.). The breaker tripped because the platform was unhealthy; don't try to resume until it's back.
 

@@ -1,21 +1,21 @@
 ---
 sidebar_position: 2
 title: "Configuration"
-description: "Configure Hermes Agent — config.yaml, providers, models, API keys, and more"
+description: "Configure Eternal Agent — config.yaml, providers, models, API keys, and more"
 ---
 
 # Configuration
 
-All settings are stored in the `~/.hermes/` directory for easy access.
+All settings are stored in the `~/.eternal/` directory for easy access.
 
 :::tip Easiest path to a working `config.yaml`
-Run `hermes setup --portal` — one OAuth gets you a model provider and all four Tool Gateway tools without hand-editing YAML. Portal subscribers also get 10% off token-billed providers. See [Nous Portal](/integrations/nous-portal).
+Run `eternal setup --portal` — one OAuth gets you a model provider and all four Tool Gateway tools without hand-editing YAML. Portal subscribers also get 10% off token-billed providers. See [Nous Portal](/integrations/nous-portal).
 :::
 
 ## Directory Structure
 
 ```text
-~/.hermes/
+~/.eternal/
 ├── config.yaml     # Settings (model, terminal, TTS, compression, etc.)
 ├── .env            # API keys and secrets
 ├── auth.json       # OAuth provider credentials (Nous Portal, etc.)
@@ -30,33 +30,33 @@ Run `hermes setup --portal` — one OAuth gets you a model provider and all four
 ## Managing Configuration
 
 ```bash
-hermes config              # View current configuration
-hermes config edit         # Open config.yaml in your editor
-hermes config get KEY      # Print a resolved value
-hermes config set KEY VAL  # Set a specific value
-hermes config unset KEY    # Remove a user-set value
-hermes config check        # Check for missing options (after updates)
-hermes config migrate      # Interactively add missing options
+eternal config              # View current configuration
+eternal config edit         # Open config.yaml in your editor
+eternal config get KEY      # Print a resolved value
+eternal config set KEY VAL  # Set a specific value
+eternal config unset KEY    # Remove a user-set value
+eternal config check        # Check for missing options (after updates)
+eternal config migrate      # Interactively add missing options
 
 # Examples:
-hermes config get model
-hermes config set model anthropic/claude-opus-4
-hermes config set terminal.backend docker
-hermes config unset terminal.backend
-hermes config set OPENROUTER_API_KEY sk-or-...  # Saves to .env
+eternal config get model
+eternal config set model anthropic/claude-opus-4
+eternal config set terminal.backend docker
+eternal config unset terminal.backend
+eternal config set OPENROUTER_API_KEY sk-or-...  # Saves to .env
 ```
 
 :::tip
-The `hermes config set` command automatically routes values to the right file — API keys are saved to `.env`, everything else to `config.yaml`.
+The `eternal config set` command automatically routes values to the right file — API keys are saved to `.env`, everything else to `config.yaml`.
 :::
 
 ## Configuration Precedence
 
 Settings are resolved in this order (highest priority first):
 
-1. **CLI arguments** — e.g., `hermes chat --model anthropic/claude-sonnet-4` (per-invocation override)
-2. **`~/.hermes/config.yaml`** — the primary config file for all non-secret settings
-3. **`~/.hermes/.env`** — fallback for env vars; **required** for secrets (API keys, tokens, passwords)
+1. **CLI arguments** — e.g., `eternal chat --model anthropic/claude-sonnet-4` (per-invocation override)
+2. **`~/.eternal/config.yaml`** — the primary config file for all non-secret settings
+3. **`~/.eternal/.env`** — fallback for env vars; **required** for secrets (API keys, tokens, passwords)
 4. **Built-in defaults** — hardcoded safe defaults when nothing else is set
 
 :::info Rule of Thumb
@@ -89,32 +89,32 @@ For AI provider setup (OpenRouter, Anthropic, Copilot, custom endpoints, self-ho
 
 ### Provider Timeouts
 
-You can set `providers.<id>.request_timeout_seconds` for a provider-wide request timeout, plus `providers.<id>.models.<model>.timeout_seconds` for a model-specific override. Applies to the primary turn client on every transport (OpenAI-wire, native Anthropic, Anthropic-compatible), the fallback chain, rebuilds after credential rotation, and (for OpenAI-wire) the per-request timeout kwarg — so the configured value wins over the legacy `HERMES_API_TIMEOUT` env var.
+You can set `providers.<id>.request_timeout_seconds` for a provider-wide request timeout, plus `providers.<id>.models.<model>.timeout_seconds` for a model-specific override. Applies to the primary turn client on every transport (OpenAI-wire, native Anthropic, Anthropic-compatible), the fallback chain, rebuilds after credential rotation, and (for OpenAI-wire) the per-request timeout kwarg — so the configured value wins over the legacy `ETERNAL_API_TIMEOUT` env var.
 
-You can also set `providers.<id>.stale_timeout_seconds` for the non-streaming stale-call detector, plus `providers.<id>.models.<model>.stale_timeout_seconds` for a model-specific override. This wins over the legacy `HERMES_API_CALL_STALE_TIMEOUT` env var.
+You can also set `providers.<id>.stale_timeout_seconds` for the non-streaming stale-call detector, plus `providers.<id>.models.<model>.stale_timeout_seconds` for a model-specific override. This wins over the legacy `ETERNAL_API_CALL_STALE_TIMEOUT` env var.
 
-Leaving these unset keeps the legacy defaults (`HERMES_API_TIMEOUT=1800`s, `HERMES_API_CALL_STALE_TIMEOUT=90`s, native Anthropic 900s). The non-streaming stale detector is auto-disabled for local endpoints when left implicit and can scale upward for very large contexts. Not currently wired for AWS Bedrock (both `bedrock_converse` and AnthropicBedrock SDK paths use boto3 with its own timeout configuration). See the commented example in [`cli-config.yaml.example`](https://github.com/NousResearch/hermes-agent/blob/main/cli-config.yaml.example).
+Leaving these unset keeps the legacy defaults (`ETERNAL_API_TIMEOUT=1800`s, `ETERNAL_API_CALL_STALE_TIMEOUT=90`s, native Anthropic 900s). The non-streaming stale detector is auto-disabled for local endpoints when left implicit and can scale upward for very large contexts. Not currently wired for AWS Bedrock (both `bedrock_converse` and AnthropicBedrock SDK paths use boto3 with its own timeout configuration). See the commented example in [`cli-config.yaml.example`](https://github.com/NousResearch/hermes-agent/blob/main/cli-config.yaml.example).
 
 ## Update Behavior
 
-`hermes update` settings live under `updates` in `config.yaml`:
+`eternal update` settings live under `updates` in `config.yaml`:
 
 ```yaml
 updates:
-  pre_update_backup: quick       # quick (state snapshot, default) | full (snapshot + HERMES_HOME zip) | off
+  pre_update_backup: quick       # quick (state snapshot, default) | full (snapshot + ETERNAL_HOME zip) | off
   backup_keep: 5                 # Keep this many full pre-update backup zips
   non_interactive_local_changes: stash  # stash | discard
 ```
 
-`pre_update_backup` is the single pre-update safety knob: `quick` (default) snapshots critical state files (pairing data, cron jobs, config, auth; files over 1 GiB are skipped) into `state-snapshots/`; `full` additionally zips all of `HERMES_HOME` into `backups/` and can add minutes on large homes; `off` disables both. Legacy booleans are honored (`true` → `full`, `false` → `off`).
+`pre_update_backup` is the single pre-update safety knob: `quick` (default) snapshots critical state files (pairing data, cron jobs, config, auth; files over 1 GiB are skipped) into `state-snapshots/`; `full` additionally zips all of `ETERNAL_HOME` into `backups/` and can add minutes on large homes; `off` disables both. Legacy booleans are honored (`true` → `full`, `false` → `off`).
 
-For git installs, Hermes auto-stashes dirty tracked files and untracked files before checking out the update branch or pulling. Interactive terminal updates prompt before restoring that stash. Non-interactive updates (desktop/chat app, gateway, or `--yes`) use `updates.non_interactive_local_changes`: `stash` restores local source edits after a successful pull, while `discard` drops the update-created stash after a successful pull. Use `discard` only on managed installs where local source edits are never meant to persist.
+For git installs, Eternal auto-stashes dirty tracked files and untracked files before checking out the update branch or pulling. Interactive terminal updates prompt before restoring that stash. Non-interactive updates (desktop/chat app, gateway, or `--yes`) use `updates.non_interactive_local_changes`: `stash` restores local source edits after a successful pull, while `discard` drops the update-created stash after a successful pull. Use `discard` only on managed installs where local source edits are never meant to persist.
 
-Before that stash step, Hermes also restores tracked `package-lock.json` diffs left by npm install/build churn. Commit or manually stash intentional lockfile edits before updating.
+Before that stash step, Eternal also restores tracked `package-lock.json` diffs left by npm install/build churn. Commit or manually stash intentional lockfile edits before updating.
 
 ## Terminal Backend Configuration
 
-Hermes supports six terminal backends. Each determines where the agent's shell commands actually execute — your local machine, a Docker container, a remote server via SSH, a Modal cloud sandbox (direct or via the Nous-managed gateway), a Daytona workspace, or a Singularity/Apptainer container.
+Eternal supports six terminal backends. Each determines where the agent's shell commands actually execute — your local machine, a Docker container, a remote server via SSH, a Modal cloud sandbox (direct or via the Nous-managed gateway), a Daytona workspace, or a Singularity/Apptainer container.
 
 ```yaml
 terminal:
@@ -128,7 +128,7 @@ terminal:
   daytona_image: "nikolaik/python-nodejs:python3.11-nodejs20"               # Container image for Daytona backend
 ```
 
-For cloud sandboxes such as Modal and Daytona, `container_persistent: true` means Hermes will try to preserve filesystem state across sandbox recreation. It does not promise that the same live sandbox, PID space, or background processes will still be running later.
+For cloud sandboxes such as Modal and Daytona, `container_persistent: true` means Eternal will try to preserve filesystem state across sandbox recreation. It does not promise that the same live sandbox, PID space, or background processes will still be running later.
 
 ### Backend Overview
 
@@ -152,22 +152,22 @@ terminal:
 
 By default, local tool subprocesses keep your real OS-user `HOME`. This lets
 external CLIs such as `git`, `ssh`, `gh`, `az`, `npm`, Claude Code, and Codex
-find the credentials and config they already use in your normal shell. Hermes
-state is still profile-scoped through `HERMES_HOME`; `HOME` is not how profiles
+find the credentials and config they already use in your normal shell. Eternal
+state is still profile-scoped through `ETERNAL_HOME`; `HOME` is not how profiles
 select config, memory, sessions, or skills.
 
-Hermes does **not** change your system-wide `HOME`, your shell startup files, or
+Eternal does **not** change your system-wide `HOME`, your shell startup files, or
 the operating system account home. This setting only controls the environment
-passed to subprocesses that Hermes launches through tools such as `terminal`,
+passed to subprocesses that Eternal launches through tools such as `terminal`,
 background terminal processes, `execute_code`, and ACP helper processes.
 
 #### `terminal.home_mode`
 
 | Mode | Host installs | Containers | Tradeoff |
 |---|---|---|---|
-| `auto` | Keep the real OS-user `HOME` | Use `{HERMES_HOME}/home` | Recommended default. Host CLIs keep working; container state persists. |
+| `auto` | Keep the real OS-user `HOME` | Use `{ETERNAL_HOME}/home` | Recommended default. Host CLIs keep working; container state persists. |
 | `real` | Force the real OS-user `HOME` | Force the real OS-user `HOME` if visible | Useful if a parent process accidentally started with `HOME` pointed at a profile home. |
-| `profile` | Use `{HERMES_HOME}/home` when it exists | Use `{HERMES_HOME}/home` when it exists | Strict per-profile CLI config isolation, but normal `~/.ssh`, `~/.gitconfig`, `~/.azure`, `~/.config/gh`, Claude/Codex auth, npm state, etc. will not be visible unless you initialize or link them inside the profile home. |
+| `profile` | Use `{ETERNAL_HOME}/home` when it exists | Use `{ETERNAL_HOME}/home` when it exists | Strict per-profile CLI config isolation, but normal `~/.ssh`, `~/.gitconfig`, `~/.azure`, `~/.config/gh`, Claude/Codex auth, npm state, etc. will not be visible unless you initialize or link them inside the profile home. |
 
 The downside of the default is that host profiles share the same normal
 user-level CLI credentials/config under `~`. If you need a profile with a
@@ -182,31 +182,31 @@ terminal:
   home_mode: profile
 ```
 
-In that mode tool subprocesses use `{HERMES_HOME}/home` as `HOME`. Hermes also
-sets `HERMES_REAL_HOME` so scripts can still locate the actual user home when
-they need it. Container backends keep using `{HERMES_HOME}/home` in `auto` mode
-because that directory lives on the persistent Hermes data volume.
+In that mode tool subprocesses use `{ETERNAL_HOME}/home` as `HOME`. Eternal also
+sets `ETERNAL_REAL_HOME` so scripts can still locate the actual user home when
+they need it. Container backends keep using `{ETERNAL_HOME}/home` in `auto` mode
+because that directory lives on the persistent Eternal data volume.
 
 Scripts that need to distinguish profile state from the real user home should
-prefer `HERMES_HOME` for Hermes data and `HERMES_REAL_HOME` for the account home:
+prefer `ETERNAL_HOME` for Eternal data and `ETERNAL_REAL_HOME` for the account home:
 
 ```python
 from pathlib import Path
 import os
 
-hermes_home = Path(os.environ["HERMES_HOME"])
-real_home = Path(os.environ.get("HERMES_REAL_HOME", os.environ["HOME"]))
+eternal_home = Path(os.environ["ETERNAL_HOME"])
+real_home = Path(os.environ.get("ETERNAL_REAL_HOME", os.environ["HOME"]))
 ```
 
 :::warning
-The agent has the same filesystem access as your user account. Use `hermes tools` to disable tools you don't want, or switch to Docker for sandboxing.
+The agent has the same filesystem access as your user account. Use `eternal tools` to disable tools you don't want, or switch to Docker for sandboxing.
 :::
 
 ### Docker Backend
 
 Runs commands inside a Docker container with security hardening (all capabilities dropped, no privilege escalation, PID limits).
 
-**Single persistent container, shared across Hermes processes.** Hermes starts ONE long-lived container on first use and routes every terminal, file, and `execute_code` call through `docker exec` into that same container — across sessions, `/new`, `/reset`, and `delegate_task` subagents. Working-directory changes, installed packages, files in `/workspace`, and **background processes** all carry over from one tool call to the next, and from one Hermes process to the next. When you close a TUI session, run `/quit`, or start a new `hermes` invocation, the container keeps running and the next Hermes process reuses it via a labeled lookup. See **Container lifecycle** below for the exact teardown rules.
+**Single persistent container, shared across Eternal processes.** Eternal starts ONE long-lived container on first use and routes every terminal, file, and `execute_code` call through `docker exec` into that same container — across sessions, `/new`, `/reset`, and `delegate_task` subagents. Working-directory changes, installed packages, files in `/workspace`, and **background processes** all carry over from one tool call to the next, and from one Eternal process to the next. When you close a TUI session, run `/quit`, or start a new `eternal` invocation, the container keeps running and the next Eternal process reuses it via a labeled lookup. See **Container lifecycle** below for the exact teardown rules.
 
 ```yaml
 terminal:
@@ -235,7 +235,7 @@ terminal:
 
   # Cross-process container reuse (defaults match the "one long-lived
   # container shared across sessions" contract — see Container lifecycle).
-  docker_persist_across_processes: true   # Reuse container across Hermes restarts
+  docker_persist_across_processes: true   # Reuse container across Eternal restarts
   docker_orphan_reaper: true              # Sweep abandoned Exited containers at startup
 
   # Cross-backend lifecycle settings (apply to docker as well)
@@ -243,25 +243,25 @@ terminal:
   lifetime_seconds: 300            # Idle-reaper window; also feeds 2× orphan-reaper threshold
 ```
 
-**`docker_env`** vs **`docker_forward_env`**: the former injects literal `KEY=value` pairs you specify in the config (the values live in your `config.yaml` or are passed as a JSON dict via `TERMINAL_DOCKER_ENV='{"DEBUG":"1"}'`). The latter forwards values from your shell or `~/.hermes/.env`, so the actual secret never appears in the config file. Use `docker_forward_env` for tokens and `docker_env` for static knobs the container needs.
+**`docker_env`** vs **`docker_forward_env`**: the former injects literal `KEY=value` pairs you specify in the config (the values live in your `config.yaml` or are passed as a JSON dict via `TERMINAL_DOCKER_ENV='{"DEBUG":"1"}'`). The latter forwards values from your shell or `~/.eternal/.env`, so the actual secret never appears in the config file. Use `docker_forward_env` for tokens and `docker_env` for static knobs the container needs.
 
-**`terminal.docker_extra_args`** (also overridable via `TERMINAL_DOCKER_EXTRA_ARGS='["--gpus=all"]'`) lets you pass arbitrary `docker run` flags that Hermes doesn't surface as first-class keys — `--gpus`, `--network`, `--add-host`, alternative `--security-opt` overrides, etc. Each entry must be a string; the list is appended last to the assembled `docker run` invocation so it can override Hermes' defaults if needed. Use sparingly — flags that conflict with the sandbox hardening (capability drops, `--user`, the workspace bind mount) will silently weaken isolation.
+**`terminal.docker_extra_args`** (also overridable via `TERMINAL_DOCKER_EXTRA_ARGS='["--gpus=all"]'`) lets you pass arbitrary `docker run` flags that Eternal doesn't surface as first-class keys — `--gpus`, `--network`, `--add-host`, alternative `--security-opt` overrides, etc. Each entry must be a string; the list is appended last to the assembled `docker run` invocation so it can override Eternal' defaults if needed. Use sparingly — flags that conflict with the sandbox hardening (capability drops, `--user`, the workspace bind mount) will silently weaken isolation.
 
-**`terminal.docker_network`** (default `true`; env: `TERMINAL_DOCKER_NETWORK`) — set to `false` to run the sandbox container with `--network=none`, cutting off all network egress from agent commands. This applies to the execution container used by `terminal`, `execute_code`, and the file tools. Because containers persist across Hermes processes, flipping this to `false` while an older networked container exists will remove that container and start a fresh air-gapped one (a warning is logged); background processes running inside it are lost. Prefer this key over passing `--network=none` through `docker_extra_args`.
+**`terminal.docker_network`** (default `true`; env: `TERMINAL_DOCKER_NETWORK`) — set to `false` to run the sandbox container with `--network=none`, cutting off all network egress from agent commands. This applies to the execution container used by `terminal`, `execute_code`, and the file tools. Because containers persist across Eternal processes, flipping this to `false` while an older networked container exists will remove that container and start a fresh air-gapped one (a warning is logged); background processes running inside it are lost. Prefer this key over passing `--network=none` through `docker_extra_args`.
 
-**Requirements:** Docker Desktop or Docker Engine installed and running. Hermes probes `$PATH` plus common macOS install locations (`/usr/local/bin/docker`, `/opt/homebrew/bin/docker`, Docker Desktop app bundle). Podman is supported out of the box: set `HERMES_DOCKER_BINARY=podman` (or the full path) to force it when both are installed.
+**Requirements:** Docker Desktop or Docker Engine installed and running. Eternal probes `$PATH` plus common macOS install locations (`/usr/local/bin/docker`, `/opt/homebrew/bin/docker`, Docker Desktop app bundle). Podman is supported out of the box: set `ETERNAL_DOCKER_BINARY=podman` (or the full path) to force it when both are installed.
 
 #### Container lifecycle
 
-Every Hermes-managed container is tagged with three labels so subsequent processes (and the orphan reaper) can identify it:
+Every Eternal-managed container is tagged with three labels so subsequent processes (and the orphan reaper) can identify it:
 
-- `hermes-agent=1` — marks it as Hermes-managed
-- `hermes-task-id=<sanitized task_id>` — keys the per-task reuse probe
-- `hermes-profile=<sanitized profile name>` — scopes reuse and reaping to the active Hermes profile
+- `eternal-agent=1` — marks it as Eternal-managed
+- `eternal-task-id=<sanitized task_id>` — keys the per-task reuse probe
+- `eternal-profile=<sanitized profile name>` — scopes reuse and reaping to the active Eternal profile
 
-On startup, Hermes runs `docker ps --filter label=hermes-task-id=<id> --filter label=hermes-profile=<profile>` and **attaches to the existing container** when it finds one. If the container is `exited` (e.g. after a Docker daemon restart), it's `docker start`'d and reused — filesystem state and any installed packages survive, but in-container background processes do not.
+On startup, Eternal runs `docker ps --filter label=eternal-task-id=<id> --filter label=eternal-profile=<profile>` and **attaches to the existing container** when it finds one. If the container is `exited` (e.g. after a Docker daemon restart), it's `docker start`'d and reused — filesystem state and any installed packages survive, but in-container background processes do not.
 
-When a Hermes process exits — `/quit`, closing a TUI session, gateway shutdown, even SIGKILL — the cleanup path is a **no-op for the container in default mode**. The container keeps running. The next Hermes process attaches to it in milliseconds via the label probe. This is the behavior the "one long-lived container shared across sessions" contract requires: it's the only way background processes (npm watchers, dev servers, long-running pytest) survive across sessions.
+When a Eternal process exits — `/quit`, closing a TUI session, gateway shutdown, even SIGKILL — the cleanup path is a **no-op for the container in default mode**. The container keeps running. The next Eternal process attaches to it in milliseconds via the label probe. This is the behavior the "one long-lived container shared across sessions" contract requires: it's the only way background processes (npm watchers, dev servers, long-running pytest) survive across sessions.
 
 **The container is only torn down (stopped and `docker rm -f`'d) in these cases:**
 
@@ -269,15 +269,15 @@ When a Hermes process exits — `/quit`, closing a TUI session, gateway shutdown
 |---|---|
 | `docker_persist_across_processes: false` | Explicit per-process isolation. Every `cleanup()` does `stop` + `rm -f`. Matches pre-issue-#20561 behavior. |
 | Idle reaper (`lifetime_seconds`, default 300s) | Only when the env is `persist_across_processes=false`. Persist-mode envs are no-op'd; container survives the idle sweep. |
-| Orphan reaper at next startup | Sweeps **Exited** hermes-labeled containers older than `2 × lifetime_seconds` (default 600s = 10 min), scoped to the current profile. **Running containers are never touched** — sibling-process safety. Set `docker_orphan_reaper: false` to disable. |
+| Orphan reaper at next startup | Sweeps **Exited** eternal-labeled containers older than `2 × lifetime_seconds` (default 600s = 10 min), scoped to the current profile. **Running containers are never touched** — sibling-process safety. Set `docker_orphan_reaper: false` to disable. |
 | Direct user action | `docker rm -f`, `docker system prune`, Docker Desktop restart. We don't set `--restart=always`, so a host reboot leaves the container `Exited` (its CoW layer survives and gets reused on next startup, but bg processes are gone). |
 
 Edge cases worth knowing:
 
 - **OOM kill of in-container PID 1** transitions the container to `Exited`. Next reuse will `docker start` it; filesystem state survives, bg processes do not.
-- **Switching profiles** isolates containers from each other — a container labeled `hermes-profile=work` is invisible to a Hermes process running under `hermes-profile=research`. The orphan reaper is profile-scoped too, so cross-profile containers don't get reaped accidentally, but they also won't get cleaned up automatically until you start Hermes again under their original profile.
+- **Switching profiles** isolates containers from each other — a container labeled `eternal-profile=work` is invisible to a Eternal process running under `eternal-profile=research`. The orphan reaper is profile-scoped too, so cross-profile containers don't get reaped accidentally, but they also won't get cleaned up automatically until you start Eternal again under their original profile.
 
-Parallel subagents spawned via `delegate_task(tasks=[...])` share this one container — concurrent `cd`, env mutations, and writes to the same path will collide. If a subagent needs an isolated sandbox, it must register a per-task image override via `register_task_env_overrides()`, which RL and benchmark environments (TerminalBench2, HermesSweEnv, etc.) do automatically for their per-task Docker images.
+Parallel subagents spawned via `delegate_task(tasks=[...])` share this one container — concurrent `cd`, env mutations, and writes to the same path will collide. If a subagent needs an isolated sandbox, it must register a per-task image override via `register_task_env_overrides()`, which RL and benchmark environments (TerminalBench2, EternalSweEnv, etc.) do automatically for their per-task Docker images.
 
 **Security hardening:**
 - `--cap-drop ALL` with only `DAC_OVERRIDE`, `CHOWN`, `FOWNER` added back
@@ -285,7 +285,7 @@ Parallel subagents spawned via `delegate_task(tasks=[...])` share this one conta
 - `--pids-limit 256`
 - Size-limited tmpfs for `/tmp` (512MB), `/var/tmp` (256MB), `/run` (64MB)
 
-**Credential forwarding:** Env vars listed in `docker_forward_env` are resolved from your shell environment first, then `~/.hermes/.env`. Skills can also declare `required_environment_variables` which are merged automatically.
+**Credential forwarding:** Env vars listed in `docker_forward_env` are resolved from your shell environment first, then `~/.eternal/.env`. Skills can also declare `required_environment_variables` which are merged automatically.
 
 #### Environment variable overrides
 
@@ -309,7 +309,7 @@ Every key under `terminal:` has an env-var override of the form `TERMINAL_<KEY_U
 | `TERMINAL_CONTAINER_PERSISTENT` | `container_persistent` | `true` / `false` — controls the bind-mount workspace dirs, distinct from `docker_persist_across_processes` |
 | `TERMINAL_LIFETIME_SECONDS` | `lifetime_seconds` | Idle reaper window |
 | `TERMINAL_TIMEOUT` | `timeout` | Per-command timeout |
-| `HERMES_DOCKER_BINARY` | _none_ | Force a specific docker/podman binary path |
+| `ETERNAL_DOCKER_BINARY` | _none_ | Force a specific docker/podman binary path |
 
 ### SSH Backend
 
@@ -353,9 +353,9 @@ terminal:
 
 **Required:** Either `MODAL_TOKEN_ID` + `MODAL_TOKEN_SECRET` environment variables, or a `~/.modal.toml` config file.
 
-**Persistence:** When enabled, the sandbox filesystem is snapshotted on cleanup and restored on next session. Snapshots are tracked in `~/.hermes/modal_snapshots.json`. This preserves filesystem state, not live processes, PID space, or background jobs.
+**Persistence:** When enabled, the sandbox filesystem is snapshotted on cleanup and restored on next session. Snapshots are tracked in `~/.eternal/modal_snapshots.json`. This preserves filesystem state, not live processes, PID space, or background jobs.
 
-**Credential files:** Automatically mounted from `~/.hermes/` (OAuth tokens, etc.) and synced before each command.
+**Credential files:** Automatically mounted from `~/.eternal/` (OAuth tokens, etc.) and synced before each command.
 
 ### Daytona Backend
 
@@ -372,7 +372,7 @@ terminal:
 
 **Required:** `DAYTONA_API_KEY` environment variable.
 
-**Persistence:** When enabled, sandboxes are stopped (not deleted) on cleanup and resumed on next session. Sandbox names follow the pattern `hermes-{task_id}`.
+**Persistence:** When enabled, sandboxes are stopped (not deleted) on cleanup and resumed on next session. Sandbox names follow the pattern `eternal-{task_id}`.
 
 **Disk limit:** Daytona enforces a 10 GiB maximum. Requests above this are capped with a warning.
 
@@ -393,7 +393,7 @@ terminal:
 
 **Image handling:** Docker URLs (`docker://...`) are automatically converted to SIF files and cached. Existing `.sif` files are used directly.
 
-**Scratch directory:** Resolved in order: `TERMINAL_SCRATCH_DIR` → `TERMINAL_SANDBOX_DIR/singularity` → `/scratch/$USER/hermes-agent` (HPC convention) → `~/.hermes/sandboxes/singularity`.
+**Scratch directory:** Resolved in order: `TERMINAL_SCRATCH_DIR` → `TERMINAL_SANDBOX_DIR/singularity` → `/scratch/$USER/eternal-agent` (HPC convention) → `~/.eternal/sandboxes/singularity`.
 
 **Isolation:** Uses `--containall --no-home` for full namespace isolation without mounting the host home directory.
 
@@ -402,9 +402,9 @@ terminal:
 If terminal commands fail immediately or the terminal tool is reported as disabled:
 
 - **Local** — No special requirements. The safest default when getting started.
-- **Docker** — Run `docker version` to verify Docker is working. If it fails, fix Docker or `hermes config set terminal.backend local`.
-- **SSH** — Both `TERMINAL_SSH_HOST` and `TERMINAL_SSH_USER` must be set. Hermes logs a clear error if either is missing.
-- **Modal** — Needs `MODAL_TOKEN_ID` env var or `~/.modal.toml`. Run `hermes doctor` to check.
+- **Docker** — Run `docker version` to verify Docker is working. If it fails, fix Docker or `eternal config set terminal.backend local`.
+- **SSH** — Both `TERMINAL_SSH_HOST` and `TERMINAL_SSH_USER` must be set. Eternal logs a clear error if either is missing.
+- **Modal** — Needs `MODAL_TOKEN_ID` env var or `~/.modal.toml`. Run `eternal doctor` to check.
 - **Daytona** — Needs `DAYTONA_API_KEY`. The Daytona SDK handles server URL configuration.
 - **Singularity** — Needs `apptainer` or `singularity` in `$PATH`. Common on HPC clusters.
 
@@ -412,11 +412,11 @@ When in doubt, set `terminal.backend` back to `local` and verify that commands r
 
 ### Remote-to-Host File Sync on Teardown
 
-For the **SSH**, **Modal**, and **Daytona** backends (anywhere the agent's working tree lives on a different machine than the host running Hermes), Hermes tracks files the agent touched inside the remote sandbox and, on session teardown / sandbox cleanup, **syncs the modified files back to the host** under `~/.hermes/cache/remote-syncs/<session-id>/`.
+For the **SSH**, **Modal**, and **Daytona** backends (anywhere the agent's working tree lives on a different machine than the host running Eternal), Eternal tracks files the agent touched inside the remote sandbox and, on session teardown / sandbox cleanup, **syncs the modified files back to the host** under `~/.eternal/cache/remote-syncs/<session-id>/`.
 
 - Triggers on: session close, `/new`, `/reset`, gateway message timeout, `delegate_task` subagent completion when the child used a remote backend.
 - Covers the whole tree the agent modified, not just files it explicitly opened. Additions, edits, and deletions are all captured.
-- The remote sandbox may have been torn down by the time you go looking; the local `~/.hermes/cache/remote-syncs/…` copy is the authoritative record of what the agent changed.
+- The remote sandbox may have been torn down by the time you go looking; the local `~/.eternal/cache/remote-syncs/…` copy is the authoritative record of what the agent changed.
 - Large binary outputs (model checkpoints, raw datasets) are capped by size — the sync skips files over `file_sync_max_mb` (default `100`). Bump that if you expect bigger artifacts to come back.
 
 ```yaml
@@ -437,7 +437,7 @@ terminal:
   docker_volumes:
     - "/home/user/projects:/workspace/projects"   # Read-write (default)
     - "/home/user/datasets:/data:ro"              # Read-only
-    - "/home/user/.hermes/cache/documents:/output" # Gateway-visible exports
+    - "/home/user/.eternal/cache/documents:/output" # Gateway-visible exports
 ```
 
 This is useful for:
@@ -447,11 +447,11 @@ This is useful for:
 
 If you use a messaging gateway and want the agent to send generated files via
 `MEDIA:/...`, prefer a dedicated host-visible export mount such as
-`/home/user/.hermes/cache/documents:/output`.
+`/home/user/.eternal/cache/documents:/output`.
 
 - Write files inside Docker to `/output/...`
 - Emit the **host path** in `MEDIA:`, for example:
-  `MEDIA:/home/user/.hermes/cache/documents/report.txt`
+  `MEDIA:/home/user/.eternal/cache/documents/report.txt`
 - Do **not** emit `/workspace/...` or `/output/...` unless that exact path also
   exists for the gateway process on the host
 
@@ -475,7 +475,7 @@ terminal:
     - "NPM_TOKEN"
 ```
 
-Hermes resolves each listed variable from your current shell first, then falls back to `~/.hermes/.env` if it was saved with `hermes config set`.
+Eternal resolves each listed variable from your current shell first, then falls back to `~/.eternal/.env` if it was saved with `eternal config set`.
 
 :::warning
 Anything listed in `docker_forward_env` becomes visible to commands run inside the container. Only forward credentials you are comfortable exposing to the terminal session.
@@ -491,13 +491,13 @@ terminal:
   docker_run_as_host_user: true   # default: false
 ```
 
-When enabled, Hermes appends `--user $(id -u):$(id -g)` to the `docker run` command so files written into bind-mounted directories (`/workspace`, `/root`, anything in `docker_volumes`) are owned by your host user, not root. The trade-off: the container can no longer `apt install` or write to root-owned paths like `/root/.npm` — use a base image whose `HOME` is owned by a non-root user (or add your required tooling at image build time) if you need both.
+When enabled, Eternal appends `--user $(id -u):$(id -g)` to the `docker run` command so files written into bind-mounted directories (`/workspace`, `/root`, anything in `docker_volumes`) are owned by your host user, not root. The trade-off: the container can no longer `apt install` or write to root-owned paths like `/root/.npm` — use a base image whose `HOME` is owned by a non-root user (or add your required tooling at image build time) if you need both.
 
 Leave this `false` (the default) for backwards-compatible behavior. Turn it on when your workflow is mostly "edit mounted host files" and you're tired of `sudo chown -R`.
 
 ### Optional: Mount the Launch Directory into `/workspace`
 
-Docker sandboxes stay isolated by default. Hermes does **not** pass your current host working directory into the container unless you explicitly opt in.
+Docker sandboxes stay isolated by default. Eternal does **not** pass your current host working directory into the container unless you explicitly opt in.
 
 Enable it in `config.yaml`:
 
@@ -508,7 +508,7 @@ terminal:
 ```
 
 When enabled:
-- if you launch Hermes from `~/projects/my-app`, that host directory is bind-mounted to `/workspace`
+- if you launch Eternal from `~/projects/my-app`, that host directory is bind-mounted to `/workspace`
 - the Docker backend starts in `/workspace`
 - file tools and terminal commands both see the same mounted project
 
@@ -516,7 +516,7 @@ When disabled, `/workspace` stays sandbox-owned unless you explicitly mount some
 
 Security tradeoff:
 - `false` preserves the sandbox boundary
-- `true` gives the sandbox direct access to the directory you launched Hermes from
+- `true` gives the sandbox direct access to the directory you launched Eternal from
 
 Use the opt-in only when you intentionally want the container to work on live host files.
 
@@ -534,7 +534,7 @@ terminal:
 To disable:
 
 ```bash
-hermes config set terminal.persistent_shell false
+eternal config set terminal.persistent_shell false
 ```
 
 **What persists across commands:**
@@ -575,21 +575,21 @@ skills:
 
 **How skill settings work:**
 
-- `hermes config migrate` scans all enabled skills, finds unconfigured settings, and offers to prompt you
-- `hermes config show` displays all skill settings under "Skill Settings" with the skill they belong to
+- `eternal config migrate` scans all enabled skills, finds unconfigured settings, and offers to prompt you
+- `eternal config show` displays all skill settings under "Skill Settings" with the skill they belong to
 - When a skill loads, its resolved config values are injected into the skill context automatically
 
 **Setting values manually:**
 
 ```bash
-hermes config set skills.config.myplugin.path ~/myplugin-data
+eternal config set skills.config.myplugin.path ~/myplugin-data
 ```
 
 For details on declaring config settings in your own skills, see [Creating Skills — Config Settings](/developer-guide/creating-skills#config-settings-configyaml).
 
 ### Guard on agent-created skill writes
 
-When the agent uses `skill_manage` to create, edit, patch, or delete a skill, Hermes can optionally scan the new/updated content for dangerous keyword patterns (credential harvesting, obvious prompt injection, exfil instructions). The scanner is **off by default** — real agent workflows that legitimately touch `~/.ssh/` or mention `$OPENAI_API_KEY` were tripping the heuristic too often. Turn it back on if you want the scanner to prompt you before the agent's skill writes land:
+When the agent uses `skill_manage` to create, edit, patch, or delete a skill, Eternal can optionally scan the new/updated content for dangerous keyword patterns (credential harvesting, obvious prompt injection, exfil instructions). The scanner is **off by default** — real agent workflows that legitimately touch `~/.ssh/` or mention `$OPENAI_API_KEY` were tripping the heuristic too often. Turn it back on if you want the scanner to prompt you before the agent's skill writes land:
 
 ```yaml
 skills:
@@ -607,7 +607,7 @@ skills:
   write_approval: false   # false = write freely (default) | true = stage every write for review
 ```
 
-When on, skill writes are staged under `~/.hermes/pending/skills/` and reviewed with `/skills pending`, `/skills diff <id>`, `/skills approve <id>`, `/skills reject <id>` — from the CLI or any messaging platform. Toggle at runtime with `/skills approval on|off`. Memory has the same gate (`memory.write_approval`, below). Full walkthrough: [Gating agent skill writes](/user-guide/features/skills#gating-agent-skill-writes-skillswrite_approval).
+When on, skill writes are staged under `~/.eternal/pending/skills/` and reviewed with `/skills pending`, `/skills diff <id>`, `/skills approve <id>`, `/skills reject <id>` — from the CLI or any messaging platform. Toggle at runtime with `/skills approval on|off`. Memory has the same gate (`memory.write_approval`, below). Full walkthrough: [Gating agent skill writes](/user-guide/features/skills#gating-agent-skill-writes-skillswrite_approval).
 
 ## Memory Configuration
 
@@ -624,7 +624,7 @@ With `memory.write_approval: true`, memory writes need your approval before they
 
 ## Context File Truncation
 
-Controls how much content Hermes loads from each automatic context file before applying head/tail truncation. This applies to files injected into the system prompt such as `SOUL.md`, `.hermes.md`, `AGENTS.md`, `CLAUDE.md`, and `.cursorrules`. It does **not** affect the `read_file` tool.
+Controls how much content Eternal loads from each automatic context file before applying head/tail truncation. This applies to files injected into the system prompt such as `SOUL.md`, `.eternal.md`, `AGENTS.md`, `CLAUDE.md`, and `.cursorrules`. It does **not** affect the `read_file` tool.
 
 ```yaml
 context_file_max_chars: 20000  # default
@@ -658,7 +658,7 @@ The agent also deduplicates file reads automatically — if the same file region
 
 ## Tool Output Truncation Limits
 
-Three related caps control how much raw output a tool can return before Hermes truncates it:
+Three related caps control how much raw output a tool can return before Eternal truncates it:
 
 ```yaml
 tool_output:
@@ -667,7 +667,7 @@ tool_output:
   max_line_length: 2000   # per-line cap in read_file's line-numbered view
 ```
 
-- **`max_bytes`** — When a `terminal` command produces more than this many characters of combined stdout/stderr, Hermes keeps the first 40% and last 60% and inserts a `[OUTPUT TRUNCATED]` notice between them. Default `50000` (≈12-15K tokens across typical tokenisers).
+- **`max_bytes`** — When a `terminal` command produces more than this many characters of combined stdout/stderr, Eternal keeps the first 40% and last 60% and inserts a `[OUTPUT TRUNCATED]` notice between them. Default `50000` (≈12-15K tokens across typical tokenisers).
 - **`max_lines`** — Upper bound on the `limit` parameter of a single `read_file` call. Requests above this are clamped so a single read can't flood the context window. Default `2000`.
 - **`max_line_length`** — Per-line cap applied when `read_file` emits the line-numbered view. Lines longer than this are truncated to this many chars followed by `... [truncated]`. Default `2000`.
 
@@ -698,10 +698,10 @@ agent:
 ```
 
 This applies **after** per-platform tool config (`platform_toolsets` written by
-`hermes tools`), so a toolset listed here is always removed — even if a
+`eternal tools`), so a toolset listed here is always removed — even if a
 platform's saved config still lists it. Use this when you want a single
 switch for "turn X off everywhere" rather than editing 15+ platform rows in
-the `hermes tools` UI.
+the `eternal tools` UI.
 
 Leaving the list empty, or omitting the key, is a no-op.
 
@@ -710,7 +710,7 @@ Leaving the list empty, or omitting the key, is a no-op.
 Enable isolated git worktrees for running multiple agents in parallel on the same repo:
 
 ```yaml
-worktree: true    # Always create a worktree (same as hermes -w)
+worktree: true    # Always create a worktree (same as eternal -w)
 # worktree: false # Default — only when -w flag is passed
 ```
 
@@ -734,7 +734,7 @@ node_modules/
 
 ## Context Compression
 
-Hermes automatically compresses long conversations to stay within your model's context window. The compression summarizer is a separate LLM call — you can point it at any provider or endpoint.
+Eternal automatically compresses long conversations to stay within your model's context window. The compression summarizer is a separate LLM call — you can point it at any provider or endpoint.
 
 All compression settings live in `config.yaml` (no environment variables).
 
@@ -848,15 +848,15 @@ context:
   engine: "lcm"          # must match the plugin's name
 ```
 
-Plugin engines are **never auto-activated** — you must explicitly set `context.engine` to the plugin name. Available engines can be browsed and selected via `hermes plugins` → Provider Plugins → Context Engine.
+Plugin engines are **never auto-activated** — you must explicitly set `context.engine` to the plugin name. Available engines can be browsed and selected via `eternal plugins` → Provider Plugins → Context Engine.
 
 See [Memory Providers](/user-guide/features/memory-providers) for the analogous single-select system for memory plugins.
 
 ## Iteration Budget
 
-When the agent is working on a complex task with many tool calls, it can burn through its iteration budget (default: 500 turns). Hermes does **not** inject mid-task pressure warnings — earlier builds warned the model at 70%/90% budget, which caused models to abandon complex tasks prematurely and was removed in April 2026.
+When the agent is working on a complex task with many tool calls, it can burn through its iteration budget (default: 500 turns). Eternal does **not** inject mid-task pressure warnings — earlier builds warned the model at 70%/90% budget, which caused models to abandon complex tasks prematurely and was removed in April 2026.
 
-Instead, when the budget is actually exhausted (500/500), Hermes injects one message asking the model to wrap up and allows a single **grace call** so it can deliver a final response. If that grace call still doesn't produce text, the agent is asked to summarise what it accomplished.
+Instead, when the budget is actually exhausted (500/500), Eternal injects one message asking the model to wrap up and allows a single **grace call** so it can deliver a final response. If that grace call still doesn't produce text, the agent is asked to summarise what it accomplished.
 
 ```yaml
 agent:
@@ -866,35 +866,35 @@ agent:
 
 When the iteration budget is fully exhausted, the CLI shows a notification to the user: `⚠ Iteration budget reached (90/90) — response may be incomplete`.
 
-`agent.api_max_retries` controls how many times Hermes retries a provider API call on transient errors (rate limits, connection drops, 5xx) **before** fallback-provider switching engages. The default is `3` — four attempts total. If you have [fallback providers](/user-guide/features/fallback-providers) configured and want to fail over faster, drop this to `0` so the first transient error on your primary immediately hands off to the fallback instead of churning retries against the flaky endpoint.
+`agent.api_max_retries` controls how many times Eternal retries a provider API call on transient errors (rate limits, connection drops, 5xx) **before** fallback-provider switching engages. The default is `3` — four attempts total. If you have [fallback providers](/user-guide/features/fallback-providers) configured and want to fail over faster, drop this to `0` so the first transient error on your primary immediately hands off to the fallback instead of churning retries against the flaky endpoint.
 
 ## Standing Goals (`/goal`)
 
-When a standing goal is active, Hermes judges whether each assistant response satisfies it. If not, it feeds a continuation prompt back into the same session and keeps working until the goal is done, the turn budget is exhausted, or the user pauses/clears it. The turn budget is the real backstop — judge failures fail **open** (continue) so a flaky judge never wedges progress.
+When a standing goal is active, Eternal judges whether each assistant response satisfies it. If not, it feeds a continuation prompt back into the same session and keeps working until the goal is done, the turn budget is exhausted, or the user pauses/clears it. The turn budget is the real backstop — judge failures fail **open** (continue) so a flaky judge never wedges progress.
 
 ```yaml
 goals:
-  max_turns: 20   # Max continuation turns before Hermes auto-pauses the goal (default: 20)
+  max_turns: 20   # Max continuation turns before Eternal auto-pauses the goal (default: 20)
 ```
 
-`max_turns` caps how many continuation turns a goal can drive before Hermes auto-pauses it and asks the user to `/goal resume`. It protects against judge false negatives (goal actually done but judge says continue) and unbounded model spend on fuzzy or unachievable goals. See [Goals](/user-guide/features/goals) for the full feature.
+`max_turns` caps how many continuation turns a goal can drive before Eternal auto-pauses it and asks the user to `/goal resume`. It protects against judge false negatives (goal actually done but judge says continue) and unbounded model spend on fuzzy or unachievable goals. See [Goals](/user-guide/features/goals) for the full feature.
 
 ### API Timeouts
 
-Hermes has separate timeout layers for streaming, plus a stale detector for non-streaming calls. The stale detectors auto-adjust for local providers only when you leave them at their implicit defaults.
+Eternal has separate timeout layers for streaming, plus a stale detector for non-streaming calls. The stale detectors auto-adjust for local providers only when you leave them at their implicit defaults.
 
 | Timeout | Default | Local providers | Config / env |
 |---------|---------|----------------|--------------|
-| Socket read timeout | 120s | Auto-raised to 1800s | `HERMES_STREAM_READ_TIMEOUT` |
-| Stale stream detection | 180s | Auto-disabled | `HERMES_STREAM_STALE_TIMEOUT` |
-| Stale non-stream detection | 300s | Auto-disabled when left implicit | `providers.<id>.stale_timeout_seconds` or `HERMES_API_CALL_STALE_TIMEOUT` |
-| API call (non-streaming) | 1800s | Unchanged | `providers.<id>.request_timeout_seconds` / `timeout_seconds` or `HERMES_API_TIMEOUT` |
+| Socket read timeout | 120s | Auto-raised to 1800s | `ETERNAL_STREAM_READ_TIMEOUT` |
+| Stale stream detection | 180s | Auto-disabled | `ETERNAL_STREAM_STALE_TIMEOUT` |
+| Stale non-stream detection | 300s | Auto-disabled when left implicit | `providers.<id>.stale_timeout_seconds` or `ETERNAL_API_CALL_STALE_TIMEOUT` |
+| API call (non-streaming) | 1800s | Unchanged | `providers.<id>.request_timeout_seconds` / `timeout_seconds` or `ETERNAL_API_TIMEOUT` |
 
-The **socket read timeout** controls how long httpx waits for the next chunk of data from the provider. Local LLMs can take minutes for prefill on large contexts before producing the first token, so Hermes raises this to 30 minutes when it detects a local endpoint. If you explicitly set `HERMES_STREAM_READ_TIMEOUT`, that value is always used regardless of endpoint detection.
+The **socket read timeout** controls how long httpx waits for the next chunk of data from the provider. Local LLMs can take minutes for prefill on large contexts before producing the first token, so Eternal raises this to 30 minutes when it detects a local endpoint. If you explicitly set `ETERNAL_STREAM_READ_TIMEOUT`, that value is always used regardless of endpoint detection.
 
 The **stale stream detection** kills connections that receive SSE keep-alive pings but no actual content. This is disabled entirely for local providers since they don't send keep-alive pings during prefill.
 
-The **stale non-stream detection** kills non-streaming calls that produce no response for too long. By default Hermes disables this on local endpoints to avoid false positives during long prefills. If you explicitly set `providers.<id>.stale_timeout_seconds`, `providers.<id>.models.<model>.stale_timeout_seconds`, or `HERMES_API_CALL_STALE_TIMEOUT`, that explicit value is honored even on local endpoints.
+The **stale non-stream detection** kills non-streaming calls that produce no response for too long. By default Eternal disables this on local endpoints to avoid false positives during long prefills. If you explicitly set `providers.<id>.stale_timeout_seconds`, `providers.<id>.models.<model>.stale_timeout_seconds`, or `ETERNAL_API_CALL_STALE_TIMEOUT`, that explicit value is honored even on local endpoints.
 
 ## Context Pressure Warnings
 
@@ -935,26 +935,26 @@ Options: `fill_first` (default), `round_robin`, `least_used`, `random`. See [Cre
 
 ## Prompt caching
 
-Hermes turns on cross-session prompt caching automatically when the active provider supports it — no user config needed.
+Eternal turns on cross-session prompt caching automatically when the active provider supports it — no user config needed.
 
-For Claude on **native Anthropic**, **OpenRouter**, and **Nous Portal**, Hermes attaches `cache_control` breakpoints with the 1-hour TTL (`ttl: "1h"`) on the system prompt and skill blocks. The first send within a fresh hour pays full input rates; subsequent sends across any session within the same hour pull from the cache at the discounted cached-read rate. This means the system prompt, loaded skill content, and the early portion of any long-context include get reused across `hermes` sessions and across forked subagents for the first hour.
+For Claude on **native Anthropic**, **OpenRouter**, and **Nous Portal**, Eternal attaches `cache_control` breakpoints with the 1-hour TTL (`ttl: "1h"`) on the system prompt and skill blocks. The first send within a fresh hour pays full input rates; subsequent sends across any session within the same hour pull from the cache at the discounted cached-read rate. This means the system prompt, loaded skill content, and the early portion of any long-context include get reused across `eternal` sessions and across forked subagents for the first hour.
 
-The Qwen Cloud (Alibaba DashScope) upstream caps cache TTL at 5 minutes, so Hermes uses the 5-minute breakpoint TTL there instead. Other Claude-via-third-party paths (AWS Bedrock, Azure Foundry) fall back to the provider's own caching defaults. xAI Grok uses a separate session-pinned conversation-id mechanism — see [xAI prompt caching](/integrations/providers#xai-grok--responses-api--prompt-caching).
+The Qwen Cloud (Alibaba DashScope) upstream caps cache TTL at 5 minutes, so Eternal uses the 5-minute breakpoint TTL there instead. Other Claude-via-third-party paths (AWS Bedrock, Azure Foundry) fall back to the provider's own caching defaults. xAI Grok uses a separate session-pinned conversation-id mechanism — see [xAI prompt caching](/integrations/providers#xai-grok--responses-api--prompt-caching).
 
 No knob exists to disable this — caching is always-on and saves money even on single-turn conversations because the system prompt alone is a meaningful fraction of the input token count.
 
-The one explicit knob is the cache TTL tier Hermes requests on Anthropic-style breakpoints:
+The one explicit knob is the cache TTL tier Eternal requests on Anthropic-style breakpoints:
 
 ```yaml
 prompt_caching:
   cache_ttl: "5m"   # "5m" or "1h" (Anthropic-supported tiers); other values are ignored
 ```
 
-`cache_ttl` selects the breakpoint TTL Hermes attaches for Claude via the native Anthropic API, OpenRouter, and Nous Portal. Only the two Anthropic-supported tiers (`"5m"`, `"1h"`) are honored — any other value is ignored. Providers with their own caps (e.g. Qwen Cloud, which maxes at 5 minutes) still clamp to what the upstream allows.
+`cache_ttl` selects the breakpoint TTL Eternal attaches for Claude via the native Anthropic API, OpenRouter, and Nous Portal. Only the two Anthropic-supported tiers (`"5m"`, `"1h"`) are honored — any other value is ignored. Providers with their own caps (e.g. Qwen Cloud, which maxes at 5 minutes) still clamp to what the upstream allows.
 
 ## Auxiliary Models
 
-Hermes uses "auxiliary" models for side tasks like image analysis, web page summarization, browser screenshot analysis, session-title generation, and context compression. By default (`auxiliary.*.provider: "auto"`), Hermes routes every auxiliary task to your **main chat model** — the same provider/model you picked in `hermes model`. You don't need to configure anything to get started, but be aware that on expensive reasoning models (Opus, MiniMax M2.7, etc.) auxiliary tasks add meaningful cost. If you want cheap-and-fast side tasks regardless of your main model, set `auxiliary.<task>.provider` and `auxiliary.<task>.model` explicitly (for example, Gemini Flash on OpenRouter for vision and web extraction).
+Eternal uses "auxiliary" models for side tasks like image analysis, web page summarization, browser screenshot analysis, session-title generation, and context compression. By default (`auxiliary.*.provider: "auto"`), Eternal routes every auxiliary task to your **main chat model** — the same provider/model you picked in `eternal model`. You don't need to configure anything to get started, but be aware that on expensive reasoning models (Opus, MiniMax M2.7, etc.) auxiliary tasks add meaningful cost. If you want cheap-and-fast side tasks regardless of your main model, set `auxiliary.<task>.provider` and `auxiliary.<task>.model` explicitly (for example, Gemini Flash on OpenRouter for vision and web extraction).
 
 :::note Why "auto" uses your main model
 Earlier builds split aggregator users (OpenRouter, Nous Portal) onto a cheap provider-side default. That was surprising — users who paid for an aggregator subscription would see a different model handling their auxiliary traffic. `auto` now uses the main model for everyone, and per-task overrides in `config.yaml` still win (see [Full auxiliary config reference](#full-auxiliary-config-reference) below).
@@ -962,10 +962,10 @@ Earlier builds split aggregator users (OpenRouter, Nous Portal) onto a cheap pro
 
 ### Configuring auxiliary models interactively
 
-Instead of hand-editing YAML, run `hermes model` and pick **"Configure auxiliary models"** from the menu. You'll get an interactive per-task picker:
+Instead of hand-editing YAML, run `eternal model` and pick **"Configure auxiliary models"** from the menu. You'll get an interactive per-task picker:
 
 ```
-$ hermes model
+$ eternal model
 → Configure auxiliary models
 
 [ ] vision               currently: auto / main model
@@ -981,13 +981,13 @@ $ hermes model
 
 Select a task, pick a provider (OAuth flows open a browser; API-key providers prompt), pick a model. The change persists to `auxiliary.<task>.*` in `config.yaml`. Same machinery as the main-model picker — no extra syntax to learn.
 
-If you do not want Hermes to auto-generate titles after the first exchange, set
+If you do not want Eternal to auto-generate titles after the first exchange, set
 `auxiliary.title_generation.enabled: false`. Manual titles still work through
-`/title` and `hermes sessions rename`.
+`/title` and `eternal sessions rename`.
 
 ### Stream-only endpoints
 
-Some OpenAI-compatible endpoints reject non-streaming chat requests outright (e.g. Tencent Copilot returns HTTP 400 `"Non-stream chat request is currently not supported"`). Interactive chat already streams, but auxiliary tasks (title generation, compression, web extraction) use non-streaming calls and would fail on every attempt. Hermes always treats `copilot.tencent.com` as stream-only; for any other such endpoint, list a URL substring under `auxiliary.stream_only_base_urls`:
+Some OpenAI-compatible endpoints reject non-streaming chat requests outright (e.g. Tencent Copilot returns HTTP 400 `"Non-stream chat request is currently not supported"`). Interactive chat already streams, but auxiliary tasks (title generation, compression, web extraction) use non-streaming calls and would fail on every attempt. Eternal always treats `copilot.tencent.com` as stream-only; for any other such endpoint, list a URL substring under `auxiliary.stream_only_base_urls`:
 
 ```yaml
 auxiliary:
@@ -1002,7 +1002,7 @@ Matching auxiliary calls are sent with `stream=True` and the chunks (including t
 <div style={{position: 'relative', width: '100%', aspectRatio: '16 / 9', marginBottom: '1.5rem'}}>
   <iframe
     src="https://www.youtube.com/embed/NoF-YajElIM"
-    title="Hermes Agent — Auxiliary Models Tutorial"
+    title="Eternal Agent — Auxiliary Models Tutorial"
     style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', border: 0}}
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
     allowFullScreen
@@ -1011,7 +1011,7 @@ Matching auxiliary calls are sent with `stream=True` and the chunks (including t
 
 ### The universal config pattern
 
-Every model slot in Hermes — auxiliary tasks, compression, fallback — uses the same three knobs:
+Every model slot in Eternal — auxiliary tasks, compression, fallback — uses the same three knobs:
 
 | Key | What it does | Default |
 |-----|-------------|---------|
@@ -1037,16 +1037,16 @@ auxiliary:
     reasoning_effort: "none"   # disable thinking for image description
 ```
 
-When `base_url` is set, Hermes ignores the provider and calls that endpoint directly (using `api_key` or `OPENAI_API_KEY` for auth). When only `provider` is set, Hermes uses that provider's built-in auth and base URL.
+When `base_url` is set, Eternal ignores the provider and calls that endpoint directly (using `api_key` or `OPENAI_API_KEY` for auth). When only `provider` is set, Eternal uses that provider's built-in auth and base URL.
 
 Available providers for auxiliary tasks: `auto`, `main`, plus any provider in the [provider registry](/reference/environment-variables) — `openrouter`, `nous`, `openai-codex`, `copilot`, `copilot-acp`, `anthropic`, `gemini`, `qwen-oauth`, `zai`, `kimi-coding`, `kimi-coding-cn`, `minimax`, `minimax-cn`, `minimax-oauth`, `deepseek`, `nvidia`, `xai`, `xai-oauth`, `ollama-cloud`, `alibaba`, `bedrock`, `huggingface`, `arcee`, `xiaomi`, `kilocode`, `opencode-zen`, `opencode-go`, `azure-foundry` — or any named custom provider from your `custom_providers` list (e.g. `provider: "beans"`).
 
 :::tip MiniMax OAuth
-`minimax-oauth` logs in via browser OAuth (no API key needed). Run `hermes model` and select **MiniMax (OAuth)** to authenticate. Auxiliary tasks use `MiniMax-M2.7-highspeed` automatically. See the [MiniMax OAuth guide](../guides/minimax-oauth.md).
+`minimax-oauth` logs in via browser OAuth (no API key needed). Run `eternal model` and select **MiniMax (OAuth)** to authenticate. Auxiliary tasks use `MiniMax-M2.7-highspeed` automatically. See the [MiniMax OAuth guide](../guides/minimax-oauth.md).
 :::
 
 :::tip xAI Grok OAuth
-`xai-oauth` logs in via browser OAuth for SuperGrok and X Premium+ subscribers (no API key needed). Run `hermes model` and select **xAI Grok OAuth (SuperGrok / Premium+)** to authenticate. The same OAuth token is reused for every direct-to-xAI surface (chat, auxiliary tasks, TTS, image gen, video gen, transcription). See the [xAI Grok OAuth guide](../guides/xai-grok-oauth.md), and if Hermes is on a remote host see [OAuth over SSH / Remote Hosts](../guides/oauth-over-ssh.md).
+`xai-oauth` logs in via browser OAuth for SuperGrok and X Premium+ subscribers (no API key needed). Run `eternal model` and select **xAI Grok OAuth (SuperGrok / Premium+)** to authenticate. The same OAuth token is reused for every direct-to-xAI surface (chat, auxiliary tasks, TTS, image gen, video gen, transcription). See the [xAI Grok OAuth guide](../guides/xai-grok-oauth.md), and if Eternal is on a remote host see [OAuth over SSH / Remote Hosts](../guides/oauth-over-ssh.md).
 :::
 
 :::warning `"main"` is for auxiliary tasks only
@@ -1133,7 +1133,7 @@ auxiliary:
     api_key: ""
     timeout: 30
 
-  # Kanban triage specifier — `hermes kanban specify <id>` (or the
+  # Kanban triage specifier — `eternal kanban specify <id>` (or the
   # dashboard's ✨ Specify button on Triage-column cards) uses this
   # slot to expand a one-liner into a concrete spec and promote the
   # task to `todo`. Cheap fast models work well here; spec expansion
@@ -1156,7 +1156,7 @@ Context compression has its own `compression:` block for thresholds and an `auxi
 
 ### Per-task fallback chain for auxiliary tasks
 
-Each auxiliary task can optionally define a `fallback_chain` — a list of provider/model entries that Hermes tries when the primary auxiliary provider fails due to rate limits, connectivity issues, or payment restrictions:
+Each auxiliary task can optionally define a `fallback_chain` — a list of provider/model entries that Eternal tries when the primary auxiliary provider fails due to rate limits, connectivity issues, or payment restrictions:
 
 ```yaml
 auxiliary:
@@ -1170,7 +1170,7 @@ auxiliary:
         model: google/gemini-2.5-flash
 ```
 
-When the primary auxiliary provider (`openrouter` / `openai/gpt-4o-mini`) returns a rate-limit, connection timeout, or payment-required error, Hermes walks the `fallback_chain` in order. It skips entries whose provider matches the already-failed provider, and tries each remaining entry until one succeeds or the chain is exhausted. If all fallbacks fail, Hermes falls back to the main agent model as a final safety net.
+When the primary auxiliary provider (`openrouter` / `openai/gpt-4o-mini`) returns a rate-limit, connection timeout, or payment-required error, Eternal walks the `fallback_chain` in order. It skips entries whose provider matches the already-failed provider, and tries each remaining entry until one succeeds or the chain is exhausted. If all fallbacks fail, Eternal falls back to the main agent model as a final safety net.
 
 Each entry supports the same three knobs as any auxiliary task config:
 
@@ -1202,7 +1202,7 @@ auxiliary:
           min_coding_score: 0.5            # 0.0–1.0; higher = stronger coders
 ```
 
-The shape mirrors what OpenRouter accepts in the chat completions request body. Hermes forwards the entire `extra_body` verbatim, so any other OpenRouter request-body field documented at [openrouter.ai/docs](https://openrouter.ai/docs) works the same way.
+The shape mirrors what OpenRouter accepts in the chat completions request body. Eternal forwards the entire `extra_body` verbatim, so any other OpenRouter request-body field documented at [openrouter.ai/docs](https://openrouter.ai/docs) works the same way.
 
 ### Changing the Vision Model
 
@@ -1214,7 +1214,7 @@ auxiliary:
     model: "openai/gpt-4o"
 ```
 
-Or via environment variable (in `~/.hermes/.env`):
+Or via environment variable (in `~/.eternal/.env`):
 
 ```bash
 AUXILIARY_VISION_MODEL=openai/gpt-4o
@@ -1228,11 +1228,11 @@ These options apply to **auxiliary task configs** (`auxiliary:`, `compression:`)
 |----------|-------------|-------------|
 | `"auto"` | Best available (default). Vision tries OpenRouter → Nous → Codex. | — |
 | `"openrouter"` | Force OpenRouter — routes to any model (Gemini, GPT-4o, Claude, etc.) | `OPENROUTER_API_KEY` |
-| `"nous"` | Force Nous Portal | `hermes auth` |
-| `"codex"` | Force Codex OAuth (ChatGPT account). Supports vision (gpt-5.3-codex). | `hermes model` → Codex |
-| `"minimax-oauth"` | Force MiniMax OAuth (browser login, no API key). Uses MiniMax-M2.7-highspeed for auxiliary tasks. | `hermes model` → MiniMax (OAuth) |
-| `"xai-oauth"` | Force xAI Grok OAuth (browser login for SuperGrok or X Premium+ subscribers, no API key). Same OAuth token covers chat, TTS, image, video, and transcription. | `hermes model` → xAI Grok OAuth (SuperGrok / Premium+) |
-| `"main"` | Use your active custom/main endpoint. This can come from `OPENAI_BASE_URL` + `OPENAI_API_KEY` or from a custom endpoint saved via `hermes model` / `config.yaml`. Works with OpenAI, local models, or any OpenAI-compatible API. **Auxiliary tasks only — not valid for `model.provider`.** | Custom endpoint credentials + base URL |
+| `"nous"` | Force Nous Portal | `eternal auth` |
+| `"codex"` | Force Codex OAuth (ChatGPT account). Supports vision (gpt-5.3-codex). | `eternal model` → Codex |
+| `"minimax-oauth"` | Force MiniMax OAuth (browser login, no API key). Uses MiniMax-M2.7-highspeed for auxiliary tasks. | `eternal model` → MiniMax (OAuth) |
+| `"xai-oauth"` | Force xAI Grok OAuth (browser login for SuperGrok or X Premium+ subscribers, no API key). Same OAuth token covers chat, TTS, image, video, and transcription. | `eternal model` → xAI Grok OAuth (SuperGrok / Premium+) |
+| `"main"` | Use your active custom/main endpoint. This can come from `OPENAI_BASE_URL` + `OPENAI_API_KEY` or from a custom endpoint saved via `eternal model` / `config.yaml`. Works with OpenAI, local models, or any OpenAI-compatible API. **Auxiliary tasks only — not valid for `model.provider`.** | Custom endpoint credentials + base URL |
 
 Direct API-key providers from the main provider catalog also work here when you want side tasks to bypass your default router. For example, `gmi` is valid once `GMI_API_KEY` is configured, and `fireworks` is valid once `FIREWORKS_API_KEY` is configured:
 
@@ -1256,11 +1256,11 @@ auxiliary:
     model: "qwen2.5-vl"
 ```
 
-`base_url` takes precedence over `provider`, so this is the most explicit way to route an auxiliary task to a specific endpoint. For direct endpoint overrides, Hermes uses the configured `api_key` or falls back to `OPENAI_API_KEY`; it does not reuse `OPENROUTER_API_KEY` for that custom endpoint.
+`base_url` takes precedence over `provider`, so this is the most explicit way to route an auxiliary task to a specific endpoint. For direct endpoint overrides, Eternal uses the configured `api_key` or falls back to `OPENAI_API_KEY`; it does not reuse `OPENROUTER_API_KEY` for that custom endpoint.
 
 **Using OpenAI API key for vision:**
 ```yaml
-# In ~/.hermes/.env:
+# In ~/.eternal/.env:
 # OPENAI_BASE_URL=https://api.openai.com/v1
 # OPENAI_API_KEY=sk-...
 
@@ -1293,7 +1293,7 @@ model:
   provider: minimax-oauth
   base_url: https://api.minimax.io/anthropic
 ```
-Run `hermes model` and select **MiniMax (OAuth)** to log in and set this automatically. For the China region, the base URL will be `https://api.minimaxi.com/anthropic`. See the [MiniMax OAuth guide](../guides/minimax-oauth.md) for the full walkthrough.
+Run `eternal model` and select **MiniMax (OAuth)** to log in and set this automatically. For the China region, the base URL will be `https://api.minimaxi.com/anthropic`. See the [MiniMax OAuth guide](../guides/minimax-oauth.md) for the full walkthrough.
 
 **Using a local/self-hosted model:**
 ```yaml
@@ -1303,7 +1303,7 @@ auxiliary:
     model: "my-local-model"
 ```
 
-`provider: "main"` uses whatever provider Hermes uses for normal chat — whether that's a named custom provider (e.g. `beans`), a built-in provider like `openrouter`, or a legacy `OPENAI_BASE_URL` endpoint.
+`provider: "main"` uses whatever provider Eternal uses for normal chat — whether that's a named custom provider (e.g. `beans`), a built-in provider like `openrouter`, or a legacy `OPENAI_BASE_URL` endpoint.
 
 :::tip
 If you use Codex OAuth as your main model provider, vision works automatically — no extra configuration needed. Codex is included in the auto-detection chain for vision.
@@ -1331,7 +1331,7 @@ Auxiliary models can also be configured via environment variables. However, `con
 Compression and fallback model settings are config.yaml-only.
 
 :::tip
-Run `hermes config` to see your current auxiliary model settings. Overrides only show up when they differ from the defaults.
+Run `eternal config` to see your current auxiliary model settings. Overrides only show up when they differ from the defaults.
 :::
 
 ## Reasoning Effort
@@ -1347,7 +1347,7 @@ When unset (default), reasoning effort defaults to "medium" — a balanced level
 
 :::note Adaptive-thinking models (Claude 4.6+, Fable/Mythos-class) over OpenRouter
 These models use *adaptive* thinking and don't accept the usual `reasoning.effort`
-field — OpenRouter ignores it for them. Hermes transparently routes your
+field — OpenRouter ignores it for them. Eternal transparently routes your
 `reasoning_effort` to OpenRouter's `verbosity` parameter instead (which maps to
 Anthropic's `output_config.effort`), so the same effort knob keeps working with
 the levels supported by the selected model. `none` (or unset) leaves the model
@@ -1388,7 +1388,7 @@ The key matching is **spelling-tolerant** — any reasonable spelling will match
 - Exact matches take precedence over variants
 
 :::note
-There is no `hermes config set` support for `reasoning_overrides` keys — edit the YAML file directly. This is because model names often contain dots (e.g. `claude-opus-4.5`), which conflict with the CLI's dotted-key syntax.
+There is no `eternal config set` support for `reasoning_overrides` keys — edit the YAML file directly. This is because model names often contain dots (e.g. `claude-opus-4.5`), which conflict with the CLI's dotted-key syntax.
 :::
 
 **Resolution priority:**
@@ -1439,7 +1439,7 @@ agent:
 
 ## Tool-Loop Guardrails
 
-Hermes detects when the agent is stuck in an unproductive tool-calling loop — the same tool call failing repeatedly, the same tool failing over and over, or an idempotent call returning the same result with no progress. By default it injects a **warning** into the tool result so the model self-corrects; it does not hard-stop, since a person watching the CLI/TUI can intervene.
+Eternal detects when the agent is stuck in an unproductive tool-calling loop — the same tool call failing repeatedly, the same tool failing over and over, or an idempotent call returning the same result with no progress. By default it injects a **warning** into the tool result so the model self-corrects; it does not hard-stop, since a person watching the CLI/TUI can intervene.
 
 For unattended gateway / server deployments, enable hard stops so a stuck agent is circuit-broken instead of burning the iteration budget:
 
@@ -1558,7 +1558,7 @@ The tally is observed from the tool-progress feed the CLI already receives, so i
 
 - Wall time is the turn's real duration (`2m05s` past the one-minute mark).
 - Tool calls are grouped by verb (`edited`, `read`, `ran`, `searched`, …) with correct pluralisation; plugin/MCP tools without a curated verb collapse into `called N tools`.
-- `+X -Y` line deltas appear only when the tool result already reports a diff (currently `patch`). Hermes never shells out to git to compute them, so a `write_file` edit is counted without a delta.
+- `+X -Y` line deltas appear only when the tool result already reports a diff (currently `patch`). Eternal never shells out to git to compute them, so a `write_file` edit is counted without a delta.
 - **Failed tool calls are not counted** — a denied write never renders as a successful edit (see the [file-mutation verifier](#file-mutation-verifier) for the complementary warning).
 - Long turns cap at four verb segments plus a `+N more` tail so the line never wraps.
 - A fast turn with no tool calls prints nothing at all.
@@ -1575,7 +1575,7 @@ Both keys are display-only and CLI-only: they are suppressed in quiet mode, when
 
 ### File-mutation verifier
 
-When `display.file_mutation_verifier` is `true` (default), Hermes appends a one-line advisory to the assistant's final response whenever a `write_file` or `patch` call failed during the turn and was never superseded by a successful write to the same path. This catches the "batch of parallel patches, half silently fail, model summarises success" class of over-claim without requiring you to manually run `git status` after every edit.
+When `display.file_mutation_verifier` is `true` (default), Eternal appends a one-line advisory to the assistant's final response whenever a `write_file` or `patch` call failed during the turn and was never superseded by a successful write to the same path. This catches the "batch of parallel patches, half silently fail, model summarises success" class of over-claim without requiring you to manually run `git status` after every edit.
 
 Example footer:
 
@@ -1586,11 +1586,11 @@ Example footer:
   • concepts/rag-pipeline.md — [patch] Could not find match for old_string
 ```
 
-Set `file_mutation_verifier: false` (or `HERMES_FILE_MUTATION_VERIFIER=0`) to suppress the footer. The verifier only fires when real failures are outstanding at turn end — a model that retries a failed patch and succeeds within the same turn will not trigger it for that file.
+Set `file_mutation_verifier: false` (or `ETERNAL_FILE_MUTATION_VERIFIER=0`) to suppress the footer. The verifier only fires when real failures are outstanding at turn end — a model that retries a failed patch and succeeds within the same turn will not trigger it for that file.
 
 **Trust the verifier over the model's summary.** The footer means the listed files were **not** modified on disk, even if the assistant's closing message says the task is done. Common causes:
 
-- **Write denied** — path is on the credential denylist or outside `HERMES_WRITE_SAFE_ROOT` (see [File write safety](./security.md#file-write-safety))
+- **Write denied** — path is on the credential denylist or outside `ETERNAL_WRITE_SAFE_ROOT` (see [File write safety](./security.md#file-write-safety))
 - **Patch mismatch** — `old_string` did not match the file on disk
 - **Syntax gate** — candidate content failed JSON/YAML/TOML validation before write
 
@@ -1598,11 +1598,11 @@ Example footer when writes are blocked:
 
 ```
 ⚠️ File-mutation verifier: 2 file(s) were NOT modified this turn despite any wording above that may suggest otherwise. Run `git status` or `read_file` to confirm.
-  • ~/.hermes/cron/jobs.json — [patch] Write denied: '…' is outside HERMES_WRITE_SAFE_ROOT (/path/to/project)
-  • ~/.hermes/scripts/monitor.py — [write_file] Write denied: '…' is outside HERMES_WRITE_SAFE_ROOT (/path/to/project)
+  • ~/.eternal/cron/jobs.json — [patch] Write denied: '…' is outside ETERNAL_WRITE_SAFE_ROOT (/path/to/project)
+  • ~/.eternal/scripts/monitor.py — [write_file] Write denied: '…' is outside ETERNAL_WRITE_SAFE_ROOT (/path/to/project)
 ```
 
-If writes to Hermes state (cron jobs, skills, scripts under `~/.hermes/`) are failing, check whether `HERMES_WRITE_SAFE_ROOT` is set in your environment. For cron changes, use the `cronjob` tool or `hermes cron edit` instead of patching `jobs.json` directly.
+If writes to Eternal state (cron jobs, skills, scripts under `~/.eternal/`) are failing, check whether `ETERNAL_WRITE_SAFE_ROOT` is set in your environment. For cron changes, use the `cronjob` tool or `eternal cron edit` instead of patching `jobs.json` directly.
 
 ### UI language for static messages
 
@@ -1610,7 +1610,7 @@ The `display.language` setting translates a small set of static user-facing mess
 
 Supported values: `en` (default), `zh` (Simplified Chinese), `zh-hant` (Traditional Chinese), `ja` (Japanese), `de` (German), `es` (Spanish), `fr` (French), `tr` (Turkish), `uk` (Ukrainian), `af` (Afrikaans), `ko` (Korean), `it` (Italian), `ga` (Irish), `pt` (Portuguese), `ru` (Russian), `hu` (Hungarian). Unknown values fall back to English.
 
-You can also set this per-session with the `HERMES_LANGUAGE` env var, which overrides the config value.
+You can also set this per-session with the `ETERNAL_LANGUAGE` env var, which overrides the config value.
 
 ```yaml
 display:
@@ -1642,7 +1642,7 @@ Focus view is **display-only**. It never edits conversation history, the system 
 
 ### Runtime-metadata footer (gateway only)
 
-When `display.runtime_footer.enabled: true`, Hermes appends a small runtime-context footer to the **final** message of each gateway turn. The current footer can show the model, context-window percentage, and current working directory. Off by default; opt in per-gateway if your team wants every reply to include this provenance.
+When `display.runtime_footer.enabled: true`, Eternal appends a small runtime-context footer to the **final** message of each gateway turn. The current footer can show the model, context-window percentage, and current working directory. Off by default; opt in per-gateway if your team wants every reply to include this provenance.
 
 ```yaml
 display:
@@ -1681,7 +1681,7 @@ Platforms without an override fall back to the global `tool_progress` value. Val
 
 Signal is listed as a valid platform key because the setting can be saved per platform, but the current Signal adapter cannot edit sent messages and does not render tool-progress bubbles. Keep Signal `tool_progress` set to `off`; use the CLI or an editing-capable messaging platform if you need to watch each tool call live.
 
-`interim_assistant_messages` is gateway-only. When enabled, Hermes sends completed mid-turn assistant updates as separate chat messages. This is independent from `tool_progress` and does not require gateway streaming.
+`interim_assistant_messages` is gateway-only. When enabled, Eternal sends completed mid-turn assistant updates as separate chat messages. This is independent from `tool_progress` and does not require gateway streaming.
 
 `show_commentary` (default `true`) controls Codex Responses models' commentary channel — the polished progress narration these models produce alongside their private reasoning. When enabled, each completed commentary message is delivered as a visible mid-turn update (on the gateway this also requires `interim_assistant_messages`). Set it to `false` if the extra narration annoys you: commentary then falls back to the reasoning channel and is only shown when `show_reasoning` is enabled.
 
@@ -1726,17 +1726,17 @@ stt:
   # model: "whisper-1"         # Legacy fallback key still respected
 ```
 
-Language resolution is the same for **every** STT provider (local, groq, openai, mistral, xai, elevenlabs, deepinfra, command providers, and plugins): `stt.<provider>.language` → `stt.language` → `HERMES_LOCAL_STT_LANGUAGE` env var → provider auto-detect. **The default is `stt.language: "en"`** — Whisper auto-detection frequently misidentifies short or accented clips, which shows up as voice notes transcribed in the wrong language. Non-English speakers should set `stt.language` to their language code once (e.g. `"es"`, `"zh"`, `"uk"`); set it to `""` to restore auto-detection for multilingual use.
+Language resolution is the same for **every** STT provider (local, groq, openai, mistral, xai, elevenlabs, deepinfra, command providers, and plugins): `stt.<provider>.language` → `stt.language` → `ETERNAL_LOCAL_STT_LANGUAGE` env var → provider auto-detect. **The default is `stt.language: "en"`** — Whisper auto-detection frequently misidentifies short or accented clips, which shows up as voice notes transcribed in the wrong language. Non-English speakers should set `stt.language` to their language code once (e.g. `"es"`, `"zh"`, `"uk"`); set it to `""` to restore auto-detection for multilingual use.
 
 Set `stt.echo_transcripts: false` when the gateway should transcribe voice notes for the agent but must not post the raw transcript back to the chat (for example, customer-facing WhatsApp bots).
 
 Provider behavior:
 
 - `local` uses `faster-whisper` running on your machine. Install it separately with `pip install faster-whisper`.
-- `groq` uses Groq's Whisper-compatible endpoint and reads `GROQ_API_KEY`. Pass `stt.groq.language` (or the global `HERMES_LOCAL_STT_LANGUAGE` env var) to skip auto-detection and reduce latency.
+- `groq` uses Groq's Whisper-compatible endpoint and reads `GROQ_API_KEY`. Pass `stt.groq.language` (or the global `ETERNAL_LOCAL_STT_LANGUAGE` env var) to skip auto-detection and reduce latency.
 - `openai` uses the OpenAI speech API and reads `VOICE_TOOLS_OPENAI_KEY`.
 
-If the requested provider is unavailable, Hermes falls back automatically in this order: `local` → `groq` → `openai`.
+If the requested provider is unavailable, Eternal falls back automatically in this order: `local` → `groq` → `openai`.
 
 Groq and OpenAI model overrides are environment-driven:
 
@@ -1796,7 +1796,7 @@ For separate natural mid-turn assistant updates without progressive token editin
 **Fresh final (Telegram):** Telegram's `editMessageText` preserves the original message timestamp, so a long-running streamed reply would keep the first-token timestamp even after completion. Set `fresh_final_after_seconds > 0` to opt in to delivering old previews as brand-new final messages with best-effort preview deletion. The default is `0`, which always finalizes streamed replies in place and avoids the brief duplicate-message/delete sequence on clients that show both operations.
 
 :::note Per-platform streaming defaults
-The master `streaming.enabled` switch is `false` by default — nothing streams until you flip it. Once enabled, streaming is decided **per platform**: Telegram ships with `display.platforms.telegram.streaming: true` (streams) and Discord with `display.platforms.discord.streaming: false` (does not). So after enabling streaming, Telegram streams out of the box and Discord stays on whole-message replies until you change its toggle. You can adjust these per-platform switches from the dashboard's **Channels** toggles or directly in `~/.hermes/config.yaml`.
+The master `streaming.enabled` switch is `false` by default — nothing streams until you flip it. Once enabled, streaming is decided **per platform**: Telegram ships with `display.platforms.telegram.streaming: true` (streams) and Discord with `display.platforms.discord.streaming: false` (does not). So after enabling streaming, Telegram streams out of the box and Discord stays on whole-message replies until you change its toggle. You can adjust these per-platform switches from the dashboard's **Channels** toggles or directly in `~/.eternal/config.yaml`.
 :::
 
 ## Group Chat Session Isolation
@@ -1808,16 +1808,16 @@ and messaging gateway:
 max_concurrent_sessions: null  # null/0 = unlimited; positive integer = active session cap
 ```
 
-When the cap is reached, Hermes returns a direct limit message for new sessions.
+When the cap is reached, Eternal returns a direct limit message for new sessions.
 Existing active sessions keep their normal behavior.
 
-The canonical key is top-level `max_concurrent_sessions`. Hermes also accepts
+The canonical key is top-level `max_concurrent_sessions`. Eternal also accepts
 `gateway.max_concurrent_sessions` as a fallback, but the top-level key wins when
 both are set.
 
-The cap is enforced with a local runtime lease file and is best-effort: Hermes
+The cap is enforced with a local runtime lease file and is best-effort: Eternal
 fails open if the registry cannot be read or locked so users are not stranded.
-It is intended for a single host/profile runtime, not a shared `$HERMES_HOME`
+It is intended for a single host/profile runtime, not a shared `$ETERNAL_HOME`
 mounted across multiple machines.
 
 Control whether shared chats keep one conversation per room or one conversation per participant:
@@ -1827,15 +1827,15 @@ group_sessions_per_user: true  # true = per-user isolation in groups/channels, f
 ```
 
 - `true` is the default and recommended setting. In Discord channels, Telegram groups, Slack channels, and similar shared contexts, each sender gets their own session when the platform provides a user ID.
-- `false` reverts to the old shared-room behavior. That can be useful if you explicitly want Hermes to treat a channel like one collaborative conversation, but it also means users share context, token costs, and interrupt state.
-- Direct messages are unaffected. Hermes still keys DMs by chat/DM ID as usual.
+- `false` reverts to the old shared-room behavior. That can be useful if you explicitly want Eternal to treat a channel like one collaborative conversation, but it also means users share context, token costs, and interrupt state.
+- Direct messages are unaffected. Eternal still keys DMs by chat/DM ID as usual.
 - Threads stay isolated from their parent channel either way; with `true`, each participant also gets their own session inside the thread.
 
 For the behavior details and examples, see [Sessions](/user-guide/sessions) and the [Discord guide](/user-guide/messaging/discord).
 
 ## Unauthorized DM Behavior
 
-Control what Hermes does when an unknown user sends a direct message:
+Control what Eternal does when an unknown user sends a direct message:
 
 ```yaml
 unauthorized_dm_behavior: pair
@@ -1844,7 +1844,7 @@ whatsapp:
   unauthorized_dm_behavior: ignore
 ```
 
-- `pair` is the default for chat-style DM platforms. Hermes denies access, but replies with a one-time pairing code in DMs.
+- `pair` is the default for chat-style DM platforms. Eternal denies access, but replies with a one-time pairing code in DMs.
 - `ignore` silently drops unauthorized DMs.
 - Email defaults to `ignore` unless `platforms.email.unauthorized_dm_behavior: pair` is set, because inboxes can contain unrelated unread mail.
 - Platform sections override the global default, so you can keep pairing enabled broadly while making one platform quieter.
@@ -1857,13 +1857,13 @@ Define custom commands that either run shell commands without invoking the LLM, 
 quick_commands:
   status:
     type: exec
-    command: systemctl status hermes-agent
+    command: systemctl status eternal-agent
   disk:
     type: exec
     command: df -h /
   update:
     type: exec
-    command: cd ~/.hermes/hermes-agent && git pull && uv pip install -e .
+    command: cd ~/.eternal/eternal-agent && git pull && uv pip install -e .
   gpu:
     type: exec
     command: nvidia-smi --query-gpu=name,utilization.gpu,memory.used,memory.total --format=csv,noheader
@@ -1907,13 +1907,13 @@ code_execution:
 **`mode`** controls the working directory and Python interpreter for scripts:
 
 - **`project`** (default) — scripts run in the session's working directory with the active virtualenv/conda env's python. Project deps (`pandas`, `torch`, project packages) and relative paths (`.env`, `./data.csv`) resolve naturally, matching what `terminal()` sees.
-- **`strict`** — scripts run in a temp staging directory with `sys.executable` (Hermes's own python). Maximum reproducibility, but project deps and relative paths won't resolve.
+- **`strict`** — scripts run in a temp staging directory with `sys.executable` (Eternal's own python). Maximum reproducibility, but project deps and relative paths won't resolve.
 
 Environment scrubbing (strips `*_API_KEY`, `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_CREDENTIAL`, `*_PASSWD`, `*_AUTH`) and the tool whitelist apply identically in both modes — switching mode does not change the security posture.
 
 ## Web Search Backends
 
-The `web_search` and `web_extract` tools support five backend providers. Configure the backend in `config.yaml` or via `hermes tools`:
+The `web_search` and `web_extract` tools support five backend providers. Configure the backend in `config.yaml` or via `eternal tools`:
 
 ```yaml
 web:
@@ -1940,7 +1940,7 @@ web:
 
 **Parallel search modes:** Set `PARALLEL_SEARCH_MODE` to control search behavior — `fast`, `one-shot`, or `agentic` (default: `agentic`).
 
-**Exa:** Set `EXA_API_KEY` in `~/.hermes/.env`. Supports `category` filtering (`company`, `research paper`, `news`, `people`, `personal site`, `pdf`) and domain/date filters.
+**Exa:** Set `EXA_API_KEY` in `~/.eternal/.env`. Supports `category` filtering (`company`, `research paper`, `news`, `people`, `personal site`, `pdf`) and domain/date filters.
 
 ## Browser
 
@@ -1950,8 +1950,8 @@ Configure browser automation behavior:
 browser:
   inactivity_timeout: 120        # Seconds before auto-closing idle sessions
   command_timeout: 30             # Timeout in seconds for browser commands (screenshot, navigate, etc.)
-  record_sessions: false         # Auto-record browser sessions as WebM videos to ~/.hermes/browser_recordings/
-  # Optional CDP override — when set, Hermes attaches directly to your own
+  record_sessions: false         # Auto-record browser sessions as WebM videos to ~/.eternal/browser_recordings/
+  # Optional CDP override — when set, Eternal attaches directly to your own
   # Chromium-family browser (via /browser connect) rather than starting a headless browser.
   cdp_url: ""
   # Dialog supervisor — controls how native JS dialogs (alert / confirm / prompt)
@@ -1962,7 +1962,7 @@ browser:
   camofox:
     managed_persistence: false   # When true, Camofox sessions persist cookies/logins across restarts
     user_id: ""                  # Optional externally managed Camofox userId
-    session_key: ""              # Optional session key sent when Hermes creates a tab
+    session_key: ""              # Optional session key sent when Eternal creates a tab
     adopt_existing_tab: false    # Reuse an existing tab for this identity before creating one
 ```
 
@@ -2037,7 +2037,7 @@ security:
       - "admin.example.com"
       - "*.local"
     shared_files:                # Load additional rules from external files
-      - "/etc/hermes/blocked-sites.txt"
+      - "/etc/eternal/blocked-sites.txt"
 ```
 
 When enabled, any URL matching a blocked domain pattern is rejected before the web or browser tool executes. This applies to `web_search`, `web_extract`, `browser_navigate`, and any tool that accesses URLs.
@@ -2053,7 +2053,7 @@ The policy is cached for 30 seconds, so config changes take effect quickly witho
 
 ## Smart Approvals
 
-Control how Hermes handles potentially dangerous commands:
+Control how Eternal handles potentially dangerous commands:
 
 ```yaml
 approvals:
@@ -2064,7 +2064,7 @@ approvals:
 |------|----------|
 | `smart` (default) | Use an auxiliary LLM to assess whether a flagged command is actually dangerous. Low-risk commands are auto-approved for that command only. Genuinely risky commands are denied; uncertain decisions escalate to the user. |
 | `manual` | Prompt the user before executing any flagged command. In the CLI, shows an interactive approval dialog. In messaging, queues a pending approval request. |
-| `off` | Skip all approval checks. Equivalent to `HERMES_YOLO_MODE=true`. **Use with caution.** |
+| `off` | Skip all approval checks. Equivalent to `ETERNAL_YOLO_MODE=true`. **Use with caution.** |
 
 Smart mode is particularly useful for reducing approval fatigue — it lets the agent work more autonomously on safe operations while still catching genuinely destructive commands.
 
@@ -2112,7 +2112,7 @@ Automatic filesystem snapshots before destructive file operations. See the [Chec
 
 ```yaml
 checkpoints:
-  enabled: false                 # Enable automatic checkpoints (also: hermes chat --checkpoints). Default: false (opt-in).
+  enabled: false                 # Enable automatic checkpoints (also: eternal chat --checkpoints). Default: false (opt-in).
   max_snapshots: 20              # Max checkpoints to keep per directory (default: 20)
 ```
 
@@ -2135,9 +2135,9 @@ delegation:
 
 **Subagent provider:model override:** By default, subagents inherit the parent agent's provider and model. Set `delegation.provider` and `delegation.model` to route subagents to a different provider:model pair — e.g., use a cheap/fast model for narrowly-scoped subtasks while your primary agent runs an expensive reasoning model.
 
-**Direct endpoint override:** If you want the obvious custom-endpoint path, set `delegation.base_url`, `delegation.api_key`, and `delegation.model`. That sends subagents directly to that OpenAI-compatible endpoint and takes precedence over `delegation.provider`. If `delegation.api_key` is omitted, Hermes falls back to `OPENAI_API_KEY` only.
+**Direct endpoint override:** If you want the obvious custom-endpoint path, set `delegation.base_url`, `delegation.api_key`, and `delegation.model`. That sends subagents directly to that OpenAI-compatible endpoint and takes precedence over `delegation.provider`. If `delegation.api_key` is omitted, Eternal falls back to `OPENAI_API_KEY` only.
 
-**Wire protocol (`api_mode`):** Hermes auto-detects the wire protocol from `delegation.base_url` (e.g. paths ending in `/anthropic` → `anthropic_messages`; Codex / native Anthropic / Kimi-coding hostnames keep their existing detection). For endpoints the heuristic can't classify — for example Azure AI Foundry, MiniMax, Zhipu GLM, or LiteLLM proxies fronting an Anthropic-shaped backend — set `delegation.api_mode` explicitly to one of `chat_completions`, `codex_responses`, or `anthropic_messages`. Leave it empty (the default) to keep auto-detection.
+**Wire protocol (`api_mode`):** Eternal auto-detects the wire protocol from `delegation.base_url` (e.g. paths ending in `/anthropic` → `anthropic_messages`; Codex / native Anthropic / Kimi-coding hostnames keep their existing detection). For endpoints the heuristic can't classify — for example Azure AI Foundry, MiniMax, Zhipu GLM, or LiteLLM proxies fronting an Anthropic-shaped backend — set `delegation.api_mode` explicitly to one of `chat_completions`, `codex_responses`, or `anthropic_messages`. Leave it empty (the default) to keep auto-detection.
 
 The delegation provider uses the same credential resolution as CLI/gateway startup. All configured providers are supported: `openrouter`, `nous`, `copilot`, `zai`, `kimi-coding`, `minimax`, `minimax-cn`. When a provider is set, the system automatically resolves the correct base URL, API key, and API mode — no manual credential wiring needed.
 
@@ -2156,22 +2156,22 @@ clarify:
 
 ## Context Files (SOUL.md, AGENTS.md)
 
-Hermes uses two different context scopes:
+Eternal uses two different context scopes:
 
 | File | Purpose | Scope |
 |------|---------|-------|
-| `SOUL.md` | **Primary agent identity** — defines who the agent is (slot #1 in the system prompt) | `~/.hermes/SOUL.md` or `$HERMES_HOME/SOUL.md` |
-| `.hermes.md` / `HERMES.md` | Project-specific instructions (highest priority) | Walks to git root |
+| `SOUL.md` | **Primary agent identity** — defines who the agent is (slot #1 in the system prompt) | `~/.eternal/SOUL.md` or `$ETERNAL_HOME/SOUL.md` |
+| `.eternal.md` / `ETERNAL.md` | Project-specific instructions (highest priority) | Walks to git root |
 | `AGENTS.md` | Project-specific instructions, coding conventions | Recursive directory walk |
 | `CLAUDE.md` | Claude Code context files (also detected) | Working directory only |
 | `.cursorrules` | Cursor IDE rules (also detected) | Working directory only |
 | `.cursor/rules/*.mdc` | Cursor rule files (also detected) | Working directory only |
 
 - **SOUL.md** is the agent's primary identity. It occupies slot #1 in the system prompt, completely replacing the built-in default identity. Edit it to fully customize who the agent is.
-- If SOUL.md is missing, empty, or cannot be loaded, Hermes falls back to a built-in default identity.
-- **Project context files use a priority system** — only ONE type is loaded (first match wins): `.hermes.md` → `AGENTS.md` → `CLAUDE.md` → `.cursorrules`. SOUL.md is always loaded independently.
+- If SOUL.md is missing, empty, or cannot be loaded, Eternal falls back to a built-in default identity.
+- **Project context files use a priority system** — only ONE type is loaded (first match wins): `.eternal.md` → `AGENTS.md` → `CLAUDE.md` → `.cursorrules`. SOUL.md is always loaded independently.
 - **AGENTS.md** is hierarchical: if subdirectories also have AGENTS.md, all are combined.
-- Hermes automatically seeds a default `SOUL.md` if one does not already exist.
+- Eternal automatically seeds a default `SOUL.md` if one does not already exist.
 - All loaded context files are capped at `context_file_max_chars` characters (default 20,000) with smart truncation.
 
 See also:
@@ -2182,18 +2182,18 @@ See also:
 
 | Context | Default |
 |---------|---------|
-| **CLI (`hermes`)** | Current directory where you run the command |
-| **Messaging gateway** | `terminal.cwd` from `~/.hermes/config.yaml`; if unset, home directory `~` |
+| **CLI (`eternal`)** | Current directory where you run the command |
+| **Messaging gateway** | `terminal.cwd` from `~/.eternal/config.yaml`; if unset, home directory `~` |
 | **Docker / Singularity / Modal / SSH** | User's home directory inside the container or remote machine |
 
 Override the working directory:
 ```yaml
-# In ~/.hermes/config.yaml:
+# In ~/.eternal/config.yaml:
 terminal:
   cwd: /home/myuser/projects
 ```
 
-`MESSAGING_CWD` and direct `TERMINAL_CWD` entries in `~/.hermes/.env` are legacy compatibility fallbacks. New configurations should use `terminal.cwd`.
+`MESSAGING_CWD` and direct `TERMINAL_CWD` entries in `~/.eternal/.env` are legacy compatibility fallbacks. New configurations should use `terminal.cwd`.
 
 ## Network
 
@@ -2217,7 +2217,7 @@ onboarding:
 ```
 
 - `profile_build` — controls the profile-build path offered on the very first gateway message ever. `"ask"` (default) offers to build a user profile; the offer is **opt-in and consent-gated** — the agent asks before any lookup and never reads connected accounts silently. `"off"` shows a plain intro only. The offer fires at most once.
-- `seen` — internal state. Hermes latches each shown hint here so it never fires again; the profile-build offer is also recorded here once shown. Don't hand-edit it — wipe the whole `onboarding` section if you want to re-see all hints.
+- `seen` — internal state. Eternal latches each shown hint here so it never fires again; the profile-build offer is also recorded here once shown. Don't hand-edit it — wipe the whole `onboarding` section if you want to re-see all hints.
 
 ## Dashboard
 
@@ -2227,7 +2227,7 @@ Configuration for the [web dashboard](/user-guide/features/web-dashboard) — vi
 dashboard:
   theme: "default"            # "default" | "midnight" | "ember" | "mono" | "cyberpunk" | "rose"
   show_token_analytics: false # Re-enable the (local-estimate-only) token/cost analytics surfaces
-  public_url: ""              # Full public authority for OAuth redirect_uri (env: HERMES_DASHBOARD_PUBLIC_URL)
+  public_url: ""              # Full public authority for OAuth redirect_uri (env: ETERNAL_DASHBOARD_PUBLIC_URL)
   oauth:                      # Portal OAuth gate (engaged with --host and not --insecure)
     client_id: ""             # agent:{instance_id} — Portal provisions this
     portal_url: ""            # blank → plugin default (production Portal)
@@ -2245,4 +2245,4 @@ dashboard:
 - `theme` — dashboard visual theme.
 - `show_token_analytics` — off by default. The Analytics page and token/cost figures are a **local lower-bound estimate** (they exclude auxiliary calls, retries, fallbacks, and cache writes), so they can read far below the provider bill. Set `true` only if you understand they're not billing.
 - `public_url` — when set, this is the complete authority (scheme + host + optional path prefix) the OAuth `redirect_uri` is built from. Set it for deploys behind reverse proxies that don't reliably forward `X-Forwarded-*` headers. Leave empty to use proxy-header reconstruction.
-- `oauth` / `basic_auth` / `drain_auth` — auth provider config read by the bundled dashboard-auth plugins. The drain secret itself is **not** set here; it's provisioned via the `HERMES_DASHBOARD_DRAIN_SECRET` env var. See [Web Dashboard](/user-guide/features/web-dashboard) for full auth setup.
+- `oauth` / `basic_auth` / `drain_auth` — auth provider config read by the bundled dashboard-auth plugins. The drain secret itself is **not** set here; it's provisioned via the `ETERNAL_DASHBOARD_DRAIN_SECRET` env var. See [Web Dashboard](/user-guide/features/web-dashboard) for full auth setup.

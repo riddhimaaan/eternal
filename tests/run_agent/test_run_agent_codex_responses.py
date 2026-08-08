@@ -239,7 +239,7 @@ class _FakeCreateStream:
 def _codex_request_kwargs():
     return {
         "model": "gpt-5-codex",
-        "instructions": "You are Hermes.",
+        "instructions": "You are Eternal.",
         "input": [{"role": "user", "content": "Ping"}],
         "tools": None,
         "store": False,
@@ -369,13 +369,13 @@ def test_build_api_kwargs_codex(monkeypatch):
     agent = _build_agent(monkeypatch)
     kwargs = agent._build_api_kwargs(
         [
-            {"role": "system", "content": "You are Hermes."},
+            {"role": "system", "content": "You are Eternal."},
             {"role": "user", "content": "Ping"},
         ]
     )
 
     assert kwargs["model"] == "gpt-5-codex"
-    assert kwargs["instructions"] == "You are Hermes."
+    assert kwargs["instructions"] == "You are Eternal."
     assert kwargs["store"] is False
     assert isinstance(kwargs["input"], list)
     assert kwargs["input"][0]["role"] == "user"
@@ -440,7 +440,7 @@ def test_build_api_kwargs_codex_clamps_minimal_effort(monkeypatch):
 
     kwargs = agent._build_api_kwargs(
         [
-            {"role": "system", "content": "You are Hermes."},
+            {"role": "system", "content": "You are Eternal."},
             {"role": "user", "content": "Ping"},
         ]
     )
@@ -1052,7 +1052,7 @@ def test_run_codex_stream_ignores_completed_response_with_null_output(monkeypatc
 
     The SDK's high-level ``responses.stream(...)`` helper used to reconstruct
     the final Response from that terminal field and raised ``TypeError:
-    'NoneType' object is not iterable``. The Hermes runtime consumes raw
+    'NoneType' object is not iterable``. The Eternal runtime consumes raw
     ``response.output_item.done`` events instead, so a null terminal ``output``
     must not affect the returned assistant/function-call items.
     """
@@ -1161,11 +1161,11 @@ def test_copilot_final_preflight_sanitizes_both_middleware_layers(monkeypatch):
         return _codex_message_response("OK")
 
     monkeypatch.setattr(
-        "hermes_cli.middleware.apply_llm_request_middleware",
+        "eternal_cli.middleware.apply_llm_request_middleware",
         _request_middleware,
     )
     monkeypatch.setattr(
-        "hermes_cli.middleware.run_llm_execution_middleware",
+        "eternal_cli.middleware.run_llm_execution_middleware",
         _execution_middleware,
     )
     monkeypatch.setattr(agent, "_interruptible_api_call", _capture_api_call)
@@ -1199,7 +1199,7 @@ def test_codex_final_preflight_bounds_middleware_cache_key(monkeypatch):
         return _codex_message_response("OK")
 
     monkeypatch.setattr(
-        "hermes_cli.middleware.run_llm_execution_middleware",
+        "eternal_cli.middleware.run_llm_execution_middleware",
         _execution_middleware,
     )
     monkeypatch.setattr(agent, "_interruptible_api_call", _capture_api_call)
@@ -1327,7 +1327,7 @@ def test_build_api_kwargs_xai_oauth_sends_cache_key_via_extra_body(monkeypatch):
     agent = _build_xai_oauth_agent(monkeypatch)
     kwargs = agent._build_api_kwargs(
         [
-            {"role": "system", "content": "You are Hermes."},
+            {"role": "system", "content": "You are Eternal."},
             {"role": "user", "content": "Ping"},
         ]
     )
@@ -1416,7 +1416,7 @@ def test_try_refresh_codex_client_credentials_handles_xai_oauth(monkeypatch):
         }
 
     monkeypatch.setattr(
-        "hermes_cli.auth.resolve_xai_oauth_runtime_credentials",
+        "eternal_cli.auth.resolve_xai_oauth_runtime_credentials",
         _fake_resolve,
     )
     monkeypatch.setattr(run_agent, "OpenAI", _fake_openai)
@@ -1474,7 +1474,7 @@ def test_try_refresh_codex_client_credentials_skips_xai_oauth_when_singleton_dif
         }
 
     monkeypatch.setattr(
-        "hermes_cli.auth.resolve_xai_oauth_runtime_credentials",
+        "eternal_cli.auth.resolve_xai_oauth_runtime_credentials",
         _fake_resolve,
     )
 
@@ -1549,7 +1549,7 @@ def test_try_refresh_codex_client_credentials_rebuilds_client(monkeypatch):
         }
 
     monkeypatch.setattr(
-        "hermes_cli.auth.resolve_codex_runtime_credentials",
+        "eternal_cli.auth.resolve_codex_runtime_credentials",
         _fake_resolve,
     )
     monkeypatch.setattr(run_agent, "OpenAI", _fake_openai)
@@ -1592,7 +1592,7 @@ def test_try_refresh_copilot_client_credentials_rebuilds_client(monkeypatch):
         return _RebuiltClient()
 
     monkeypatch.setattr(
-        "hermes_cli.copilot_auth.resolve_copilot_token",
+        "eternal_cli.copilot_auth.resolve_copilot_token",
         lambda: ("gho_new_token", "GH_TOKEN"),
     )
     monkeypatch.setattr(run_agent, "OpenAI", _fake_openai)
@@ -1631,7 +1631,7 @@ def test_try_refresh_copilot_client_credentials_rebuilds_even_if_token_unchanged
         return _RebuiltClient()
 
     monkeypatch.setattr(
-        "hermes_cli.copilot_auth.resolve_copilot_token",
+        "eternal_cli.copilot_auth.resolve_copilot_token",
         lambda: ("gh-token", "gh auth token"),
     )
     monkeypatch.setattr(run_agent, "OpenAI", _fake_openai)
@@ -1731,7 +1731,7 @@ def test_preflight_codex_api_kwargs_strips_optional_function_call_id(monkeypatch
     preflight = _preflight_codex_api_kwargs(
         {
             "model": "gpt-5-codex",
-            "instructions": "You are Hermes.",
+            "instructions": "You are Eternal.",
             "input": [
                 {"role": "user", "content": "hi"},
                 {
@@ -1760,7 +1760,7 @@ def test_preflight_codex_api_kwargs_rejects_function_call_output_without_call_id
         _preflight_codex_api_kwargs(
             {
                 "model": "gpt-5-codex",
-                "instructions": "You are Hermes.",
+                "instructions": "You are Eternal.",
                 "input": [{"type": "function_call_output", "output": "{}"}],
                 "tools": [],
                 "store": False,
@@ -1965,7 +1965,7 @@ def test_run_conversation_compresses_mid_turn_before_output_budget_exhaustion(mo
         compress_calls.append(approx_tokens)
         return [
             {"role": "user", "content": "[summary of prior tool-heavy work]"},
-        ], "You are Hermes."
+        ], "You are Eternal."
 
     monkeypatch.setattr(agent, "_execute_tool_calls", _fake_execute_tool_calls)
     monkeypatch.setattr(agent, "_compress_context", _fake_compress_context)
@@ -1992,9 +1992,9 @@ def test_mid_turn_compaction_does_not_double_persist_in_place_rows(monkeypatch, 
     context and retriggering compression. This guards that regression with a
     REAL SessionDB and the REAL archive_and_compact path (no persist stubs).
     """
-    from hermes_state import SessionDB
+    from eternal_state import SessionDB
 
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path))
+    monkeypatch.setenv("ETERNAL_HOME", str(tmp_path))
     agent = _build_agent(monkeypatch)
     # _build_agent stubs _persist_session; restore the real one so the flush
     # cursor / double-write behaviour is exercised end to end.
@@ -2030,7 +2030,7 @@ def test_mid_turn_compaction_does_not_double_persist_in_place_rows(monkeypatch, 
         compacted = [{"role": "user", "content": "[summary of prior tool-heavy work]"}]
         agent._session_db.archive_and_compact(agent.session_id, compacted)
         agent._flushed_db_message_ids = set()
-        return compacted, "You are Hermes."
+        return compacted, "You are Eternal."
 
     monkeypatch.setattr(agent, "_execute_tool_calls", _fake_execute_tool_calls)
     monkeypatch.setattr(agent, "_compress_context", _fake_compress_context)
@@ -2937,7 +2937,7 @@ def test_dump_api_request_debug_redacts_request_and_error_secrets(monkeypatch, t
     import json
 
     _patch_agent_bootstrap(monkeypatch)
-    monkeypatch.setenv("HERMES_DUMP_REQUEST_STDOUT", "1")
+    monkeypatch.setenv("ETERNAL_DUMP_REQUEST_STDOUT", "1")
     agent = run_agent.AIAgent(
         model="gpt-4o",
         base_url="http://127.0.0.1:9208/v1",

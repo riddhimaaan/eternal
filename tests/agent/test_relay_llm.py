@@ -17,7 +17,7 @@ from agent import relay_llm, relay_runtime
 
 @pytest.fixture()
 def relay_turn(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "profile"))
+    monkeypatch.setenv("ETERNAL_HOME", str(tmp_path / "profile"))
     relay_runtime._reset_for_tests()
     lease = relay_runtime.SESSION_COORDINATOR.acquire_conversation(
         profile_key=relay_runtime.current_profile_key(),
@@ -93,13 +93,13 @@ def test_stream_uses_rewritten_request_and_post_intercept_chunks(relay_turn):
         ])
 
     relay.intercepts.register_llm_request(
-        "hermes-test-request",
+        "eternal-test-request",
         1,
         False,
         rewrite_request,
     )
     relay.intercepts.register_llm_stream_execution(
-        "hermes-test-stream",
+        "eternal-test-stream",
         1,
         rewrite_stream,
     )
@@ -131,8 +131,8 @@ def test_stream_uses_rewritten_request_and_post_intercept_chunks(relay_turn):
         )
         chunks = list(stream)
     finally:
-        relay.intercepts.deregister_llm_stream_execution("hermes-test-stream")
-        relay.intercepts.deregister_llm_request("hermes-test-request")
+        relay.intercepts.deregister_llm_stream_execution("eternal-test-stream")
+        relay.intercepts.deregister_llm_request("eternal-test-request")
 
     assert captured_requests[0]["temperature"] == 0.25
     assert captured_requests[0]["extra_headers"] == {
@@ -1038,9 +1038,9 @@ def test_stream_does_not_swallow_interrupt_after_provider_success(
     assert turn.logical_llm_calls == {}
 
 
-def test_stream_does_not_swallow_hermes_finalizer_failure(relay_turn, monkeypatch):
+def test_stream_does_not_swallow_eternal_finalizer_failure(relay_turn, monkeypatch):
     relay, _turn = relay_turn
-    finalizer_error = RuntimeError("Hermes finalizer failed")
+    finalizer_error = RuntimeError("Eternal finalizer failed")
 
     def fail_finalizer():
         raise finalizer_error
@@ -1204,7 +1204,7 @@ def test_anthropic_codec_preserves_tool_history_and_cached_system_blocks(relay_t
         "system": [
             {
                 "type": "text",
-                "text": "You are Hermes.",
+                "text": "You are Eternal.",
                 "cache_control": {"type": "ephemeral"},
             }
         ],
@@ -1441,7 +1441,7 @@ def test_chat_codec_preserves_provider_message_extensions_after_rewrite(relay_tu
         }
 
     relay.intercepts.register_llm_request(
-        "hermes-provider-extension-request",
+        "eternal-provider-extension-request",
         1,
         False,
         rewrite_request,
@@ -1469,7 +1469,7 @@ def test_chat_codec_preserves_provider_message_extensions_after_rewrite(relay_tu
         )
     finally:
         relay.intercepts.deregister_llm_request(
-            "hermes-provider-extension-request"
+            "eternal-provider-extension-request"
         )
 
     assert captured_requests[0]["temperature"] == 0.25
@@ -1489,7 +1489,7 @@ def test_request_rewrite_preserves_unmodified_provider_objects(relay_turn):
         return relay.LLMRequestInterceptOutcome(request, annotated)
 
     relay.intercepts.register_llm_request(
-        "hermes-provider-object-request",
+        "eternal-provider-object-request",
         1,
         False,
         rewrite_request,
@@ -1508,7 +1508,7 @@ def test_request_rewrite_preserves_unmodified_provider_objects(relay_turn):
         )
     finally:
         relay.intercepts.deregister_llm_request(
-            "hermes-provider-object-request"
+            "eternal-provider-object-request"
         )
 
     assert captured_requests[0]["timeout"] is timeout

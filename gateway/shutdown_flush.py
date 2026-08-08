@@ -8,7 +8,7 @@ This module provides two hooks:
 
 1. ``flush_pending_to_file()`` — called BEFORE ``_pending_messages.clear()``
    during shutdown.  Serialises any non-empty pending slots to a JSON file
-   under ``<hermes_home>/pending_messages/``.
+   under ``<eternal_home>/pending_messages/``.
 
 2. ``recover_pending_to_db()`` — called AFTER ``runner.start()`` on startup.
    Reads flush files, inserts messages into state.db via ``SessionDB.append_message``
@@ -29,11 +29,11 @@ logger = logging.getLogger(__name__)
 
 
 def _get_flush_dir():
-    """Return the pending-messages flush directory under the active HERMES_HOME."""
-    from hermes_constants import get_hermes_home
+    """Return the pending-messages flush directory under the active ETERNAL_HOME."""
+    from eternal_constants import get_eternal_home
     from pathlib import Path
 
-    flush_dir = get_hermes_home() / "pending_messages"
+    flush_dir = get_eternal_home() / "pending_messages"
     flush_dir.mkdir(parents=True, exist_ok=True)
     return flush_dir
 
@@ -158,7 +158,7 @@ def recover_pending_to_db(
     # Use the provided SessionDB or open one on the default path.
     own_db = False
     if session_db is None:
-        from hermes_state import SessionDB
+        from eternal_state import SessionDB
         session_db = SessionDB()
         own_db = True
 

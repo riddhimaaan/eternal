@@ -279,7 +279,7 @@ registry.registerMany([
       run: toggleLayoutEditMode
     } satisfies PaletteContribution
   },
-  // The agent's write -> see loop: rescan <hermes home>/desktop-plugins
+  // The agent's write -> see loop: rescan <eternal home>/desktop-plugins
   // without relaunching (same-id reloads dispose the previous incarnation).
   {
     id: 'plugins.reload',
@@ -324,7 +324,7 @@ registry.registerMany([
       id: 'keybinds.panel',
       label: 'Keyboard shortcuts',
       keywords: ['keybinds', 'shortcuts', 'hotkeys', 'keyboard'],
-      run: () => window.dispatchEvent(new CustomEvent('hermes:open-keybinds'))
+      run: () => window.dispatchEvent(new CustomEvent('eternal:open-keybinds'))
     } satisfies PaletteContribution
   }
 ])
@@ -591,7 +591,7 @@ const $previewVisible = computed($previewTabs, tabs => tabs.length > 0)
 bindPaneVisibility('preview', $previewVisible, closeRightRail)
 
 // Logs are optional chrome: off by default, toggled from ⌘K, persisted.
-const $logsOpen = persistentAtom('hermes.desktop.logsOpen', false, Codecs.bool)
+const $logsOpen = persistentAtom('eternal.desktop.logsOpen', false, Codecs.bool)
 
 bindPaneCollapse(
   'logs',

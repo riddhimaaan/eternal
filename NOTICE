@@ -1,0 +1,33 @@
+ETERNAL
+=======
+
+ETERNAL is a fork of Hermes Agent.
+
+Original work:
+  Hermes Agent — https://github.com/NousResearch/hermes-agent
+  Copyright (c) 2025 Nous Research
+  Licensed under the MIT License (see LICENSE).
+
+This fork:
+  ETERNAL — a personal, rebranded derivative.
+  Not affiliated with, endorsed by, or supported by Nous Research.
+
+The MIT License of the original work is retained in full in LICENSE, and the
+original copyright notice is preserved as that license requires. All
+modifications in this fork remain under the same MIT License.
+
+Deliberately unmodified from upstream
+-------------------------------------
+The rebrand renamed "Hermes" to "Eternal" throughout, with these exceptions,
+which refer to things that are not the agent and would break if renamed:
+
+  * LICENSE and the contributors/ records — legal and attribution integrity.
+  * Hermes 3 / Hermes 4 model identifiers (e.g. "nousresearch/hermes-4-405b")
+    and the regex that matches them — these are large language model names used
+    for provider routing and for the non-agentic-model warning.
+  * The "hermes-0day" indicator of compromise in eternal_cli/mcp_security.py —
+    an attacker SSH key and campaign name in a security blocklist. Renaming it
+    would silently disable that detection.
+  * Upstream URLs (hermes-agent.nousresearch.com, github.com/NousResearch/
+    hermes-agent, the nousresearch/hermes-agent Docker image) — these point at
+    real upstream resources and must resolve.

@@ -6,7 +6,7 @@ Whisper auto-detection frequently misidentifies short/accented clips
 auto-detect with ``stt.language: ""``.
 """
 
-from hermes_cli.config import DEFAULT_CONFIG
+from eternal_cli.config import DEFAULT_CONFIG
 from tools.transcription_tools import _resolve_stt_language
 
 
@@ -15,19 +15,19 @@ class TestDefaultSttLanguage:
         assert DEFAULT_CONFIG["stt"]["language"] == "en"
 
     def test_default_config_resolves_en_for_every_provider(self, monkeypatch):
-        monkeypatch.delenv("HERMES_LOCAL_STT_LANGUAGE", raising=False)
+        monkeypatch.delenv("ETERNAL_LOCAL_STT_LANGUAGE", raising=False)
         stt = DEFAULT_CONFIG["stt"]
         for provider in ("local", "groq", "openai", "mistral", "xai", "elevenlabs", "deepinfra"):
             assert _resolve_stt_language(provider, stt) == "en", provider
 
     def test_blank_global_restores_auto_detect(self, monkeypatch):
-        monkeypatch.delenv("HERMES_LOCAL_STT_LANGUAGE", raising=False)
+        monkeypatch.delenv("ETERNAL_LOCAL_STT_LANGUAGE", raising=False)
         stt = dict(DEFAULT_CONFIG["stt"])
         stt["language"] = ""
         assert _resolve_stt_language("groq", stt) is None
 
     def test_per_provider_still_wins_over_default(self, monkeypatch):
-        monkeypatch.delenv("HERMES_LOCAL_STT_LANGUAGE", raising=False)
+        monkeypatch.delenv("ETERNAL_LOCAL_STT_LANGUAGE", raising=False)
         stt = dict(DEFAULT_CONFIG["stt"])
         stt["groq"] = {"language": "he"}
         assert _resolve_stt_language("groq", stt) == "he"

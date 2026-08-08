@@ -41,9 +41,9 @@ class TestIsVoiceStopPhrase:
         assert is_voice_stop_phrase(utterance, ("stop",)) is False
 
     def test_custom_phrases(self):
-        phrases = ("stop", "goodbye hermes")
-        assert is_voice_stop_phrase("Goodbye Hermes!", phrases) is True
-        assert is_voice_stop_phrase("goodbye hermes, one more thing", phrases) is False
+        phrases = ("stop", "goodbye eternal")
+        assert is_voice_stop_phrase("Goodbye Eternal!", phrases) is True
+        assert is_voice_stop_phrase("goodbye eternal, one more thing", phrases) is False
 
     def test_empty_phrase_list_disables(self):
         assert is_voice_stop_phrase("stop", ()) is False
@@ -57,7 +57,7 @@ class TestIsVoiceStopPhrase:
 class TestLoadVoiceStopPhrases:
     def _with_cfg(self, voice_cfg):
         return patch(
-            "hermes_cli.config.load_config",
+            "eternal_cli.config.load_config",
             return_value={"voice": voice_cfg},
         )
 
@@ -66,8 +66,8 @@ class TestLoadVoiceStopPhrases:
             assert _load_voice_stop_phrases() == DEFAULT_VOICE_STOP_PHRASES
 
     def test_custom_list(self):
-        with self._with_cfg({"stop_phrases": ["Stop", "  Goodbye Hermes "]}):
-            assert _load_voice_stop_phrases() == ("stop", "goodbye hermes")
+        with self._with_cfg({"stop_phrases": ["Stop", "  Goodbye Eternal "]}):
+            assert _load_voice_stop_phrases() == ("stop", "goodbye eternal")
 
     def test_empty_list_disables(self):
         with self._with_cfg({"stop_phrases": []}):
@@ -82,7 +82,7 @@ class TestLoadVoiceStopPhrases:
             assert _load_voice_stop_phrases() == DEFAULT_VOICE_STOP_PHRASES
 
     def test_config_error_falls_back(self):
-        with patch("hermes_cli.config.load_config", side_effect=RuntimeError):
+        with patch("eternal_cli.config.load_config", side_effect=RuntimeError):
             assert _load_voice_stop_phrases() == DEFAULT_VOICE_STOP_PHRASES
 
 
@@ -91,7 +91,7 @@ class TestContinuousLoopStopPhrase:
     phrase and never forwards it to on_transcript."""
 
     def _run_silence_cycle(self, transcript_text):
-        import hermes_cli.voice as v
+        import eternal_cli.voice as v
 
         delivered = []
         silent_limit_fired = []

@@ -9,7 +9,7 @@ from agent import auxiliary_client, relay_llm, relay_runtime
 
 @pytest.fixture()
 def relay_turn(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "profile"))
+    monkeypatch.setenv("ETERNAL_HOME", str(tmp_path / "profile"))
     relay_runtime._reset_for_tests()
     lease = relay_runtime.SESSION_COORDINATOR.acquire_conversation(
         profile_key=relay_runtime.current_profile_key(),
@@ -414,7 +414,7 @@ def test_auxiliary_attempt_uses_real_relay_request_intercepts(relay_turn):
         return relay.LLMRequestInterceptOutcome(request, annotated)
 
     relay.intercepts.register_llm_request(
-        "hermes-auxiliary-request",
+        "eternal-auxiliary-request",
         1,
         False,
         rewrite_request,
@@ -437,7 +437,7 @@ def test_auxiliary_attempt_uses_real_relay_request_intercepts(relay_turn):
 
         result = run("compression")
     finally:
-        relay.intercepts.deregister_llm_request("hermes-auxiliary-request")
+        relay.intercepts.deregister_llm_request("eternal-auxiliary-request")
         turn.lease.host.release_managed_execution(consumer)
 
     assert result.choices[0].message.content == "ok"

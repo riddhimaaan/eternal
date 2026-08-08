@@ -15,13 +15,13 @@
 
 import {
   JsonRpcGatewayClient,
-  buildHermesWebSocketUrl,
+  buildEternalWebSocketUrl,
   type ConnectionState,
   type GatewayEvent,
   type GatewayEventName,
-} from "@hermes/shared";
+} from "@eternal/shared";
 
-import { HERMES_BASE_PATH, buildWsAuthParam } from "@/lib/api";
+import { ETERNAL_BASE_PATH, buildWsAuthParam } from "@/lib/api";
 
 export type { ConnectionState, GatewayEvent, GatewayEventName };
 
@@ -46,14 +46,14 @@ export class GatewayClient extends JsonRpcGatewayClient {
     const authParam = token ? (["token", token] as const) : await buildWsAuthParam();
     if (!authParam[1]) {
       throw new Error(
-        "Session token not available — page must be served by the Hermes dashboard server",
+        "Session token not available — page must be served by the Eternal dashboard server",
       );
     }
 
     await super.connect(
-      buildHermesWebSocketUrl({
+      buildEternalWebSocketUrl({
         authParam,
-        basePath: HERMES_BASE_PATH,
+        basePath: ETERNAL_BASE_PATH,
         path: "/api/ws",
       }),
     );

@@ -1,4 +1,4 @@
-"""Tests for the core Relay-managed Hermes tool adapter."""
+"""Tests for the core Relay-managed Eternal tool adapter."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ from agent import relay_runtime, relay_tools
 
 @pytest.fixture()
 def relay_turn(tmp_path, monkeypatch):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "profile"))
+    monkeypatch.setenv("ETERNAL_HOME", str(tmp_path / "profile"))
     relay_runtime._reset_for_tests()
     lease = relay_runtime.SESSION_COORDINATOR.acquire_conversation(
         profile_key=relay_runtime.current_profile_key(),
@@ -102,10 +102,10 @@ def test_request_rewrite_reaches_authorized_callback_once(relay_turn):
         return relay.ToolExecutionInterceptOutcome({**result, "wrapped": True})
 
     relay.intercepts.register_tool_request(
-        "hermes-test-tool-request", 1, False, rewrite_request
+        "eternal-test-tool-request", 1, False, rewrite_request
     )
     relay.intercepts.register_tool_execution(
-        "hermes-test-tool-execution", 1, wrap_execution
+        "eternal-test-tool-execution", 1, wrap_execution
     )
     try:
         result, observed_args = relay_tools.execute(
@@ -116,8 +116,8 @@ def test_request_rewrite_reaches_authorized_callback_once(relay_turn):
             metadata={"tool_call_id": "call-1"},
         )
     finally:
-        relay.intercepts.deregister_tool_execution("hermes-test-tool-execution")
-        relay.intercepts.deregister_tool_request("hermes-test-tool-request")
+        relay.intercepts.deregister_tool_execution("eternal-test-tool-execution")
+        relay.intercepts.deregister_tool_request("eternal-test-tool-request")
 
     assert callback_args == [{"path": "/approved/path"}]
     assert observed_args == {"path": "/approved/path"}
@@ -239,7 +239,7 @@ def test_tool_adapter_returns_dispatch_result_after_relay_post_processing_failur
 
     assert result is raw_result
     assert observed_args == {"command": "pwd"}
-    assert "returning the Hermes tool result" in caplog.text
+    assert "returning the Eternal tool result" in caplog.text
 
 
 def test_tool_adapter_does_not_swallow_interrupt_after_dispatch_success(

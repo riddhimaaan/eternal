@@ -12,14 +12,14 @@ class TestSaveConfigValueAtomic:
     @pytest.fixture
     def config_env(self, tmp_path, monkeypatch):
         """Isolated config environment with a writable config.yaml."""
-        hermes_home = tmp_path / ".hermes"
-        hermes_home.mkdir()
-        config_path = hermes_home / "config.yaml"
+        eternal_home = tmp_path / ".eternal"
+        eternal_home.mkdir()
+        config_path = eternal_home / "config.yaml"
         config_path.write_text(yaml.dump({
             "model": {"default": "test-model", "provider": "openrouter"},
             "display": {"skin": "default"},
         }))
-        monkeypatch.setattr("cli._hermes_home", hermes_home)
+        monkeypatch.setattr("cli._eternal_home", eternal_home)
         return config_path
 
     def test_calls_roundtrip_yaml_update(self, config_env, monkeypatch):
@@ -80,7 +80,7 @@ class TestSaveConfigValueAtomic:
     def test_model_write_runs_shared_cron_drift_warning(self, config_env, monkeypatch):
         warning = MagicMock()
         monkeypatch.setattr(
-            "hermes_cli.config.warn_unpinned_cron_jobs_after_model_config_change",
+            "eternal_cli.config.warn_unpinned_cron_jobs_after_model_config_change",
             warning,
         )
 

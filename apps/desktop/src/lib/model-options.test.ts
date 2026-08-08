@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { getGlobalModelOptions } from '@/hermes'
+import { getGlobalModelOptions } from '@/eternal'
 
 import { manualPickRemoved, modelOptionsQueryKey, requestModelOptions } from './model-options'
 
 const globalOptions = { model: 'hermes-4', provider: 'nous', providers: [] }
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/eternal', () => ({
   getGlobalModelOptions: vi.fn(() => Promise.resolve(globalOptions))
 }))
 

@@ -33,7 +33,7 @@ import { enrichSelectedSshHost, selectSshHost } from './ssh-host-selection'
 type Mode = 'local' | 'remote' | 'cloud' | 'ssh'
 type AuthMode = 'oauth' | 'token'
 type ProbeStatus = 'idle' | 'probing' | 'done' | 'error'
-// Hermes Cloud discovery lifecycle for the cloud-mode panel.
+// Eternal Cloud discovery lifecycle for the cloud-mode panel.
 type CloudDiscoverStatus = 'idle' | 'loading' | 'done' | 'error'
 
 interface GatewaySettingsState {
@@ -49,7 +49,7 @@ interface GatewaySettingsState {
   sshUser: string
   sshPort: number | null
   sshKeyPath: string
-  sshRemoteHermesPath: string
+  sshRemoteEternalPath: string
 }
 
 const SSH_HOST_CUSTOM = '__custom__'
@@ -67,7 +67,7 @@ const EMPTY_STATE: GatewaySettingsState = {
   sshUser: '',
   sshPort: null,
   sshKeyPath: '',
-  sshRemoteHermesPath: ''
+  sshRemoteEternalPath: ''
 }
 
 export function savedCloudConnectionUrl(config: Pick<GatewaySettingsState, 'mode' | 'remoteUrl'>): string {
@@ -169,7 +169,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     setConnectedCloudUrl(savedCloudConnectionUrl(config))
   }
 
-  // --- Hermes Cloud (cloud mode) state ---
+  // --- Eternal Cloud (cloud mode) state ---
   // One portal session powers discovery + the silent per-agent cascade. These
   // track the cloud panel: whether we're signed in, the discovered agent list,
   // and which agent is mid-connect.
@@ -214,7 +214,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
 
   useEffect(() => {
     let cancelled = false
-    const desktop = window.hermesDesktop
+    const desktop = window.eternalDesktop
 
     if (!desktop?.getConnectionConfig) {
       setLoading(false)
@@ -276,7 +276,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
       return
     }
 
-    const desktop = window.hermesDesktop
+    const desktop = window.eternalDesktop
 
     if (!desktop?.probeConnectionConfig) {
       return
@@ -383,12 +383,12 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
   }, [state.sshHost, sshHostSuggestions])
 
   useEffect(() => {
-    if (state.mode !== 'ssh' || !window.hermesDesktop?.sshConfigHosts) {
+    if (state.mode !== 'ssh' || !window.eternalDesktop?.sshConfigHosts) {
       return
     }
 
     let cancelled = false
-    void window.hermesDesktop
+    void window.eternalDesktop
       .sshConfigHosts()
       .then(result => {
         if (!cancelled) {
@@ -412,7 +412,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     signingSeq.current += 1
     cloudConnectSeq.current += 1
     setLastTest(null)
-  }, [scope, state.mode, state.sshHost, state.sshUser, state.sshPort, state.sshKeyPath, state.sshRemoteHermesPath])
+  }, [scope, state.mode, state.sshHost, state.sshUser, state.sshPort, state.sshKeyPath, state.sshRemoteEternalPath])
 
   const oauthConnected = state.remoteOauthConnected
 
@@ -438,7 +438,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     sshUser: state.sshUser.trim() || undefined,
     sshPort: state.sshPort,
     sshKeyPath: state.sshKeyPath.trim() || undefined,
-    sshRemoteHermesPath: state.sshRemoteHermesPath.trim()
+    sshRemoteEternalPath: state.sshRemoteEternalPath.trim()
   })
 
   const save = async (apply: boolean) => {
@@ -458,8 +458,8 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
 
     try {
       const next = apply
-        ? await window.hermesDesktop.applyConnectionConfig(payload())
-        : await window.hermesDesktop.saveConnectionConfig(payload())
+        ? await window.eternalDesktop.applyConnectionConfig(payload())
+        : await window.eternalDesktop.saveConnectionConfig(payload())
 
       if (seq !== saveSeq.current) {
         return
@@ -481,7 +481,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
 
       const errors = {
         'auth-failed': g.sshErrAuth,
-        'hermes-not-found': g.sshErrNotInstalled,
+        'eternal-not-found': g.sshErrNotInstalled,
         'host-key-changed': g.sshErrHostKey,
         timeout: g.sshErrTimeout,
         unreachable: g.sshErrUnreachable,
@@ -522,7 +522,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     try {
       // Save (don't apply/restart) so the login window has a URL to use and the
       // oauth mode is persisted, without yet flipping the live connection.
-      const saved = await window.hermesDesktop.saveConnectionConfig({
+      const saved = await window.eternalDesktop.saveConnectionConfig({
         mode: state.mode,
         profile: scope ?? undefined,
         remoteAuthMode: 'oauth',
@@ -535,14 +535,14 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
 
       acceptSavedConfig(saved)
 
-      const result = await window.hermesDesktop.oauthLoginConnectionConfig(trimmedUrl)
+      const result = await window.eternalDesktop.oauthLoginConnectionConfig(trimmedUrl)
 
       if (seq !== signingSeq.current) {
         return
       }
 
       if (result.connected) {
-        const refreshed = await window.hermesDesktop.getConnectionConfig(scope)
+        const refreshed = await window.eternalDesktop.getConnectionConfig(scope)
         acceptSavedConfig(refreshed)
         notify({ kind: 'success', title: g.signedIn, message: g.connectedTo(providerLabel) })
       } else {
@@ -568,8 +568,8 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     setSigningIn(true)
 
     try {
-      await window.hermesDesktop.oauthLogoutConnectionConfig(trimmedUrl || undefined)
-      const refreshed = await window.hermesDesktop.getConnectionConfig(scope)
+      await window.eternalDesktop.oauthLogoutConnectionConfig(trimmedUrl || undefined)
+      const refreshed = await window.eternalDesktop.getConnectionConfig(scope)
 
       if (seq !== signingSeq.current) {
         return
@@ -588,14 +588,14 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     }
   }
 
-  // --- Hermes Cloud handlers ---
+  // --- Eternal Cloud handlers ---
 
   // Pull the discovered agent list over the shared portal session. Tolerant of
   // a lapsed session: a needsCloudLogin error flips us back to signed-out.
   // `org` scopes discovery for multi-org users; when discovery comes back with
   // needsOrgSelection we surface the org list and show a picker instead.
   const discoverCloud = async (org?: string) => {
-    const desktop = window.hermesDesktop
+    const desktop = window.eternalDesktop
     const seq = contextSeq.current
 
     if (!desktop?.cloud) {
@@ -679,7 +679,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
       return
     }
 
-    const desktop = window.hermesDesktop
+    const desktop = window.eternalDesktop
 
     if (!desktop?.cloud) {
       return
@@ -725,7 +725,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
   }, [state.mode, scope])
 
   const cloudSignIn = async () => {
-    const desktop = window.hermesDesktop
+    const desktop = window.eternalDesktop
     const seq = ++signingSeq.current
 
     if (!desktop?.cloud) {
@@ -758,7 +758,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
   }
 
   const cloudSignOut = async () => {
-    const desktop = window.hermesDesktop
+    const desktop = window.eternalDesktop
     const seq = ++signingSeq.current
 
     if (!desktop?.cloud) {
@@ -801,7 +801,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
       return
     }
 
-    const desktop = window.hermesDesktop
+    const desktop = window.eternalDesktop
 
     if (!desktop?.cloud) {
       return
@@ -862,14 +862,14 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
   }
 
   const resolveSshHost = async (host: string) => {
-    if (!host || !window.hermesDesktop?.sshResolveHost) {
+    if (!host || !window.eternalDesktop?.sshResolveHost) {
       return
     }
 
     const seq = ++sshResolveSeq.current
 
     try {
-      const resolved = await window.hermesDesktop.sshResolveHost(host)
+      const resolved = await window.eternalDesktop.sshResolveHost(host)
 
       if (seq !== sshResolveSeq.current) {
         return
@@ -907,7 +907,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     setLastTest(null)
 
     try {
-      const result = await window.hermesDesktop.testConnectionConfig(payload())
+      const result = await window.eternalDesktop.testConnectionConfig(payload())
 
       if (seq !== sshTestSeq.current) {
         return
@@ -916,7 +916,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
       if (!result.reachable) {
         const errors = {
           'auth-failed': g.sshErrAuth,
-          'hermes-not-found': g.sshErrNotInstalled,
+          'eternal-not-found': g.sshErrNotInstalled,
           'host-key-changed': g.sshErrHostKey,
           timeout: g.sshErrTimeout,
           unreachable: g.sshErrUnreachable,
@@ -959,7 +959,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     setLastTest(null)
 
     try {
-      const result = await window.hermesDesktop.testConnectionConfig({
+      const result = await window.eternalDesktop.testConnectionConfig({
         mode: 'remote',
         profile: scope ?? undefined,
         remoteAuthMode: authMode,
@@ -996,7 +996,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
     )
   }
 
-  if (!window.hermesDesktop?.getConnectionConfig) {
+  if (!window.eternalDesktop?.getConnectionConfig) {
     return <EmptyState description={g.unavailableDesc} title={g.unavailableTitle} />
   }
 
@@ -1089,7 +1089,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
         </div>
       </div>
 
-      {/* Hermes Cloud panel: one portal sign-in, then a discovered-agent picker
+      {/* Eternal Cloud panel: one portal sign-in, then a discovered-agent picker
           whose selection drives the silent per-agent cascade + a cloud
           connection. Replaces the URL/token form while in cloud mode. */}
       {state.mode === 'cloud' && !state.envOverride ? (
@@ -1242,7 +1242,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
                 className={cn('h-8', CONTROL_TEXT)}
                 disabled={state.envOverride}
                 onChange={event => setState(current => ({ ...current, remoteUrl: event.target.value }))}
-                placeholder="https://gateway.example.com/hermes"
+                placeholder="https://gateway.example.com/eternal"
                 value={state.remoteUrl}
               />
             }
@@ -1415,13 +1415,13 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
             action={
               <Input
                 className={cn('h-8 font-mono', CONTROL_TEXT)}
-                onChange={event => setState(current => ({ ...current, sshRemoteHermesPath: event.target.value }))}
-                placeholder={g.sshHermesPathPlaceholder}
-                value={state.sshRemoteHermesPath}
+                onChange={event => setState(current => ({ ...current, sshRemoteEternalPath: event.target.value }))}
+                placeholder={g.sshEternalPathPlaceholder}
+                value={state.sshRemoteEternalPath}
               />
             }
-            description={g.sshHermesPathDesc}
-            title={g.sshHermesPathTitle}
+            description={g.sshEternalPathDesc}
+            title={g.sshEternalPathTitle}
           />
         </div>
       ) : null}
@@ -1477,7 +1477,7 @@ export function GatewaySettings({ embedded = false }: { embedded?: boolean } = {
         <div className="mt-6 grid gap-1">
           <ListRow
             action={
-              <Button onClick={() => void window.hermesDesktop?.revealLogs()} size="sm" variant="textStrong">
+              <Button onClick={() => void window.eternalDesktop?.revealLogs()} size="sm" variant="textStrong">
                 <FileText />
                 {g.openLogs}
               </Button>

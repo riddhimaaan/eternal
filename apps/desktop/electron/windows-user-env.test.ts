@@ -7,25 +7,25 @@ import { expandWindowsEnvRefs, parseRegQueryValue, readWindowsUserEnvVar } from 
 // ── parseRegQueryValue ─────────────────────────────────────────────────────
 
 test('parseRegQueryValue extracts a REG_SZ value', () => {
-  const out = ['', 'HKEY_CURRENT_USER\\Environment', '    HERMES_HOME    REG_SZ    F:\\Hermes\\data', ''].join('\r\n')
-  assert.equal(parseRegQueryValue(out, 'HERMES_HOME'), 'F:\\Hermes\\data')
+  const out = ['', 'HKEY_CURRENT_USER\\Environment', '    ETERNAL_HOME    REG_SZ    F:\\Eternal\\data', ''].join('\r\n')
+  assert.equal(parseRegQueryValue(out, 'ETERNAL_HOME'), 'F:\\Eternal\\data')
 })
 
 test('parseRegQueryValue matches the name case-insensitively', () => {
-  const out = 'HKEY_CURRENT_USER\\Environment\r\n    Hermes_Home    REG_EXPAND_SZ    %USERPROFILE%\\h\r\n'
-  assert.equal(parseRegQueryValue(out, 'HERMES_HOME'), '%USERPROFILE%\\h')
+  const out = 'HKEY_CURRENT_USER\\Environment\r\n    Eternal_Home    REG_EXPAND_SZ    %USERPROFILE%\\h\r\n'
+  assert.equal(parseRegQueryValue(out, 'ETERNAL_HOME'), '%USERPROFILE%\\h')
 })
 
 test('parseRegQueryValue preserves spaces inside the value', () => {
-  const out = '    HERMES_HOME    REG_SZ    C:\\Program Files\\Hermes\r\n'
-  assert.equal(parseRegQueryValue(out, 'HERMES_HOME'), 'C:\\Program Files\\Hermes')
+  const out = '    ETERNAL_HOME    REG_SZ    C:\\Program Files\\Eternal\r\n'
+  assert.equal(parseRegQueryValue(out, 'ETERNAL_HOME'), 'C:\\Program Files\\Eternal')
 })
 
 test('parseRegQueryValue returns null when the value line is absent', () => {
   const out = 'HKEY_CURRENT_USER\\Environment\r\n    Path    REG_SZ    C:\\x\r\n'
-  assert.equal(parseRegQueryValue(out, 'HERMES_HOME'), null)
-  assert.equal(parseRegQueryValue('', 'HERMES_HOME'), null)
-  assert.equal(parseRegQueryValue('garbage', 'HERMES_HOME'), null)
+  assert.equal(parseRegQueryValue(out, 'ETERNAL_HOME'), null)
+  assert.equal(parseRegQueryValue('', 'ETERNAL_HOME'), null)
+  assert.equal(parseRegQueryValue('garbage', 'ETERNAL_HOME'), null)
 })
 
 // ── expandWindowsEnvRefs ───────────────────────────────────────────────────
@@ -35,7 +35,7 @@ test('expandWindowsEnvRefs expands %VAR% case-insensitively', () => {
 })
 
 test('expandWindowsEnvRefs leaves literal paths and unknown refs intact', () => {
-  assert.equal(expandWindowsEnvRefs('F:\\Hermes\\data', {}), 'F:\\Hermes\\data')
+  assert.equal(expandWindowsEnvRefs('F:\\Eternal\\data', {}), 'F:\\Eternal\\data')
   assert.equal(expandWindowsEnvRefs('%NOPE%\\x', {}), '%NOPE%\\x')
 })
 
@@ -50,7 +50,7 @@ test('readWindowsUserEnvVar returns null off Windows without spawning', () => {
     return ''
   }
 
-  assert.equal(readWindowsUserEnvVar('HERMES_HOME', { platform: 'linux', exec }), null)
+  assert.equal(readWindowsUserEnvVar('ETERNAL_HOME', { platform: 'linux', exec }), null)
   assert.equal(spawned, false)
 })
 
@@ -60,17 +60,17 @@ test('readWindowsUserEnvVar queries HKCU\\Environment and expands the value', ()
   const exec = (cmd, args) => {
     calls.push([cmd, args])
 
-    return 'HKEY_CURRENT_USER\\Environment\r\n    HERMES_HOME    REG_EXPAND_SZ    %DRIVE%\\Hermes\r\n'
+    return 'HKEY_CURRENT_USER\\Environment\r\n    ETERNAL_HOME    REG_EXPAND_SZ    %DRIVE%\\Eternal\r\n'
   }
 
-  const value = readWindowsUserEnvVar('HERMES_HOME', {
+  const value = readWindowsUserEnvVar('ETERNAL_HOME', {
     platform: 'win32',
     env: { DRIVE: 'F:' },
     exec
   })
 
-  assert.equal(value, 'F:\\Hermes')
-  assert.deepEqual(calls, [['reg', ['query', 'HKCU\\Environment', '/v', 'HERMES_HOME']]])
+  assert.equal(value, 'F:\\Eternal')
+  assert.deepEqual(calls, [['reg', ['query', 'HKCU\\Environment', '/v', 'ETERNAL_HOME']]])
 })
 
 test('readWindowsUserEnvVar returns null when reg exits non-zero (value missing)', () => {
@@ -78,10 +78,10 @@ test('readWindowsUserEnvVar returns null when reg exits non-zero (value missing)
     throw new Error('reg exited 1')
   }
 
-  assert.equal(readWindowsUserEnvVar('HERMES_HOME', { platform: 'win32', exec }), null)
+  assert.equal(readWindowsUserEnvVar('ETERNAL_HOME', { platform: 'win32', exec }), null)
 })
 
 test('readWindowsUserEnvVar returns null for an empty value', () => {
-  const exec = () => '    HERMES_HOME    REG_SZ    \r\n'
-  assert.equal(readWindowsUserEnvVar('HERMES_HOME', { platform: 'win32', exec }), null)
+  const exec = () => '    ETERNAL_HOME    REG_SZ    \r\n'
+  assert.equal(readWindowsUserEnvVar('ETERNAL_HOME', { platform: 'win32', exec }), null)
 })

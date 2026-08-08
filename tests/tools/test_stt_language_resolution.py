@@ -3,7 +3,7 @@
 Class-level contract: EVERY provider resolves its language hint through one
 helper with the order:
 
-    stt.<provider>.language > stt.language (global) > HERMES_LOCAL_STT_LANGUAGE > None
+    stt.<provider>.language > stt.language (global) > ETERNAL_LOCAL_STT_LANGUAGE > None
 
 Regression coverage for the "STT transcribes the wrong language" issue class
 (#55551, #50181 and siblings):
@@ -21,7 +21,7 @@ from tools.transcription_tools import _resolve_stt_language
 
 @pytest.fixture(autouse=True)
 def _clear_lang_env(monkeypatch):
-    monkeypatch.delenv("HERMES_LOCAL_STT_LANGUAGE", raising=False)
+    monkeypatch.delenv("ETERNAL_LOCAL_STT_LANGUAGE", raising=False)
 
 
 class TestResolveSttLanguage:
@@ -39,7 +39,7 @@ class TestResolveSttLanguage:
             assert _resolve_stt_language(provider, cfg) == "uk", provider
 
     def test_env_var_fallback(self, monkeypatch):
-        monkeypatch.setenv("HERMES_LOCAL_STT_LANGUAGE", "de")
+        monkeypatch.setenv("ETERNAL_LOCAL_STT_LANGUAGE", "de")
         assert _resolve_stt_language("openai", {}) == "de"
 
     def test_auto_detect_when_nothing_set(self):
