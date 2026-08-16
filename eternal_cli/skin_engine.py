@@ -908,10 +908,33 @@ def load_skin(name: str) -> SkinConfig:
     return _build_skin_config(_BUILTIN_SKINS["default"])
 
 
+def _skin_name_from_config() -> Optional[str]:
+    """``display.skin`` from config.yaml, or None if unset/unreadable.
+
+    The TUI resolves the active skin this way already (see tui_gateway/server
+    ``_skin_sig``). Without this, the CLI/banner path is stuck on whatever
+    ``_active_skin_name`` was initialised to — which nothing in production ever
+    changes — so ``display.skin`` was silently ignored outside the TUI.
+    """
+    try:
+        from eternal_cli.config import load_config_readonly
+        display = load_config_readonly().get("display") or {}
+        name = display.get("skin")
+        return str(name) if name else None
+    except Exception:
+        return None
+
+
 def get_active_skin() -> SkinConfig:
     """Get the currently active skin config (cached)."""
-    global _active_skin
+    global _active_skin, _active_skin_name
     if _active_skin is None:
+        # Honour config.yaml on first resolve, unless a caller already pinned a
+        # skin explicitly via set_active_skin().
+        if _active_skin_name == "default":
+            configured = _skin_name_from_config()
+            if configured:
+                _active_skin_name = configured
         _active_skin = load_skin(_active_skin_name)
     return _active_skin
 

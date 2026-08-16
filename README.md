@@ -6,7 +6,9 @@
 <p align="center">
   <a href="https://hermes-agent.nousresearch.com/">Eternal Agent</a> | <a href="https://hermes-agent.nousresearch.com/">Eternal Desktop</a>
 </p>
+
 <p align="center">
+  <a href="https://github.com/NousResearch/hermes-agent"><img src="https://img.shields.io/badge/Fork%20of-Hermes%20Agent-blueviolet?style=for-the-badge" alt="Fork of Hermes Agent"></a>
   <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-eternal--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
   <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
@@ -15,6 +17,10 @@
   <a href="README.ur-pk.md"><img src="https://img.shields.io/badge/Lang-اردو-green?style=for-the-badge" alt="اردو"></a>
   <a href="README.es.md"><img src="https://img.shields.io/badge/Lang-Español-orange?style=for-the-badge" alt="Español"></a>
 </p>
+
+> **ETERNAL is a personal fork of [Hermes Agent](https://github.com/NousResearch/hermes-agent), created by [Nous Research](https://nousresearch.com) and used here under the MIT License.**
+> It is not affiliated with, endorsed by, or supported by Nous Research. For the original project, its
+> documentation, and its community, go upstream — don't file ETERNAL issues there.
 
 **The self-improving AI agent built by [Nous Research](https://nousresearch.com).** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
 
@@ -159,6 +165,47 @@ Eternal has two entry points: start the terminal UI with `eternal`, or run the g
 For the full command lists, see the [CLI guide](https://hermes-agent.nousresearch.com/docs/user-guide/cli) and the [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
 
 ---
+
+## Packs — the one thing Claude Code has that Eternal didn't
+
+Eternal ships three extension systems that don't package together: skills
+(markdown instructions), plugins (Python tools and hooks), and MCP servers.
+Shipping "everything for working with X" therefore meant three separate
+installs, with nothing telling the user they needed all three.
+
+A **pack** is one directory with one `eternal-pack.yaml` that carries all
+three:
+
+```yaml
+name: n8n-kit
+version: 1.0.0
+description: Everything for working with n8n
+
+skills:
+  - skills/n8n-workflow-patterns
+plugins:
+  - plugins/n8n-tools
+mcp_servers:
+  n8n:
+    command: npx
+    args: ["-y", "n8n-mcp"]
+```
+
+```bash
+eternal pack create my-kit      # scaffold
+eternal pack install ./my-kit   # preview, confirm, install all three
+eternal pack list
+eternal pack remove my-kit      # replays the receipt
+```
+
+Install writes a receipt to `ETERNAL_HOME/packs/<name>.json` recording the
+exact paths created and config keys added, and `remove` replays it — so it
+never deletes something the pack did not install. Skills are namespaced under
+the pack name, so two packs can ship a same-named skill without collision.
+`--dry-run` writes nothing; conflicts refuse unless `--force`; and MCP env
+vars with secret-looking names are stripped and reported rather than
+installed.
+
 
 ## Documentation
 

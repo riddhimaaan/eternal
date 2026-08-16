@@ -1,0 +1,75 @@
+name: eternal-mono
+label: ETERNAL Mono
+description: Pure black and white. Colour reserved strictly for state.
+
+# The dashboard counterpart to ~/.eternal/skins/eternal-mono.yaml, so the
+# terminal and the browser agree. Same rule in both: everything structural is
+# monochrome, and the only saturated colour marks success or failure.
+#
+# Contrast on #000000 (WCAG AA needs 4.5:1 for text):
+#   #FFFFFF 21.0:1   #B3B3B3 10.0:1   #8A8A8A 6.1:1
+#   green #3FB950 8.3:1   red #F85149 6.3:1   amber #D29922 8.3:1
+
+palette:
+  # Deepest canvas.
+  background:
+    hex: "#000000"
+    alpha: 1
+  # Primary text and accent — most UI chrome reads this.
+  midground:
+    hex: "#FFFFFF"
+    alpha: 1
+  # Top-layer highlight; invisible by default, drives ring-style accents.
+  foreground:
+    hex: "#FFFFFF"
+    alpha: 0
+  warmGlow: "rgba(255, 255, 255, 0.08)"
+  noiseOpacity: 0
+
+typography:
+  # Arial everywhere, by request.
+  #
+  # Both slots are set on purpose. 29 dashboard components apply `font-mono`
+  # by design — the whole content area is monospace — and index.css maps
+  # `code, kbd, pre, samp, .font-mono, .font-mono-ui` to --theme-font-mono.
+  # So setting fontSans alone only reached the sidebar; everything else kept
+  # resolving through the mono slot.
+  #
+  # Arial is a system font on every desktop OS, so no fontUrl and no network
+  # fetch. Helvetica/Liberation Sans are the metric-compatible fallbacks for
+  # machines without it (Liberation Sans is the usual Linux stand-in).
+  fontSans: 'Arial, Helvetica, "Liberation Sans", sans-serif'
+  fontMono: 'Arial, Helvetica, "Liberation Sans", sans-serif'
+  baseSize: "15px"
+  lineHeight: "1.6"
+  letterSpacing: "0"
+
+layout:
+  # Square corners. Rounded corners read as friendly; this theme isn't.
+  radius: "0"
+  density: "comfortable"
+
+colorOverrides:
+  # Structure — greys only, so nothing competes with state colour.
+  card: "#000000"
+  cardForeground: "#FFFFFF"
+  popover: "#0A0A0A"
+  popoverForeground: "#FFFFFF"
+  primary: "#FFFFFF"
+  primaryForeground: "#000000"
+  secondary: "#1A1A1A"
+  secondaryForeground: "#FFFFFF"
+  muted: "#1A1A1A"
+  mutedForeground: "#8A8A8A"
+  accent: "#1A1A1A"
+  accentForeground: "#FFFFFF"
+  border: "#333333"
+  input: "#333333"
+  ring: "#FFFFFF"
+
+  # State — the only saturated colour in the theme. Same hexes as the
+  # terminal skin so a passing check looks identical in both surfaces.
+  success: "#3FB950"
+  destructive: "#F85149"
+  destructiveForeground: "#000000"
+  warning: "#D29922"

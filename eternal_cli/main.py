@@ -11318,7 +11318,7 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "dump", "egress", "fallback", "gateway", "hooks", "import", "import-agent", "insights",
         "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate", "moa",
         "journey", "memory-graph", "learning",
-        "model", "monitoring", "pairing", "pause", "pets", "plugins", "portal", "profile",
+        "model", "monitoring", "pack", "pairing", "pause", "pets", "plugins", "portal", "profile",
         "project", "proxy",
         "prompt-size",
         "resume",
@@ -12457,6 +12457,23 @@ def main():
     from eternal_cli.bundles import register_cli as _bundles_register, bundles_command
     _bundles_register(bundles_parser)
     bundles_parser.set_defaults(func=bundles_command)
+
+    # =========================================================================
+    # pack command — skills + plugins + MCP servers as one installable unit
+    # =========================================================================
+    pack_parser = subparsers.add_parser(
+        "pack",
+        help="Install skills, plugins, and MCP servers together as one pack",
+        description=(
+            "A pack bundles skills, plugins, and MCP servers behind a single "
+            "eternal-pack.yaml so a whole setup installs in one command "
+            "instead of three. Removal replays the install receipt, so it "
+            "only ever deletes what the pack put there."
+        ),
+    )
+    from eternal_cli.packs import register_cli as _packs_register, pack_command
+    _packs_register(pack_parser)
+    pack_parser.set_defaults(func=pack_command)
 
     # =========================================================================
     # plugins command  (parser built in eternal_cli/subcommands/plugins.py)

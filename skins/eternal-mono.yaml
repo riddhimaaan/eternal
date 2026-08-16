@@ -1,0 +1,108 @@
+name: eternal-mono
+description: Pure black and white. Colour reserved strictly for state.
+
+# Everything structural is monochrome. The ONLY saturated colours in this skin
+# are green (success) and red (failure) — plus amber for warnings, which is the
+# single addition beyond your two. To go strictly green/red, set every amber
+# value below to "#FFFFFF".
+#
+# Contrast on #000000 (WCAG AA needs 4.5:1 for text):
+#   #FFFFFF 21.0:1   #B3B3B3 10.0:1   #8A8A8A 6.1:1
+#   green   #3FB950  8.3:1   red #F85149 6.3:1   amber #D29922 8.0:1
+# #5A5A5A and #333333 are decorative rules only — never used for text.
+
+colors:
+  background: "#000000"
+
+  # Brand / accent — deliberately white, so nothing competes with state colour.
+  ui_accent: "#FFFFFF"
+  ui_primary: "#FFFFFF"
+  banner_accent: "#FFFFFF"
+  banner_title: "#FFFFFF"
+
+  # Text hierarchy.
+  ui_text: "#FFFFFF"
+  banner_text: "#FFFFFF"
+  banner_dim: "#8A8A8A"
+
+  # Structure — decorative rules, kept low so chrome never shouts over content.
+  ui_border: "#333333"
+  banner_border: "#333333"
+
+  # Semantic status — the whole point of the skin.
+  ui_ok: "#3FB950"
+  ui_error: "#F85149"
+  ui_warn: "#D29922"
+  ui_label: "#FFFFFF"
+
+  # Element-specific.
+  ui_tool: "#FFFFFF"
+  ui_thinking: "#8A8A8A"
+
+  # Diffs inherit the same two hues.
+  diff_added: "#3FB950"
+  diff_removed: "#F85149"
+  diff_added_word: "#56D364"
+  diff_removed_word: "#FF7B72"
+
+  # Syntax highlighting stays monochrome — code reads by shape, not hue.
+  syntax_string: "#B3B3B3"
+  syntax_number: "#FFFFFF"
+  syntax_keyword: "#FFFFFF"
+  syntax_comment: "#5A5A5A"
+
+  # CLI / TUI chrome.
+  prompt: "#FFFFFF"
+  input_rule: "#333333"
+  response_border: "#333333"
+  shell_dollar: "#8A8A8A"
+  selection_bg: "#333333"
+  session_label: "#8A8A8A"
+  session_border: "#333333"
+
+  status_bar_bg: "#1A1A1A"
+  status_bar_text: "#FFFFFF"
+  status_bar_strong: "#FFFFFF"
+  status_bar_dim: "#8A8A8A"
+  status_bar_good: "#3FB950"
+  status_bar_warn: "#D29922"
+  status_bar_bad: "#F85149"
+  status_bar_critical: "#F85149"
+
+  voice_status_bg: "#1A1A1A"
+  completion_menu_bg: "#1A1A1A"
+  completion_menu_current_bg: "#333333"
+  completion_menu_meta_bg: "#1A1A1A"
+  completion_menu_meta_current_bg: "#333333"
+
+branding:
+  agent_name: ETERNAL
+  prompt_symbol: "❯"
+
+# Replaces the inherited HERMES-AGENT block letters. 59 columns wide instead of
+# 100, so it no longer eats a third of the screen before you have typed anything.
+banner_logo: |-
+  [#FFFFFF]███████╗████████╗███████╗██████╗ ███╗   ██╗ █████╗ ██╗     [/]
+  [#FFFFFF]██╔════╝╚══██╔══╝██╔════╝██╔══██╗████╗  ██║██╔══██╗██║     [/]
+  [#FFFFFF]█████╗     ██║   █████╗  ██████╔╝██╔██╗ ██║███████║██║     [/]
+  [#B3B3B3]██╔══╝     ██║   ██╔══╝  ██╔══██╗██║╚██╗██║██╔══██║██║     [/]
+  [#8A8A8A]███████╗   ██║   ███████╗██║  ██║██║ ╚████║██║  ██║███████╗[/]
+  [#5A5A5A]╚══════╝   ╚═╝   ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝  ╚═╝╚══════╝[/]
+
+# A paper plane: folded by hand, then let go. Replaces both the inherited
+# caduceus and the swift that preceded it. Brightest through the body and nose,
+# fading at the trailing tips so it reads as motion rather than a static mass.
+banner_hero: |-
+  [#8A8A8A]⠀⠀⠀⢤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+  [#8A8A8A]⠀⠀⠀⠀⠈⠻⣷⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+  [#B3B3B3]⠀⠀⠀⠀⠀⠀⠀⠙⠿⣿⣿⣷⣦⣤⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+  [#B3B3B3]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⢿⣿⣿⣿⣿⣷⣦⣤⣀⠀⠀⠀⠀⠀⠀[/]
+  [#FFFFFF]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠿⣿⣿⣿⣿⣿⣿⣿⣷⣦⣤⣀⠀[/]
+  [#FFFFFF]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠉⠉⠉⠉⠉⠉⢙⣛⣛⣛⣻⡷[/]
+  [#FFFFFF]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣠⣶⣶⣾⣿⣿⣿⣿⡿⠟⠋⠁[/]
+  [#FFFFFF]⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⠿⠛⠉⠁⠀⠀⠀⠀[/]
+  [#B3B3B3]⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣴⣿⣿⣿⠿⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+  [#B3B3B3]⠀⠀⠀⠀⠀⠀⠀⣠⣾⡿⠟⠋⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+  [#8A8A8A]⠀⠀⠀⠀⢀⡴⠞⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀[/]
+
+tool_prefix: "│"
