@@ -32,7 +32,7 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { getProfileSoul, updateProfileSoul } from '@/hermes'
+import { getProfileSoul, updateProfileSoul } from '@/eternal'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { PROFILE_SWATCHES, profileColorSoft, resolveProfileColor } from '@/lib/profile-color'
@@ -61,7 +61,7 @@ import {
   sortByProfileOrder
 } from '@/store/profile'
 import { runExportProfileFlow, runImportProfileFlow } from '@/store/profile-share'
-import type { ProfileInfo } from '@/types/hermes'
+import type { ProfileInfo } from '@/types/eternal'
 
 import { CreateProfileDialog } from '../../profiles/create-profile-dialog'
 import { DeleteProfileDialog } from '../../profiles/delete-profile-dialog'
@@ -317,7 +317,7 @@ export function ProfileRail() {
 
       {/* Multi-gateway discoverability: a plug pinned beside Manage deep-links
           to Settings → Connections. The registry (local runtime + remote
-          gateways + Hermes Cloud + SSH) is otherwise buried three levels into
+          gateways + Eternal Cloud + SSH) is otherwise buried three levels into
           Settings, and the rail is exactly where a user looks when they wonder
           "how do I get my other machine's agents in here". */}
       <ProfilePill

@@ -12,14 +12,14 @@ import {
   DialogTitle
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { getHermesConfigRecord, saveMcpServers } from '@/hermes'
+import { getEternalConfigRecord, saveMcpServers } from '@/eternal'
 import { useI18n } from '@/i18n'
 import { AlertTriangle } from '@/lib/icons'
 import { MCP_DEEPLINK_NAME_RE } from '@/lib/mcp-deeplink'
 import { $mcpInstallRequest } from '@/store/mcp-deeplink-install'
 import { notify, readableError } from '@/store/notifications'
 
-import { setHermesConfigCache } from '../hooks/use-config-record'
+import { setEternalConfigCache } from '../hooks/use-config-record'
 
 type McpServers = Record<string, Record<string, unknown>>
 
@@ -30,12 +30,12 @@ const getServers = (config: { mcp_servers?: unknown } | null): McpServers => {
 }
 
 /**
- * Explicit-confirm gate for `hermes://mcp/install` deep links. The payload is
+ * Explicit-confirm gate for `eternal://mcp/install` deep links. The payload is
  * arbitrary attacker-controllable input (any web page can open the link), so
  * this dialog shows the server name and the FULL pretty-printed config —
  * exactly what would be written — and nothing touches config until the user
  * confirms. stdio (`command`) entries carry an extra caution banner because
- * confirming lets Hermes spawn that local process. An existing server name is
+ * confirming lets Eternal spawn that local process. An existing server name is
  * never silently overwritten: confirm stays blocked until the user picks a
  * fresh name or cancels.
  */
@@ -64,7 +64,7 @@ export function McpInstallDeepLinkDialog() {
 
     let cancelled = false
 
-    getHermesConfigRecord()
+    getEternalConfigRecord()
       .then(config => {
         if (!cancelled) {
           setExistingNames(Object.keys(getServers(config)))
@@ -110,7 +110,7 @@ export function McpInstallDeepLinkDialog() {
       // Merge over the FRESHEST server map — saveMcpServers replaces the whole
       // `mcp_servers` document, so saving over a stale snapshot would drop
       // servers added elsewhere since the dialog opened.
-      const current = getServers(await getHermesConfigRecord())
+      const current = getServers(await getEternalConfigRecord())
 
       if (Object.prototype.hasOwnProperty.call(current, trimmedName)) {
         setExistingNames(Object.keys(current))
@@ -121,7 +121,7 @@ export function McpInstallDeepLinkDialog() {
 
       const nextServers = { ...current, [trimmedName]: request.config }
       await saveMcpServers(nextServers)
-      setHermesConfigCache(previous => (previous ? { ...previous, mcp_servers: nextServers } : previous))
+      setEternalConfigCache(previous => (previous ? { ...previous, mcp_servers: nextServers } : previous))
       notify({ kind: 'success', title: m.savedTitle, message: m.savedMessage(trimmedName) })
       $mcpInstallRequest.set(null)
       navigate(`/skills?tab=mcp&server=${encodeURIComponent(trimmedName)}`)

@@ -1,23 +1,23 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { HermesReadDirResult } from '@/global'
-import type * as HermesModule from '@/hermes'
+import type { EternalReadDirResult } from '@/global'
+import type * as EternalModule from '@/eternal'
 
 import { $pluginRecords, setPluginEnabled } from './plugins-store'
 import { discoverRuntimePlugins, watchRuntimePlugins } from './runtime-loader'
 
-// getStatus would supply the connected backend's hermes_home — a REMOTE path in
+// getStatus would supply the connected backend's eternal_home — a REMOTE path in
 // remote mode. The disk scanner must NOT derive the plugin root from it (#66899).
-const getStatus = vi.fn(async () => ({ hermes_home: '/remote/box/.hermes' }))
+const getStatus = vi.fn(async () => ({ eternal_home: '/remote/box/.eternal' }))
 
-vi.mock('@/hermes', async importActual => ({
-  ...(await importActual<typeof HermesModule>()),
+vi.mock('@/eternal', async importActual => ({
+  ...(await importActual<typeof EternalModule>()),
   getStatus: () => getStatus()
 }))
 
 const desktopPluginsRoot = vi.fn<() => Promise<string>>()
 const agentPluginsRoot = vi.fn<() => Promise<string>>()
-const readDir = vi.fn<(path: string) => Promise<HermesReadDirResult>>()
+const readDir = vi.fn<(path: string) => Promise<EternalReadDirResult>>()
 const readFileText = vi.fn<(path: string) => Promise<{ text: string }>>()
 const watchDirectory = vi.fn<(path: string) => Promise<{ id: string }>>()
 const watchPreviewFile = vi.fn<(path: string) => Promise<{ id: string }>>()
@@ -32,7 +32,7 @@ beforeEach(() => {
   watchPreviewFile.mockReset()
   onPreviewFileChanged.mockReset()
   getStatus.mockClear()
-  ;(window as unknown as { hermesDesktop: unknown }).hermesDesktop = {
+  ;(window as unknown as { eternalDesktop: unknown }).eternalDesktop = {
     agentPluginsRoot,
     desktopPluginsRoot,
     onPreviewFileChanged,
@@ -44,23 +44,23 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  delete (window as unknown as { hermesDesktop?: unknown }).hermesDesktop
+  delete (window as unknown as { eternalDesktop?: unknown }).eternalDesktop
 })
 
 describe('scanDiskPlugins (#66899)', () => {
-  it('scans the Electron-resolved local roots, never the backend hermes_home', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+  it('scans the Electron-resolved local roots, never the backend eternal_home', async () => {
+    desktopPluginsRoot.mockResolvedValue('/local/.eternal/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.eternal/plugins')
     readDir.mockResolvedValue({ entries: [] })
 
     await discoverRuntimePlugins()
 
     expect(desktopPluginsRoot).toHaveBeenCalled()
-    expect(readDir).toHaveBeenCalledWith('/local/.hermes/desktop-plugins')
-    expect(readDir).toHaveBeenCalledWith('/local/.hermes/plugins')
-    // The remote backend's hermes_home must never feed the local plugin scan.
+    expect(readDir).toHaveBeenCalledWith('/local/.eternal/desktop-plugins')
+    expect(readDir).toHaveBeenCalledWith('/local/.eternal/plugins')
+    // The remote backend's eternal_home must never feed the local plugin scan.
     expect(getStatus).not.toHaveBeenCalled()
-    expect(readDir).not.toHaveBeenCalledWith('/remote/box/.hermes/desktop-plugins')
+    expect(readDir).not.toHaveBeenCalledWith('/remote/box/.eternal/desktop-plugins')
   })
 
   it('no-ops when the resolvers yield no local root', async () => {
@@ -73,11 +73,11 @@ describe('scanDiskPlugins (#66899)', () => {
   })
 
   it('probes desktop/plugin.js inside agent-plugin packages (unified packaging)', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+    desktopPluginsRoot.mockResolvedValue('/local/.eternal/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.eternal/plugins')
     readDir.mockImplementation(async dir =>
-      dir === '/local/.hermes/plugins'
-        ? { entries: [{ isDirectory: true, name: 'my-feature', path: '/local/.hermes/plugins/my-feature' }] }
+      dir === '/local/.eternal/plugins'
+        ? { entries: [{ isDirectory: true, name: 'my-feature', path: '/local/.eternal/plugins/my-feature' }] }
         : { entries: [] }
     )
     // No desktop half in this package — probe must target desktop/plugin.js.
@@ -85,28 +85,28 @@ describe('scanDiskPlugins (#66899)', () => {
 
     await discoverRuntimePlugins()
 
-    expect(readFileText).toHaveBeenCalledWith('/local/.hermes/plugins/my-feature/desktop/plugin.js')
+    expect(readFileText).toHaveBeenCalledWith('/local/.eternal/plugins/my-feature/desktop/plugin.js')
     // The Python half's files must never be probed as a desktop entry.
-    expect(readFileText).not.toHaveBeenCalledWith('/local/.hermes/plugins/my-feature/plugin.js')
+    expect(readFileText).not.toHaveBeenCalledWith('/local/.eternal/plugins/my-feature/plugin.js')
   })
 
   it('still scans the standalone root when agentPluginsRoot is absent (older shell)', async () => {
-    delete (window.hermesDesktop as unknown as { agentPluginsRoot?: unknown }).agentPluginsRoot
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
+    delete (window.eternalDesktop as unknown as { agentPluginsRoot?: unknown }).agentPluginsRoot
+    desktopPluginsRoot.mockResolvedValue('/local/.eternal/desktop-plugins')
     readDir.mockResolvedValue({ entries: [] })
 
     await discoverRuntimePlugins()
 
-    expect(readDir).toHaveBeenCalledWith('/local/.hermes/desktop-plugins')
+    expect(readDir).toHaveBeenCalledWith('/local/.eternal/desktop-plugins')
     expect(readDir).toHaveBeenCalledTimes(1)
   })
 
   it('loads a unified desktop half OPT-IN: inventoried but not activated by default', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+    desktopPluginsRoot.mockResolvedValue('/local/.eternal/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.eternal/plugins')
     readDir.mockImplementation(async dir =>
-      dir === '/local/.hermes/plugins'
-        ? { entries: [{ isDirectory: true, name: 'uni', path: '/local/.hermes/plugins/uni' }] }
+      dir === '/local/.eternal/plugins'
+        ? { entries: [{ isDirectory: true, name: 'uni', path: '/local/.eternal/plugins/uni' }] }
         : { entries: [] }
     )
 
@@ -144,7 +144,7 @@ describe('scanDiskPlugins (#66899)', () => {
       await discoverRuntimePlugins()
 
       // Inventoried for Settings → Plugins, but the root's opt-in posture wins:
-      // ~/.hermes/plugins stays installed-but-inert until the user toggles it.
+      // ~/.eternal/plugins stays installed-but-inert until the user toggles it.
       expect($pluginRecords.get().uni).toMatchObject({ kind: 'disk', status: 'disabled' })
       expect(register).not.toHaveBeenCalled()
 
@@ -162,9 +162,9 @@ describe('scanDiskPlugins (#66899)', () => {
 })
 
 describe('watchRuntimePlugins dir watch (#66899)', () => {
-  it('watches both Electron-resolved local roots, never the backend hermes_home', async () => {
-    desktopPluginsRoot.mockResolvedValue('/local/.hermes/desktop-plugins')
-    agentPluginsRoot.mockResolvedValue('/local/.hermes/plugins')
+  it('watches both Electron-resolved local roots, never the backend eternal_home', async () => {
+    desktopPluginsRoot.mockResolvedValue('/local/.eternal/desktop-plugins')
+    agentPluginsRoot.mockResolvedValue('/local/.eternal/plugins')
     readDir.mockResolvedValue({ entries: [] })
     watchDirectory.mockResolvedValue({ id: 'watch-1' })
 
@@ -172,9 +172,9 @@ describe('watchRuntimePlugins dir watch (#66899)', () => {
     // Drain the async scan + startDirWatches chains.
     await vi.waitFor(() => expect(watchDirectory).toHaveBeenCalledTimes(2))
 
-    expect(watchDirectory).toHaveBeenCalledWith('/local/.hermes/desktop-plugins')
-    expect(watchDirectory).toHaveBeenCalledWith('/local/.hermes/plugins')
-    expect(watchDirectory).not.toHaveBeenCalledWith('/remote/box/.hermes/desktop-plugins')
+    expect(watchDirectory).toHaveBeenCalledWith('/local/.eternal/desktop-plugins')
+    expect(watchDirectory).toHaveBeenCalledWith('/local/.eternal/plugins')
+    expect(watchDirectory).not.toHaveBeenCalledWith('/remote/box/.eternal/desktop-plugins')
     expect(getStatus).not.toHaveBeenCalled()
   })
 })

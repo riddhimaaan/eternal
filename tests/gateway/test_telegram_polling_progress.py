@@ -227,7 +227,7 @@ async def test_fallback_disabled_skips_doh_discovery_on_connect(monkeypatch):
         side_effect=start_polling_with_progress
     )
     builders = _configure_lifecycle_connect(monkeypatch, adapter, [polling_app])
-    monkeypatch.setenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "true")
+    monkeypatch.setenv("ETERNAL_TELEGRAM_DISABLE_FALLBACK_IPS", "true")
 
     async def fail_if_discovered():
         raise AssertionError("fallback discovery should be skipped when disabled")
@@ -255,7 +255,7 @@ async def test_fallback_discovery_timeout_falls_back_to_plain_connect(monkeypatc
         side_effect=start_polling_with_progress
     )
     builders = _configure_lifecycle_connect(monkeypatch, adapter, [polling_app])
-    monkeypatch.setenv("HERMES_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", "0.05")
+    monkeypatch.setenv("ETERNAL_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", "0.05")
 
     async def stuck_discovery():
         await asyncio.Event().wait()
@@ -282,7 +282,7 @@ async def test_non_finite_fallback_discovery_timeout_uses_finite_default(monkeyp
         side_effect=start_polling_with_progress
     )
     builders = _configure_lifecycle_connect(monkeypatch, adapter, [polling_app])
-    monkeypatch.setenv("HERMES_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", "nan")
+    monkeypatch.setenv("ETERNAL_TELEGRAM_FALLBACK_DISCOVERY_TIMEOUT", "nan")
 
     async def stuck_discovery():
         await asyncio.Event().wait()
@@ -319,7 +319,7 @@ async def test_fallback_disabled_excludes_configured_ips_from_proxy_targets(monk
         side_effect=start_polling_with_progress
     )
     builders = _configure_lifecycle_connect(monkeypatch, adapter, [polling_app])
-    monkeypatch.setenv("HERMES_TELEGRAM_DISABLE_FALLBACK_IPS", "true")
+    monkeypatch.setenv("ETERNAL_TELEGRAM_DISABLE_FALLBACK_IPS", "true")
     monkeypatch.setattr(adapter, "_fallback_ips", lambda: ["149.154.167.220"])
 
     proxy_targets = []

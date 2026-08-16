@@ -1,7 +1,7 @@
 import { atom } from 'nanostores'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { HermesConnection } from '@/global'
+import type { EternalConnection } from '@/global'
 
 // Registry-agent activation (ensureGatewayAgent — the SDK ensureAgent door).
 // Two regressions pinned here:
@@ -26,7 +26,7 @@ vi.mock('@/store/gateway', () => ({
   ensureGatewayForProfile,
   openGatewayForProfile
 }))
-vi.mock('@/hermes', () => ({
+vi.mock('@/eternal', () => ({
   getProfiles: vi.fn(async () => ({ profiles: [] })),
   setApiRequestProfile: vi.fn()
 }))
@@ -36,16 +36,16 @@ vi.mock('@/store/starmap', () => ({ resetStarmapGraph }))
 const { $activeGatewayProfile, ensureGatewayAgent, ensureGatewayProfile } = await import('./profile')
 const { $connection } = await import('./session')
 
-const agentConn = (over: Partial<HermesConnection> = {}): HermesConnection =>
-  ({ baseUrl: 'https://homelab.invalid', mode: 'remote', profile: 'research', ...over }) as HermesConnection
+const agentConn = (over: Partial<EternalConnection> = {}): EternalConnection =>
+  ({ baseUrl: 'https://homelab.invalid', mode: 'remote', profile: 'research', ...over }) as EternalConnection
 
-const localConn = (over: Partial<HermesConnection> = {}): HermesConnection =>
-  ({ baseUrl: '', mode: 'local', profile: 'default', ...over }) as HermesConnection
+const localConn = (over: Partial<EternalConnection> = {}): EternalConnection =>
+  ({ baseUrl: '', mode: 'local', profile: 'default', ...over }) as EternalConnection
 
-const getConnection = vi.fn<(profile?: string | null) => Promise<HermesConnection>>()
+const getConnection = vi.fn<(profile?: string | null) => Promise<EternalConnection>>()
 
 const getConnectionFor =
-  vi.fn<(payload: { connectionId?: null | string; profile?: null | string }) => Promise<HermesConnection>>()
+  vi.fn<(payload: { connectionId?: null | string; profile?: null | string }) => Promise<EternalConnection>>()
 
 function deferred(): { promise: Promise<void>; resolve: () => void } {
   let resolve!: () => void
@@ -65,7 +65,7 @@ beforeEach(() => {
   $gateway.set({ id: 'live-socket' })
   $activeGatewayProfile.set('default')
   $connection.set(localConn())
-  vi.stubGlobal('window', { hermesDesktop: { getConnection, getConnectionFor } })
+  vi.stubGlobal('window', { eternalDesktop: { getConnection, getConnectionFor } })
 })
 
 afterEach(() => {

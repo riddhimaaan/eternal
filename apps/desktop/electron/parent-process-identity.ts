@@ -1,7 +1,7 @@
 export type ParentWatchdogEnv = {
-  HERMES_PARENT_PID: string
-  HERMES_PARENT_START_MARKER?: string
-  HERMES_PARENT_NONCE?: string
+  ETERNAL_PARENT_PID: string
+  ETERNAL_PARENT_START_MARKER?: string
+  ETERNAL_PARENT_NONCE?: string
 }
 
 export interface ParentStartMarkerResolverOptions {
@@ -68,7 +68,7 @@ export function parentWatchdogEnv(pid: number, startMarker: string | null, nonce
     throw new Error('Parent watchdog requires a positive process ID.')
   }
 
-  const env: ParentWatchdogEnv = { HERMES_PARENT_PID: String(pid) }
+  const env: ParentWatchdogEnv = { ETERNAL_PARENT_PID: String(pid) }
 
   if (startMarker === null) {
     return env
@@ -78,8 +78,8 @@ export function parentWatchdogEnv(pid: number, startMarker: string | null, nonce
     throw new Error('Parent watchdog marker and nonce must be non-empty.')
   }
 
-  env.HERMES_PARENT_START_MARKER = startMarker
-  env.HERMES_PARENT_NONCE = nonce
+  env.ETERNAL_PARENT_START_MARKER = startMarker
+  env.ETERNAL_PARENT_NONCE = nonce
 
   return env
 }

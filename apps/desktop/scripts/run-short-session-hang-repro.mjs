@@ -37,8 +37,8 @@ const JOURNAL_SEED_TIMEOUT_MS = 30_000
 const STREAM_RESPONSE_TIMEOUT_MS = 30_000
 const STREAM_RESPONSE_EVALUATION_TIMEOUT_MS = 30_000
 const STREAM_PAYLOAD_BYTES = 512 * 1024
-const LEGACY_STORAGE_KEY = 'hermes.desktop.inflightTurnJournal.v1'
-const LEGACY_MIGRATION_KEY = 'hermes.desktop.inflightTurnJournal.v2.migrated'
+const LEGACY_STORAGE_KEY = 'eternal.desktop.inflightTurnJournal.v1'
+const LEGACY_MIGRATION_KEY = 'eternal.desktop.inflightTurnJournal.v2.migrated'
 const LEGACY_SEED_ENTRY_COUNT = 15
 const MAX_LEGACY_SEED_BYTES = 1.9 * 1024 * 1024
 // Reserve space for the JSON envelope and per-entry metadata so the generated
@@ -802,7 +802,7 @@ async function verifyInteractiveSurfaces(cdp, timed, measure, label) {
     throw new Error(`composer did not paint sentinel at ${label}`)
   }
 
-  const version = await timed(`version.ipc.${label}`, () => cdp.eval('window.hermesDesktop.getVersion()'))
+  const version = await timed(`version.ipc.${label}`, () => cdp.eval('window.eternalDesktop.getVersion()'))
 
   if (typeof version?.appVersion !== 'string' || version.appVersion.length === 0) {
     throw new Error(`version IPC returned no appVersion at ${label}: ${JSON.stringify(version)}`)
@@ -1169,7 +1169,7 @@ async function runRendererChecks(cdp, label, runDir, mock, appPid, journalContra
 }
 
 async function withTemporarySandbox(label, body) {
-  const sandbox = mkdtempSync(join(tmpdir(), `hermes-short-session-${label}-`))
+  const sandbox = mkdtempSync(join(tmpdir(), `eternal-short-session-${label}-`))
 
   try {
     return await body(sandbox)
@@ -1240,9 +1240,9 @@ function promoteAttemptArtifacts(output, label, index, warmup, attempt) {
 
 async function executeRunInSandboxAttempt(target, index, warmup, mock, output, sandbox, attempt) {
   const runDir = runDirForAttempt(output, target.label, index, warmup, attempt)
-  const hermesHome = join(sandbox, 'hermes-home')
+  const eternalHome = join(sandbox, 'eternal-home')
   const userData = join(sandbox, 'electron-user-data')
-  const desktopLog = join(hermesHome, 'logs', 'desktop.log')
+  const desktopLog = join(eternalHome, 'logs', 'desktop.log')
   const stdoutPath = join(runDir, 'electron.stdout.log')
   const stderrPath = join(runDir, 'electron.stderr.log')
   const eventsPath = join(runDir, 'events.jsonl')
@@ -1250,7 +1250,7 @@ async function executeRunInSandboxAttempt(target, index, warmup, mock, output, s
 
   mkdirSync(runDir, { recursive: true })
   mkdirSync(userData, { recursive: true })
-  writeSandboxConfig(hermesHome, mock.url)
+  writeSandboxConfig(eternalHome, mock.url)
 
   const electron = require('electron')
   const stdoutLog = createWriteStream(stdoutPath)
@@ -1269,11 +1269,11 @@ async function executeRunInSandboxAttempt(target, index, warmup, mock, output, s
     {
       cwd: target.targetDesktop,
       env: sanitizedEnv({
-        HERMES_DESKTOP_APP_NAME: `HermesShortSession-${target.label}-${process.pid}-${index}-${warmup ? 'w' : 'm'}-${attempt}`,
-        HERMES_DESKTOP_HERMES_ROOT: target.targetRoot,
-        HERMES_DESKTOP_IGNORE_EXISTING: '1',
-        HERMES_DESKTOP_USER_DATA_DIR: userData,
-        HERMES_HOME: hermesHome,
+        ETERNAL_DESKTOP_APP_NAME: `EternalShortSession-${target.label}-${process.pid}-${index}-${warmup ? 'w' : 'm'}-${attempt}`,
+        ETERNAL_DESKTOP_ETERNAL_ROOT: target.targetRoot,
+        ETERNAL_DESKTOP_IGNORE_EXISTING: '1',
+        ETERNAL_DESKTOP_USER_DATA_DIR: userData,
+        ETERNAL_HOME: eternalHome,
         SHORT_SESSION_API_KEY: 'local-diagnostic-only'
       }),
       stdio: ['ignore', 'pipe', 'pipe']
@@ -1602,7 +1602,7 @@ async function main() {
   mkdirSync(options.output, { recursive: true })
   writeFileSync(join(options.output, 'environment.json'), `${JSON.stringify(plan, null, 2)}\n`)
 
-  const ephemeralRoot = mkdtempSync(join(tmpdir(), 'hermes-short-session-ab-'))
+  const ephemeralRoot = mkdtempSync(join(tmpdir(), 'eternal-short-session-ab-'))
   const prepared = []
   const mock = await startMockInference()
 

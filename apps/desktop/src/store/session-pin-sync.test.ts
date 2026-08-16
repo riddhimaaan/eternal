@@ -1,12 +1,12 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { SessionInfo } from '@/types/hermes'
+import type { SessionInfo } from '@/types/eternal'
 
 const patch = vi.fn<(id: string, pinned: boolean, profile?: null | string) => Promise<{ ok: boolean }>>(() =>
   Promise.resolve({ ok: true })
 )
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/eternal', () => ({
   // The layout store reaches the profile store, which sets the request profile
   // at import time; this suite only cares about the pin call.
   setApiRequestProfile: () => {},
@@ -25,7 +25,7 @@ const flush = () => Promise.resolve()
 
 beforeAll(() => {
   ;(globalThis as { window?: unknown }).window ??= {}
-  ;(window as unknown as { hermesDesktop: unknown }).hermesDesktop = {}
+  ;(window as unknown as { eternalDesktop: unknown }).eternalDesktop = {}
   // Attach the listeners once — module state is process-global.
   watchSessionPins()
 })

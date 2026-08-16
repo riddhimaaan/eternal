@@ -1,7 +1,7 @@
 """Tests for the cua-driver --no-overlay policy.
 
 cua-driver's cursor overlay rendering loop can consume CPU indefinitely when
-idle (#28152, #47032). Hermes passes ``--no-overlay`` to suppress it when the
+idle (#28152, #47032). Eternal passes ``--no-overlay`` to suppress it when the
 ``computer_use.no_overlay`` config is enabled (or auto-detected on macOS and
 headless Linux / WSL2).
 
@@ -24,7 +24,7 @@ class TestNoOverlayFlag:
 
 
     def test_explicit_true_overrides(self):
-        with patch("hermes_cli.config.load_config",
+        with patch("eternal_cli.config.load_config",
                    return_value={"computer_use": {"no_overlay": True}}):
             assert cua_backend._cua_no_overlay() is True
 
@@ -36,7 +36,7 @@ class TestNoOverlayFlag:
         macOS-only: the auto-detect verdict IS ``sys.platform == "darwin"``,
         so a patched platform would only re-assert the patch.
         """
-        with patch("hermes_cli.config.load_config",
+        with patch("eternal_cli.config.load_config",
                    side_effect=RuntimeError("boom")):
             assert cua_backend._cua_no_overlay() is True
 
@@ -48,7 +48,7 @@ class TestNoOverlayFlag:
         ``/proc/version``, neither of which exists to be probed elsewhere.
         """
         monkeypatch.delenv("DISPLAY", raising=False)
-        with patch("hermes_cli.config.load_config",
+        with patch("eternal_cli.config.load_config",
                    side_effect=RuntimeError("boom")):
             assert cua_backend._cua_no_overlay() is True
 

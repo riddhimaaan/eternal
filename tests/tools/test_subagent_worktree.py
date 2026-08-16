@@ -38,7 +38,7 @@ def _make_repo(root: Path) -> Path:
 
 class SubagentWorktreeTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = Path(tempfile.mkdtemp(prefix="hermes-sw-test-"))
+        self.tmp = Path(tempfile.mkdtemp(prefix="eternal-sw-test-"))
         self.addCleanup(shutil.rmtree, self.tmp, True)
 
     # ── resolve_repo_root ──────────────────────────────────────────────
@@ -74,7 +74,7 @@ class SubagentWorktreeTests(unittest.TestCase):
         assert info is not None
         self.assertTrue(os.path.isdir(info["path"]))
         self.assertIn(".worktrees", info["path"])
-        self.assertEqual(info["branch"], "hermes-subagent/subagent-abc123")
+        self.assertEqual(info["branch"], "eternal-subagent/subagent-abc123")
         self.assertTrue(info["base_commit"])
         # Worktree carries the committed file
         self.assertTrue((Path(info["path"]) / "README.md").exists())
@@ -143,14 +143,14 @@ class SubagentWorktreeTests(unittest.TestCase):
 
     def test_local_backend_active_local(self):
         with mock.patch(
-            "hermes_cli.config.load_config_readonly",
+            "eternal_cli.config.load_config_readonly",
             return_value={"terminal": {"backend": "local"}},
         ):
             self.assertTrue(sw.local_backend_active())
 
     def test_local_backend_active_docker(self):
         with mock.patch(
-            "hermes_cli.config.load_config_readonly",
+            "eternal_cli.config.load_config_readonly",
             return_value={"terminal": {"backend": "docker"}},
         ):
             self.assertFalse(sw.local_backend_active())
@@ -159,10 +159,10 @@ class SubagentWorktreeTests(unittest.TestCase):
 
     def test_context_note_names_path_and_branch(self):
         note = sw.build_worktree_context_note(
-            {"path": "/x/wt", "branch": "hermes-subagent/subagent-1"}
+            {"path": "/x/wt", "branch": "eternal-subagent/subagent-1"}
         )
         self.assertIn("/x/wt", note)
-        self.assertIn("hermes-subagent/subagent-1", note)
+        self.assertIn("eternal-subagent/subagent-1", note)
         self.assertIn("WORKTREE ISOLATION", note)
 
 

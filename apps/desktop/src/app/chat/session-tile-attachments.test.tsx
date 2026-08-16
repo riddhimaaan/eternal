@@ -30,8 +30,8 @@ vi.mock('@/i18n', () => ({
   })
 }))
 
-vi.mock('@/hermes', () => ({
-  HermesGateway: class {},
+vi.mock('@/eternal', () => ({
+  EternalGateway: class {},
   PROMPT_SUBMIT_REQUEST_TIMEOUT_MS: 1_000,
   setApiRequestProfile: vi.fn(),
   transcribeAudio: vi.fn()
@@ -40,7 +40,7 @@ vi.mock('@/hermes', () => ({
 const RUNTIME_ID = 'runtime-tile'
 const STORED_ID = 'stored-tile'
 const HOST_PATH = 'C:\\Users\\alice\\Pictures\\photo.png'
-const STAGED_PATH = '/root/.hermes/attachments/photo.png'
+const STAGED_PATH = '/root/.eternal/attachments/photo.png'
 const THUMBNAIL = 'data:image/png;base64,dGh1bWJuYWls'
 const FULL_SOURCE = 'data:image/png;base64,b3JpZ2luYWw='
 
@@ -127,14 +127,14 @@ describe('session tile attachment occurrence ownership', () => {
       }
     })
     installDelegate()
-    Object.defineProperty(window, 'hermesDesktop', {
+    Object.defineProperty(window, 'eternalDesktop', {
       configurable: true,
       value: { readFileDataUrl: vi.fn(async () => FULL_SOURCE) }
     })
   })
 
   afterEach(() => {
-    Reflect.deleteProperty(window, 'hermesDesktop')
+    Reflect.deleteProperty(window, 'eternalDesktop')
     $connection.set(null)
     $sessions.set([])
     $sessionStates.set({})
@@ -311,7 +311,7 @@ describe('session tile attachment occurrence ownership', () => {
       if (method === 'file.attach') {
         return {
           attached: true,
-          ref_text: '@file:.hermes/desktop-attachments/report.txt',
+          ref_text: '@file:.eternal/desktop-attachments/report.txt',
           uploaded: true
         }
       }

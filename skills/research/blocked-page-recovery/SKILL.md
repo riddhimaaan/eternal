@@ -2,11 +2,11 @@
 name: blocked-page-recovery
 description: "Recover blocked/paywalled/WAF'd pages via fallbacks."
 version: 1.0.0
-author: Hermes Agent
+author: Eternal Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
-  hermes:
+  eternal:
     tags: [Research, Archives, Wayback, Paywall, WAF, Fallback]
     related_skills: [grounded-citations]
 ---

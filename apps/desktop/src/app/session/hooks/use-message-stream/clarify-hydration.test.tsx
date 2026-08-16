@@ -7,7 +7,7 @@ import type { ClientSessionState } from '@/app/types'
 import { createClientSessionState } from '@/lib/chat-runtime'
 import { $clarifyRequests, clearClarifyRequest } from '@/store/clarify'
 import { onScrollToBottomRequest } from '@/store/thread-scroll'
-import type { RpcEvent } from '@/types/hermes'
+import type { RpcEvent } from '@/types/eternal'
 
 import { useMessageStream } from './index'
 
@@ -33,7 +33,7 @@ function Harness() {
     activeSessionIdRef,
     hydrateFromStoredSession: vi.fn(async () => undefined),
     queryClient: queryClientRef.current,
-    refreshHermesConfig: vi.fn(async () => undefined),
+    refreshEternalConfig: vi.fn(async () => undefined),
     refreshSessions: vi.fn(async () => undefined),
     sessionStateByRuntimeIdRef,
     updateSessionState: (sessionId, updater) => {

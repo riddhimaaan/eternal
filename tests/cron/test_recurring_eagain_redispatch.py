@@ -13,7 +13,7 @@ never dispatched them, and the wedge SURVIVED a gateway restart. That points
 at a PERSISTED non-dispatch state, not just the in-memory `_running_job_ids`
 leak (which t_3778a491 already bounds).
 
-This file drives the REAL `tick()` end-to-end against a throwaway HERMES_HOME:
+This file drives the REAL `tick()` end-to-end against a throwaway ETERNAL_HOME:
   tick 1 -> script EAGAINs (subprocess.run raises OSError 11) -> failed exec row
   tick 2 -> substrate recovered (script runs clean) -> job MUST fire again
 """
@@ -36,18 +36,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 @pytest.fixture
 def wedge_env(tmp_path, monkeypatch):
     """Isolated cron env + a recurring no_agent interval job, due NOW."""
-    hermes_home = tmp_path / ".hermes"
-    hermes_home.mkdir()
-    (hermes_home / "cron").mkdir()
-    (hermes_home / "cron" / "output").mkdir()
-    (hermes_home / "scripts").mkdir()
-    monkeypatch.setenv("HERMES_HOME", str(hermes_home))
+    eternal_home = tmp_path / ".eternal"
+    eternal_home.mkdir()
+    (eternal_home / "cron").mkdir()
+    (eternal_home / "cron" / "output").mkdir()
+    (eternal_home / "scripts").mkdir()
+    monkeypatch.setenv("ETERNAL_HOME", str(eternal_home))
 
     import cron.jobs as jobs_mod
-    monkeypatch.setattr(jobs_mod, "HERMES_DIR", hermes_home)
-    monkeypatch.setattr(jobs_mod, "CRON_DIR", hermes_home / "cron")
-    monkeypatch.setattr(jobs_mod, "JOBS_FILE", hermes_home / "cron" / "jobs.json")
-    monkeypatch.setattr(jobs_mod, "OUTPUT_DIR", hermes_home / "cron" / "output")
+    monkeypatch.setattr(jobs_mod, "ETERNAL_DIR", eternal_home)
+    monkeypatch.setattr(jobs_mod, "CRON_DIR", eternal_home / "cron")
+    monkeypatch.setattr(jobs_mod, "JOBS_FILE", eternal_home / "cron" / "jobs.json")
+    monkeypatch.setattr(jobs_mod, "OUTPUT_DIR", eternal_home / "cron" / "output")
 
     # Create a recurring no_agent interval job.
     job = jobs_mod.create_job(
@@ -60,10 +60,10 @@ def wedge_env(tmp_path, monkeypatch):
     now = datetime.now(timezone.utc)
     jobs_mod.update_job(job["id"], {"next_run_at": (now - timedelta(minutes=1)).isoformat()})
 
-    script = hermes_home / "scripts" / "probe.py"
+    script = eternal_home / "scripts" / "probe.py"
     script.write_text("print('ok')\n")
 
-    return {"home": hermes_home, "job_id": job["id"]}
+    return {"home": eternal_home, "job_id": job["id"]}
 
 
 class TestEAGAINRecurringRedispatches:
@@ -106,7 +106,7 @@ class TestEAGAINRecurringRedispatches:
         env = wedge_env
         # Point the executions ledger at the throwaway home.
         monkeypatch.setattr(E, "EXECUTIONS_FILE", env["home"] / "cron" / "executions.db")
-        monkeypatch.setattr(S, "_hermes_home", env["home"])
+        monkeypatch.setattr(S, "_eternal_home", env["home"])
         monkeypatch.setattr(S, "get_due_jobs", S.get_due_jobs)  # no-op, keep real
 
         state = self._make_script_eagain(env, monkeypatch)
@@ -148,7 +148,7 @@ class TestEAGAINRecurringRedispatches:
 
         env = wedge_env
         monkeypatch.setattr(E, "EXECUTIONS_FILE", env["home"] / "cron" / "executions.db")
-        monkeypatch.setattr(S, "_hermes_home", env["home"])
+        monkeypatch.setattr(S, "_eternal_home", env["home"])
 
         self._make_script_eagain(env, monkeypatch)
         n1 = S.tick(verbose=False, sync=True)

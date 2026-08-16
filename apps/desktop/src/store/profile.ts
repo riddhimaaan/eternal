@@ -1,7 +1,7 @@
-import { backendScopeKey } from '@hermes/shared'
+import { backendScopeKey } from '@eternal/shared'
 import { atom, computed } from 'nanostores'
 
-import { getProfiles, setApiRequestProfile, STARTUP_REQUEST_TIMEOUT_MS } from '@/hermes'
+import { getProfiles, setApiRequestProfile, STARTUP_REQUEST_TIMEOUT_MS } from '@/eternal'
 import { invalidateProfileScopedQueries } from '@/lib/query-client'
 import {
   arraysEqual,
@@ -16,7 +16,7 @@ import { invalidateCronModelImpactScopeState } from '@/store/cron-model-impact-s
 import { $gateway, ensureGatewayForAgent, ensureGatewayForProfile, openGatewayForProfile } from '@/store/gateway'
 import { setConnection } from '@/store/session'
 import { resetStarmapGraph } from '@/store/starmap'
-import type { ProfileInfo } from '@/types/hermes'
+import type { ProfileInfo } from '@/types/eternal'
 
 // Canonical key for a profile: trimmed, empty → "default". Used everywhere we
 // compare a session's owning profile against the live gateway's profile.
@@ -27,7 +27,7 @@ export function normalizeProfileKey(name: string | null | undefined): string {
 }
 
 // The profile the running local backend is actually scoped to (mirrors
-// /api/profiles/active `current`). "default" is the root ~/.hermes. This is the
+// /api/profiles/active `current`). "default" is the root ~/.eternal. This is the
 // display source of truth for the statusbar pill; the desktop's *stored*
 // preference (which may be unset) lives in the Electron main process.
 export const $activeProfile = atom<string>('default')
@@ -51,7 +51,7 @@ export async function refreshProfiles(): Promise<ProfileInfo[]> {
 // User-defined order for the named (non-default) profile squares in the rail.
 // Names absent from the list fall back to alphabetical, appended at the tail —
 // so a freshly created profile lands at the end until the user drags it.
-const PROFILE_ORDER_STORAGE_KEY = 'hermes.desktop.profileOrder'
+const PROFILE_ORDER_STORAGE_KEY = 'eternal.desktop.profileOrder'
 
 export const $profileOrder = atom<string[]>(storedStringArray(PROFILE_ORDER_STORAGE_KEY))
 
@@ -83,7 +83,7 @@ export function sortByProfileOrder<T extends { name: string }>(items: T[], order
 // Optional per-profile color override (long-press a rail square to pick). Absent
 // names fall back to the deterministic hue from profileColor(); a local-only
 // cosmetic preference, so single-profile users never touch it.
-const PROFILE_COLORS_STORAGE_KEY = 'hermes.desktop.profileColors'
+const PROFILE_COLORS_STORAGE_KEY = 'eternal.desktop.profileColors'
 
 export const $profileColors = atom<Record<string, string>>(storedStringRecord(PROFILE_COLORS_STORAGE_KEY))
 
@@ -112,7 +112,7 @@ interface ActiveProfileResponse {
 // Best-effort: failures (backend not up yet) leave the prior values intact.
 export async function refreshActiveProfile(): Promise<void> {
   try {
-    const res = await window.hermesDesktop.api<ActiveProfileResponse>({
+    const res = await window.eternalDesktop.api<ActiveProfileResponse>({
       path: '/api/profiles/active',
       timeoutMs: STARTUP_REQUEST_TIMEOUT_MS
     })
@@ -129,7 +129,7 @@ export async function refreshActiveProfile(): Promise<void> {
   }
 }
 
-// Persist the choice and relaunch the backend under the new HERMES_HOME. The
+// Persist the choice and relaunch the backend under the new ETERNAL_HOME. The
 // main process reloads the window, so this normally never returns to the caller
 // (the renderer is torn down). We optimistically reflect the selection first so
 // the pill updates instantly if the reload is delayed.
@@ -139,7 +139,7 @@ export async function switchProfile(name: string): Promise<void> {
   }
 
   setActiveProfile(name)
-  await window.hermesDesktop.profile.set(name)
+  await window.eternalDesktop.profile.set(name)
 }
 
 // ── Swap-minimal gateway routing ──────────────────────────────────────────
@@ -242,7 +242,7 @@ let gatewaySwitch: Promise<void> | null = null
 // Best-effort: a failed descriptor fetch leaves the prior connection intact for
 // boot/reconnect to resync.
 async function syncConnectionToActiveProfile(profile: string): Promise<void> {
-  const getConnection = window.hermesDesktop?.getConnection
+  const getConnection = window.eternalDesktop?.getConnection
 
   if (!getConnection) {
     return
@@ -312,7 +312,7 @@ export async function ensureGatewayProfile(profile: string | null | undefined): 
 // agent's descriptor comes from getConnectionFor (its SOURCE connection), not
 // getConnection (the local pool). Same best-effort contract.
 async function syncConnectionToActiveAgent(connectionId: string, profile: string): Promise<void> {
-  const getConnectionFor = window.hermesDesktop?.getConnectionFor
+  const getConnectionFor = window.eternalDesktop?.getConnectionFor
 
   if (!getConnectionFor) {
     return
@@ -384,7 +384,7 @@ export const sidebarProfileForScope = (profileScope: string): string =>
 export const messagingTotalsKey = (messagingProfile: string, sourceId: string): string =>
   `${messagingProfile}:${sourceId}`
 
-const SHOW_ALL_PROFILES_STORAGE_KEY = 'hermes.desktop.showAllProfiles'
+const SHOW_ALL_PROFILES_STORAGE_KEY = 'eternal.desktop.showAllProfiles'
 
 // Opt-in unified view. When false, scope follows the live gateway profile, so
 // single-profile users (who never see the switcher) are completely unaffected.
@@ -458,7 +458,7 @@ function orderedProfileKeys(): string[] {
   return hasDefault ? ['default', ...named] : named
 }
 
-// Switch to the default (root ~/.hermes) profile — bound to ⌘1.
+// Switch to the default (root ~/.eternal) profile — bound to ⌘1.
 export function switchToDefaultProfile(): void {
   const def = $profiles.get().find(profile => profile.is_default)
 
@@ -509,5 +509,5 @@ export function touchActiveGatewayBackend(): void {
   // Always ping: the main process no-ops for non-pool (primary) backends, so we
   // don't need to know which profile is primary from here.
   const target = normalizeProfileKey($activeGatewayProfile.get())
-  void window.hermesDesktop?.touchBackend?.(target).catch(() => undefined)
+  void window.eternalDesktop?.touchBackend?.(target).catch(() => undefined)
 }

@@ -35,7 +35,7 @@ beforeEach(() => {
   remove.mockResolvedValue({ ok: true, registry: { ...registry, connections: [registry.connections[0]] } })
   setPrimary.mockResolvedValue({ ok: true, registry: { ...registry, primary: 'homelab' } })
   test.mockResolvedValue({ ok: true, reachable: true })
-  Object.defineProperty(window, 'hermesDesktop', {
+  Object.defineProperty(window, 'eternalDesktop', {
     configurable: true,
     value: { connections: { list, remove, save, setPrimary, test } }
   })

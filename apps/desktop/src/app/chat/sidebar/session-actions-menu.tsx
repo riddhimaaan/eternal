@@ -31,7 +31,7 @@ import {
   preventCloseButtonAutoFocus
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { renameSession } from '@/hermes'
+import { renameSession } from '@/eternal'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import { PROFILE_SWATCHES } from '@/lib/profile-color'

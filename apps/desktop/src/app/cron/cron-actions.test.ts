@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const getCronJobs = vi.fn()
 const triggerCronJob = vi.fn()
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/eternal', () => ({
   getCronJobs: (...args: unknown[]) => getCronJobs(...args),
   triggerCronJob: (...args: unknown[]) => triggerCronJob(...args)
 }))

@@ -2,10 +2,10 @@
 sidebar_position: 5
 ---
 
-# Connecting Desktop to Many Hermes Instances
+# Connecting Desktop to Many Eternal Instances
 
-Register every Hermes backend you own — the local runtime, remote gateways on
-your LAN or VPS, SSH hosts, and Hermes Cloud instances — in one desktop app,
+Register every Eternal backend you own — the local runtime, remote gateways on
+your LAN or VPS, SSH hosts, and Eternal Cloud instances — in one desktop app,
 and use the agents on all of them side by side. Connections are persistent:
 each registered source dials its own backends and WebSockets on demand, and
 background agents keep streaming while you look at another source.
@@ -22,7 +22,7 @@ Three doors lead to the same pane:
 - **Settings → Connections** — the pane itself (**Cmd/Ctrl+,**, then
   **Connections** in the settings nav).
 - **The sidebar profile rail** — the plug button at the right end of the rail
-  (tooltip: **"Connect another Hermes gateway…"**) deep-links straight to
+  (tooltip: **"Connect another Eternal gateway…"**) deep-links straight to
   Settings → Connections. It is always visible, even before you have created
   a second profile or a second connection.
 - **The command palette** — **Cmd/Ctrl+K**, then type *Connections* (also
@@ -32,15 +32,15 @@ Three doors lead to the same pane:
 
 **Settings → Connections** manages a named registry of agent sources. The
 pane's intro says it plainly: *"Register every place your agents live — this
-device, remote gateways on your network, and Hermes Cloud instances. All of
+device, remote gateways on your network, and Eternal Cloud instances. All of
 them are stored here."* Each entry is a *connection*:
 
 | Kind | What it is | Auth |
 |---|---|---|
-| **Local** | "The Hermes runtime managed by this app." | automatic |
-| **Remote gateway** | "A Hermes gateway reachable over HTTP(S) — LAN, Tailscale, or the internet." | session token or OAuth |
-| **SSH** | "A Hermes install reached over SSH." The app opens the tunnel and starts the dashboard for you | SSH key + adopted token |
-| **Hermes Cloud** | "A hosted instance discovered through your Hermes Cloud account." | portal sign-in |
+| **Local** | "The Eternal runtime managed by this app." | automatic |
+| **Remote gateway** | "A Eternal gateway reachable over HTTP(S) — LAN, Tailscale, or the internet." | session token or OAuth |
+| **SSH** | "A Eternal install reached over SSH." The app opens the tunnel and starts the dashboard for you | SSH key + adopted token |
+| **Eternal Cloud** | "A hosted instance discovered through your Eternal Cloud account." | portal sign-in |
 
 Rules worth knowing:
 
@@ -58,7 +58,7 @@ Rules worth knowing:
 - **Test** probes the connection's own HTTP *and* WebSocket legs, so a pass
   (the *"Reachable"* toast) means chat will actually work — not just that the
   host pinged.
-- Cloud entries come from the Hermes Cloud sign-in/discovery flow
+- Cloud entries come from the Eternal Cloud sign-in/discovery flow
   (Settings → Gateway), not a hand-typed URL — which is why the add-connection
   editor only offers **Remote gateway** and **SSH**.
 
@@ -75,7 +75,7 @@ Settings → Gateway."*
    - **Name** — required, unique; the "device name" shown everywhere this
      instance appears (placeholder: `Homelab`). Max 64 characters.
    - *Remote gateway only:*
-     - **Gateway URL** — the base URL of a running `hermes serve` backend,
+     - **Gateway URL** — the base URL of a running `eternal serve` backend,
        e.g. `http://homelab.lan:9119`. Reverse-proxy path prefixes work.
      - **Authentication** — choose **Session token** or **OAuth**:
        - **Session token** — paste the dashboard session token from the
@@ -94,7 +94,7 @@ Edit any non-local entry later with the pencil button, or remove it with the
 trash button — removal asks for confirmation and reminds you that *"The
 instance itself is not touched — you can add it again any time."*
 
-:::info The remote backend is a running `hermes serve` process
+:::info The remote backend is a running `eternal serve` process
 Nothing here works unless the backend is actually up and reachable on the
 other machine. The desktop app attaches to it; it does not start it for you
 (except for SSH connections, where the app starts the dashboard over the
@@ -117,7 +117,7 @@ machine keep working. If a migrated name collided, it was suffixed
 
 Every [profile](./profiles.md) on every registered connection is an *agent*.
 The union roster is what multi-source surfaces (and plugins like
-[Bot Mode](https://github.com/NousResearch/Hermes-Bot-Mode)) render:
+[Bot Mode](https://github.com/NousResearch/Eternal-Bot-Mode)) render:
 
 - When the same profile name exists on several sources, handles disambiguate
   as **`@name-device`** — `research` on your Homelab renders as
@@ -154,14 +154,14 @@ Switching agents is the same gesture as switching profiles:
 ## Updating every instance at once
 
 **Settings → Connections → Update all instances** (shown once more than one
-connection is registered) dispatches `hermes update` to every eligible
+connection is registered) dispatches `eternal update` to every eligible
 connection in parallel:
 
 - **Local** updates through the app's own update pipeline (the same flow as
   Settings → Updates).
 - **Remote and SSH** connections are told to update themselves via their own
   backend — the update runs on *that* machine.
-- **Hermes Cloud** instances are skipped with a *"Managed by Hermes Cloud"*
+- **Eternal Cloud** instances are skipped with a *"Managed by Eternal Cloud"*
   note: the platform manages their versions.
 
 Each instance reports independently, so one unreachable box never wedges the
@@ -207,7 +207,7 @@ multi-source roster is the reference consumer.
 ## Troubleshooting
 
 - **"Connection test failed"** — the backend isn't reachable at that URL from
-  this machine. Check that `hermes serve` is running on the remote host, the
+  this machine. Check that `eternal serve` is running on the remote host, the
   port is open, and (for token auth) the token is current. Re-run **Test**
   after fixing.
 - **An agent shows but won't open** — run **Test** on its connection. The
@@ -216,7 +216,7 @@ multi-source roster is the reference consumer.
 - **A remote source is missing from the roster** — its backend is down or
   unreachable; the roster lists it under sources with the error. SSH sources
   show *connect-on-demand* until first use — that's by design, not a failure.
-- **"Update Hermes Desktop to chat with agents on other connections"** — the
+- **"Update Eternal Desktop to chat with agents on other connections"** — the
   app predates the multi-connection stack; update the desktop app itself.
 - **Duplicate device names** — not possible; names are enforced unique at
   save time. If a migrated name collided, it was suffixed (`Homelab 2`).

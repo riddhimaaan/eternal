@@ -21,7 +21,7 @@ import {
   getUsageAnalytics,
   setSkillEnabled,
   setToolsetEnabled
-} from '@/hermes'
+} from '@/eternal'
 import { useI18n } from '@/i18n'
 import { isDesktopToolsetVisible } from '@/lib/desktop-toolsets'
 import { compactNumber } from '@/lib/format'
@@ -32,7 +32,7 @@ import { useStoreSelector } from '@/lib/use-session-slice'
 import { $gateway } from '@/store/gateway'
 import { notify, notifyError } from '@/store/notifications'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
-import type { SkillInfo, ToolsetInfo } from '@/types/hermes'
+import type { SkillInfo, ToolsetInfo } from '@/types/eternal'
 
 import { useOnProfileSwitch } from '../hooks/use-on-profile-switch'
 import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
@@ -523,7 +523,7 @@ export function SkillsView({
 
   // Learned/local skills are editable + archivable, mirroring the memory
   // graph (same /api/learning/node endpoints — delete archives, restorable
-  // via `hermes curator restore`).
+  // via `eternal curator restore`).
   const [skillEditor, setSkillEditor] = useState<null | { content: string; name: string }>(null)
   const [skillDraft, setSkillDraft] = useState('')
   const [skillSaving, setSkillSaving] = useState(false)
@@ -639,7 +639,7 @@ export function SkillsView({
           <SelectContent>
             {profiles.map(p => (
               <SelectItem key={p.name} value={p.name}>
-                {p.is_default ? 'Hermes (default)' : p.name}
+                {p.is_default ? 'Eternal (default)' : p.name}
               </SelectItem>
             ))}
           </SelectContent>

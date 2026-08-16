@@ -1,6 +1,6 @@
 import { atom } from 'nanostores'
 
-import type { SessionInfo } from '@/types/hermes'
+import type { SessionInfo } from '@/types/eternal'
 
 import { $selectedStoredSessionId, $sessions } from './session'
 

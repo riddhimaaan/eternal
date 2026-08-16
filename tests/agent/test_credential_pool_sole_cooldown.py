@@ -14,9 +14,9 @@ import pytest
 
 
 def _write_auth_store(tmp_path, payload: dict) -> None:
-    hermes_home = tmp_path / "hermes"
-    hermes_home.mkdir(parents=True, exist_ok=True)
-    (hermes_home / "auth.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    eternal_home = tmp_path / "eternal"
+    eternal_home.mkdir(parents=True, exist_ok=True)
+    (eternal_home / "auth.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 def _entry(
@@ -45,7 +45,7 @@ def _entry(
 
 
 def _load(tmp_path, monkeypatch, entries: list[dict]):
-    monkeypatch.setenv("HERMES_HOME", str(tmp_path / "hermes"))
+    monkeypatch.setenv("ETERNAL_HOME", str(tmp_path / "eternal"))
     monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
     _write_auth_store(
         tmp_path,

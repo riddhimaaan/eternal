@@ -58,7 +58,7 @@ export {
 } from './json-rpc-gateway'
 export { skillInvocationText } from './skill-scaffold'
 export {
-  type HermesSkin,
+  type EternalSkin,
   SKIN_BRANDING_TOKENS,
   SKIN_COLOR_TOKENS,
   type SkinBranding,
@@ -67,12 +67,12 @@ export {
   type SkinColorToken
 } from './skin'
 export {
-  buildHermesWebSocketUrl,
+  buildEternalWebSocketUrl,
   type GatewayAuthMode,
   GatewayReauthRequiredError,
   type GatewayWsConnection,
   type GatewayWsUrlResult,
-  type HermesWebSocketUrlOptions,
+  type EternalWebSocketUrlOptions,
   isGatewayReauthRequired,
   resolveGatewayWsUrl,
   type ResolveGatewayWsUrlDeps,

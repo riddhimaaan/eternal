@@ -1,4 +1,4 @@
-import { type CronJob, getCronJobs, triggerCronJob } from '@/hermes'
+import { type CronJob, getCronJobs, triggerCronJob } from '@/eternal'
 import {
   beginCronJobsAction,
   beginCronJobsRequest,

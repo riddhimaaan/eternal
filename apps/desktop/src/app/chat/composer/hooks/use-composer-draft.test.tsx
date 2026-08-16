@@ -56,7 +56,7 @@ describe('useComposerDraft — attachment scope stays coherent with the committe
     mainComposerScope.clear()
     clearSessionDraft('session-A')
     clearSessionDraft('session-B')
-    delete (window as unknown as { hermesDesktop?: unknown }).hermesDesktop
+    delete (window as unknown as { eternalDesktop?: unknown }).eternalDesktop
     vi.unstubAllGlobals()
     $connection.set(null)
   })
@@ -100,9 +100,9 @@ describe('useComposerDraft — attachment scope stays coherent with the committe
 
     ;(
       window as unknown as {
-        hermesDesktop: { readFileDataUrl: typeof readFileDataUrl }
+        eternalDesktop: { readFileDataUrl: typeof readFileDataUrl }
       }
-    ).hermesDesktop = { readFileDataUrl }
+    ).eternalDesktop = { readFileDataUrl }
 
     let resolveBitmap!: (bitmap: { close: () => void; height: number; width: number }) => void
 

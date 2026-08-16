@@ -2,7 +2,7 @@ import { act, render, renderHook } from '@testing-library/react'
 import { Suspense } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { SessionInfo, SidebarSessionsResponse } from '@/hermes'
+import type { SessionInfo, SidebarSessionsResponse } from '@/eternal'
 import { $cronJobs, setCronJobs } from '@/store/cron'
 import {
   $cronSessions,
@@ -77,7 +77,7 @@ function deferred<T>(): Deferred<T> {
   return { promise, resolve }
 }
 
-vi.mock('@/hermes', async importOriginal => ({
+vi.mock('@/eternal', async importOriginal => ({
   ...(await importOriginal<Record<string, unknown>>()),
   getCronJobs: (...args: unknown[]) => getCronJobs(...args),
   listAllProfileSessions: (...args: unknown[]) => listAllProfileSessions(...args),

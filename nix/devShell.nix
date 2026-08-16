@@ -11,21 +11,21 @@
     { pkgs, self', ... }:
     let
       packages = builtins.attrValues self'.packages;
-      hermesNpmLib = self'.packages.default.passthru.hermesNpmLib;
+      eternalNpmLib = self'.packages.default.passthru.eternalNpmLib;
 
       # Collect all packageJsonPath values from npm workspace packages.
       npmPackageJsonPaths = builtins.filter (p: p != null) (
         map (p: p.passthru.packageJsonPath or null) packages
       );
 
-      hermesAgentDevShellHook = self'.packages.default.passthru.devShellHook;
+      eternalAgentDevShellHook = self'.packages.default.passthru.devShellHook;
     in
     {
       devShells.default = pkgs.mkShell {
         packages = with pkgs; [
-          (pkgs.runCommand "hermes" { } ''
+          (pkgs.runCommand "eternal" { } ''
             mkdir -p $out/bin
-            install -Dm755 ${../hermes} $out/bin/hermes
+            install -Dm755 ${../eternal} $out/bin/eternal
           '')
           self'.packages.sandbox
           uv
@@ -43,21 +43,21 @@
         ]
         ++ self'.packages.default.passthru.devDeps;
         shellHook = ''
-          ${hermesAgentDevShellHook}
-          ${hermesNpmLib.mkNpmDevShellHook npmPackageJsonPaths}
+          ${eternalAgentDevShellHook}
+          ${eternalNpmLib.mkNpmDevShellHook npmPackageJsonPaths}
 
           # Force Node to use Nix's playwright-test binary instead of node_modules/.bin
           export PATH="${pkgs.playwright-test}/bin:$PATH"
 
           # for the devshell to pick up the src
-          export HERMES_PYTHON_SRC_ROOT=$(git rev-parse --show-toplevel)
+          export ETERNAL_PYTHON_SRC_ROOT=$(git rev-parse --show-toplevel)
 
           # Let `uv run --active --no-sync` reuse Nix's provisioned Python
           # environment instead of creating an empty project .venv.
           export VIRTUAL_ENV="$(dirname "$(dirname "$(readlink -f "$(command -v python)")")")"
 
-          echo "Hermes Agent dev shell in $HERMES_PYTHON_SRC_ROOT"
-          echo "Ready. Run 'hermes' or 'sandbox hermes' to start."
+          echo "Eternal Agent dev shell in $ETERNAL_PYTHON_SRC_ROOT"
+          echo "Ready. Run 'eternal' or 'sandbox eternal' to start."
         '';
       };
     };

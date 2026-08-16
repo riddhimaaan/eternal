@@ -2,19 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { $activeGatewayProfile } from '@/store/profile'
 import { $sessions } from '@/store/session'
-import type { SessionInfo } from '@/types/hermes'
+import type { SessionInfo } from '@/types/eternal'
 
 import { $hudActive, $hudSession, openHud } from './hud'
 
-const desktopWindow = window as unknown as { hermesDesktop?: Window['hermesDesktop'] }
-const initialHermesDesktop = desktopWindow.hermesDesktop
+const desktopWindow = window as unknown as { eternalDesktop?: Window['eternalDesktop'] }
+const initialEternalDesktop = desktopWindow.eternalDesktop
 
 const open = vi.fn().mockResolvedValue({ ok: true })
 
 function installBridge() {
-  desktopWindow.hermesDesktop = {
+  desktopWindow.eternalDesktop = {
     hud: { open }
-  } as unknown as Window['hermesDesktop']
+  } as unknown as Window['eternalDesktop']
 }
 
 function session(overrides: Partial<SessionInfo>): SessionInfo {
@@ -31,10 +31,10 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  if (initialHermesDesktop) {
-    desktopWindow.hermesDesktop = initialHermesDesktop
+  if (initialEternalDesktop) {
+    desktopWindow.eternalDesktop = initialEternalDesktop
   } else {
-    delete desktopWindow.hermesDesktop
+    delete desktopWindow.eternalDesktop
   }
 })
 

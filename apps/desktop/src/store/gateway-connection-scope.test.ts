@@ -16,9 +16,9 @@ const gatewayMocks = vi.hoisted(() => ({
   setConnection: vi.fn()
 }))
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/eternal', () => ({
   setApiRequestConnection: vi.fn(),
-  HermesGateway: class {
+  EternalGateway: class {
     connectionState = 'closed'
     wsUrl = ''
     connect = async (wsUrl: string): Promise<void> => {
@@ -48,7 +48,7 @@ const {
 } = await import('./gateway')
 
 function installDesktop(): void {
-  ;(window as unknown as { hermesDesktop: unknown }).hermesDesktop = {
+  ;(window as unknown as { eternalDesktop: unknown }).eternalDesktop = {
     getConnection: vi.fn(async () => ({
       authMode: 'token',
       profile: 'default',
@@ -80,7 +80,7 @@ beforeEach(() => {
 afterEach(() => {
   closeSecondaryGateways()
   vi.clearAllMocks()
-  delete (window as unknown as { hermesDesktop?: unknown }).hermesDesktop
+  delete (window as unknown as { eternalDesktop?: unknown }).eternalDesktop
 })
 
 describe('pruneSecondaryGateways with registry-scoped entries', () => {

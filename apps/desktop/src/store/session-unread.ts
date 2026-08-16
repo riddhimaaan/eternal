@@ -2,7 +2,7 @@ import { Codecs, persistentAtom } from '@/lib/persisted'
 import { stableArray } from '@/lib/stable-array'
 import { readKey } from '@/lib/storage'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
-import type { SessionInfo } from '@/types/hermes'
+import type { SessionInfo } from '@/types/eternal'
 
 import {
   $cronSessions,
@@ -65,13 +65,13 @@ type SeenCounts = Record<string, Record<string, number>>
 type Markers = Record<string, string[]>
 
 export const $sessionSeenCounts = persistentAtom<SeenCounts>(
-  'hermes.desktop.sessionSeenCounts',
+  'eternal.desktop.sessionSeenCounts',
   {},
   Codecs.json(sanitizeSeenCounts)
 )
 
 export const $unreadFinishedMarkers = persistentAtom<Markers>(
-  'hermes.desktop.unreadFinishedSessions',
+  'eternal.desktop.unreadFinishedSessions',
   {},
   Codecs.json(sanitizeMarkers)
 )
@@ -514,7 +514,7 @@ function rehydrateFromDiskOnce(): void {
   rehydratedFromDisk = true
 
   try {
-    const rawSeen = readKey('hermes.desktop.sessionSeenCounts')
+    const rawSeen = readKey('eternal.desktop.sessionSeenCounts')
     const diskSeen = rawSeen ? sanitizeSeenCounts(JSON.parse(rawSeen) as unknown) : {}
     const memorySeen = $sessionSeenCounts.get()
     const mergedSeen: SeenCounts = { ...diskSeen }
@@ -525,7 +525,7 @@ function rehydrateFromDiskOnce(): void {
 
     $sessionSeenCounts.set(mergedSeen)
 
-    const rawMarkers = readKey('hermes.desktop.unreadFinishedSessions')
+    const rawMarkers = readKey('eternal.desktop.unreadFinishedSessions')
     const diskMarkers = rawMarkers ? sanitizeMarkers(JSON.parse(rawMarkers) as unknown) : {}
     const memoryMarkers = $unreadFinishedMarkers.get()
     const merged: Markers = { ...diskMarkers }

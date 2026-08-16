@@ -14,12 +14,12 @@ import type {
   DesktopUpdateStatus,
   DesktopVersionInfo
 } from '@/global'
-import { checkHermesUpdate, getActionStatus, updateHermes } from '@/hermes'
+import { checkEternalUpdate, getActionStatus, updateEternal } from '@/eternal'
 import { translateNow } from '@/i18n'
 import { persistString, storedString } from '@/lib/storage'
 import { dismissNotification, notify } from '@/store/notifications'
 import { $connection } from '@/store/session'
-import type { BackendUpdateCheckResponse } from '@/types/hermes'
+import type { BackendUpdateCheckResponse } from '@/types/eternal'
 
 export interface UpdateApplyState {
   applying: boolean
@@ -77,7 +77,7 @@ const UPDATE_TOAST_ID = 'desktop-update-available'
 // a day, so a "don't show this exact sha again" guard re-popped the toast on
 // every new commit. We instead suppress the toast for a cooldown window that
 // (re)starts whenever the user closes it.
-const UPDATE_TOAST_SNOOZE_KEY = 'hermes:update-toast-snooze-until'
+const UPDATE_TOAST_SNOOZE_KEY = 'eternal:update-toast-snooze-until'
 const UPDATE_TOAST_COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 function snoozeUpdateToast(): void {
@@ -106,7 +106,7 @@ const SKEW_TOAST_ID = 'backend-contract-skew'
 // right after they closed it. Mirror the update toast: persist a cooldown when
 // the user dismisses it. It still reminds again after the window if the backend
 // is still behind, and clears immediately once the backend catches up.
-const SKEW_TOAST_SNOOZE_KEY = 'hermes:backend-skew-toast-snooze-until'
+const SKEW_TOAST_SNOOZE_KEY = 'eternal:backend-skew-toast-snooze-until'
 const SKEW_TOAST_COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 function snoozeSkewToast(): void {
@@ -124,7 +124,7 @@ const INSTALL_METHOD_TOAST_ID = 'install-method-not-supported'
 // re-derived from every session.info (session.create/resume/activate all
 // route through applyRuntimeInfo), so without a snooze it would re-pop on
 // every session switch even right after the user dismissed it.
-const INSTALL_METHOD_TOAST_SNOOZE_KEY = 'hermes:install-method-toast-snooze-until'
+const INSTALL_METHOD_TOAST_SNOOZE_KEY = 'eternal:install-method-toast-snooze-until'
 const INSTALL_METHOD_TOAST_COOLDOWN_MS = 24 * 60 * 60 * 1000
 
 function snoozeInstallMethodToast(): void {
@@ -162,7 +162,7 @@ export function reportBackendContract(contract: number | undefined): void {
 
   notify({
     action: {
-      label: translateNow('notifications.updateHermes'),
+      label: translateNow('notifications.updateEternal'),
       onClick: () => {
         snoozeSkewToast()
         void applyBackendUpdate()
@@ -299,7 +299,7 @@ export async function refreshDesktopVersion(): Promise<DesktopVersionInfo | null
   // mid-reload, or the bridge not yet ready on first paint) would surface
   // as an unhandled promise rejection in the renderer. Swallow it.
   try {
-    const next = await window.hermesDesktop?.getVersion?.()
+    const next = await window.eternalDesktop?.getVersion?.()
 
     if (next) {
       $desktopVersion.set(next)
@@ -338,7 +338,7 @@ export async function checkBackendUpdates(): Promise<DesktopUpdateStatus | null>
   $backendUpdateChecking.set(true)
 
   try {
-    const status = mapBackendCheck(await checkHermesUpdate(true))
+    const status = mapBackendCheck(await checkEternalUpdate(true))
     $backendUpdateStatus.set(status)
     maybeNotifyUpdateAvailable(status)
 
@@ -360,7 +360,7 @@ export async function checkBackendUpdates(): Promise<DesktopUpdateStatus | null>
 }
 
 export async function checkUpdates(): Promise<DesktopUpdateStatus | null> {
-  const bridge = window.hermesDesktop?.updates
+  const bridge = window.eternalDesktop?.updates
 
   if (!bridge || $updateChecking.get()) {
     return $updateStatus.get()
@@ -395,7 +395,7 @@ export async function checkUpdates(): Promise<DesktopUpdateStatus | null> {
 }
 
 export async function applyUpdates(opts: DesktopUpdateApplyOptions = {}): Promise<DesktopUpdateApplyResult> {
-  const bridge = window.hermesDesktop?.updates
+  const bridge = window.eternalDesktop?.updates
 
   if (!bridge) {
     return { ok: false, error: 'unavailable', message: 'Desktop bridge unavailable.' }
@@ -408,15 +408,15 @@ export async function applyUpdates(opts: DesktopUpdateApplyOptions = {}): Promis
     const result = await bridge.apply(opts)
 
     // CLI install with no staged updater: not an error — the user just runs
-    // `hermes update` themselves. Land on a dedicated manual state so the
+    // `eternal update` themselves. Land on a dedicated manual state so the
     // overlay shows the command + copy button instead of a dead retry loop.
     if (result?.manual) {
       $updateApply.set({
         ...IDLE,
         applying: false,
         stage: 'manual',
-        message: result.command ?? 'hermes update',
-        command: result.command ?? 'hermes update'
+        message: result.command ?? 'eternal update',
+        command: result.command ?? 'eternal update'
       })
 
       return result
@@ -547,7 +547,7 @@ function completedAfterRestart(
   status: Awaited<ReturnType<typeof getActionStatus>>,
   actionId: string | undefined
 ): boolean {
-  return !!actionId && status.lines.some(line => line === `=== hermes-update completed ${actionId} ===`)
+  return !!actionId && status.lines.some(line => line === `=== eternal-update completed ${actionId} ===`)
 }
 
 function legacyBackendReachedTarget(
@@ -585,11 +585,11 @@ async function runBackendUpdate(): Promise<DesktopUpdateApplyResult> {
       ? previousStatus.targetSha.slice('backend:'.length)
       : undefined
 
-    const started = await updateHermes()
+    const started = await updateEternal()
 
     if (!started.ok) {
       const message = (started as { message?: string }).message || translateNow('updates.applyStatus.notAvailable')
-      const command = (started as { update_command?: string }).update_command || 'hermes update'
+      const command = (started as { update_command?: string }).update_command || 'eternal update'
       $backendUpdateApply.set({ ...IDLE, applying: false, stage: 'manual', message, command })
 
       return { ok: false, error: 'manual', manual: true, message, command }
@@ -651,7 +651,7 @@ async function runBackendUpdate(): Promise<DesktopUpdateApplyResult> {
 
       if (!started.action_id && last.exit_code === null) {
         try {
-          const status = await checkHermesUpdate(true)
+          const status = await checkEternalUpdate(true)
 
           if (legacyBackendReachedTarget(status, requestedTargetSha, previousVersion)) {
             return finishBackendApply(true)
@@ -737,7 +737,7 @@ export function startUpdatePoller(): void {
     return
   }
 
-  const bridge = window.hermesDesktop?.updates
+  const bridge = window.eternalDesktop?.updates
 
   if (!bridge) {
     return

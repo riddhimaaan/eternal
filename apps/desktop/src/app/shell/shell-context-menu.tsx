@@ -60,7 +60,7 @@ export function ShellContextMenu({ children }: { children: React.ReactNode }) {
       <kit.Separator />
       {renderActionItem(kit, {
         icon: 'cloud-download',
-        label: t.commandCenter.updateHermes,
+        label: t.commandCenter.updateEternal,
         onSelect: requestActiveUpdate
       })}
     </>

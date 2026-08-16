@@ -6,7 +6,7 @@ description: "How the ACP adapter works: lifecycle, sessions, event bridge, appr
 
 # ACP Internals
 
-The ACP adapter wraps Hermes' synchronous `AIAgent` in an async JSON-RPC stdio server.
+The ACP adapter wraps Eternal' synchronous `AIAgent` in an async JSON-RPC stdio server.
 
 Key implementation files:
 
@@ -21,12 +21,12 @@ Key implementation files:
 ## Boot flow
 
 ```text
-hermes acp / hermes-acp / python -m acp_adapter
+eternal acp / eternal-acp / python -m acp_adapter
   -> acp_adapter.entry.main()
   -> parse --version / --check / --setup before server startup
-  -> load ~/.hermes/.env
+  -> load ~/.eternal/.env
   -> configure stderr logging
-  -> construct HermesACPAgent
+  -> construct EternalACPAgent
   -> acp.run_agent(agent, use_unstable_protocol=True)
 ```
 
@@ -34,7 +34,7 @@ Stdout is reserved for ACP JSON-RPC transport. Human-readable logs go to stderr.
 
 ## Major components
 
-### `HermesACPAgent`
+### `EternalACPAgent`
 
 `acp_adapter/server.py` implements the ACP agent protocol.
 
@@ -91,15 +91,15 @@ asyncio.run_coroutine_threadsafe(...)
 
 Mapping:
 
-- `allow_once` -> Hermes `once`
-- `allow_always` -> Hermes `always`
-- reject options -> Hermes `deny`
+- `allow_once` -> Eternal `once`
+- `allow_always` -> Eternal `always`
+- reject options -> Eternal `deny`
 
 Timeouts and bridge failures deny by default.
 
 ### Tool rendering helpers
 
-`acp_adapter/tools.py` maps Hermes tools to ACP tool kinds and builds editor-facing content.
+`acp_adapter/tools.py` maps Eternal tools to ACP tool kinds and builds editor-facing content.
 
 Examples:
 
@@ -113,7 +113,7 @@ Examples:
 ```text
 new_session(cwd)
   -> create SessionState
-  -> create AIAgent(platform="acp", enabled_toolsets=["hermes-acp"])
+  -> create AIAgent(platform="acp", enabled_toolsets=["eternal-acp"])
   -> bind task_id/session_id to cwd override
 
 prompt(..., session_id)
@@ -141,12 +141,12 @@ prompt(..., session_id)
 
 ACP does not implement its own auth store.
 
-Instead it reuses Hermes' runtime resolver:
+Instead it reuses Eternal' runtime resolver:
 
 - `acp_adapter/auth.py`
-- `hermes_cli/runtime_provider.py`
+- `eternal_cli/runtime_provider.py`
 
-So ACP advertises and uses the currently configured Hermes provider/credentials. It also always advertises a terminal setup auth method (`hermes-setup`, args `--setup`) so first-run ACP clients can open Hermes' interactive model/provider configuration before starting a normal ACP session.
+So ACP advertises and uses the currently configured Eternal provider/credentials. It also always advertises a terminal setup auth method (`eternal-setup`, args `--setup`) so first-run ACP clients can open Eternal' interactive model/provider configuration before starting a normal ACP session.
 
 ## Working directory binding
 
@@ -169,13 +169,13 @@ ACP temporarily installs an approval callback on the terminal tool during prompt
 
 ## Current limitations
 
-- ACP sessions are persisted to the shared `~/.hermes/state.db` (SessionDB) and transparently restored across process restarts; they appear in `session_search`
+- ACP sessions are persisted to the shared `~/.eternal/state.db` (SessionDB) and transparently restored across process restarts; they appear in `session_search`
 - non-text prompt blocks are currently ignored for request text extraction
 - editor-specific UX varies by ACP client implementation
 
 ## Related files
 
 - `tests/acp/` — ACP test suite
-- `toolsets.py` — `hermes-acp` toolset definition
-- `hermes_cli/main.py` — `hermes acp` CLI subcommand
-- `pyproject.toml` — `[acp]` optional dependency + `hermes-acp` script
+- `toolsets.py` — `eternal-acp` toolset definition
+- `eternal_cli/main.py` — `eternal acp` CLI subcommand
+- `pyproject.toml` — `[acp]` optional dependency + `eternal-acp` script

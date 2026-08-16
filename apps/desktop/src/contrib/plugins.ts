@@ -2,19 +2,19 @@
  * Plugin discovery — both delivery modes:
  *
  *  - BUNDLED: every `src/plugins/<name>/plugin.{ts,tsx}` default-exporting a
- *    `HermesPlugin` registers automatically (vite glob — drop a folder in).
+ *    `EternalPlugin` registers automatically (vite glob — drop a folder in).
  *    None ship in-tree today; reference/demo plugins live in the companion
- *    `hermes-example-plugins` repo.
- *  - RUNTIME: the on-disk doors (`<hermes home>/desktop-plugins/<name>/plugin.js`
- *    and the unified-package half `<hermes home>/plugins/<name>/desktop/plugin.js`)
+ *    `eternal-example-plugins` repo.
+ *  - RUNTIME: the on-disk doors (`<eternal home>/desktop-plugins/<name>/plugin.js`
+ *    and the unified-package half `<eternal home>/plugins/<name>/desktop/plugin.js`)
  *    — the agent's/user's doors, watched + hot-reloaded by the runtime loader.
  */
 
-import { createPluginContext, type HermesPlugin } from './plugin'
+import { createPluginContext, type EternalPlugin } from './plugin'
 import { pluginActive, publishPlugin } from './plugins-store'
 import { watchRuntimePlugins } from './runtime-loader'
 
-const modules = import.meta.glob<{ default: HermesPlugin }>('../plugins/*/plugin.{ts,tsx}', { eager: true })
+const modules = import.meta.glob<{ default: EternalPlugin }>('../plugins/*/plugin.{ts,tsx}', { eager: true })
 
 // One-shot init guard. Contributions themselves register by id (re-registering
 // is idempotent), but the disk-door watcher setup below (watchRuntimePlugins)
@@ -33,7 +33,7 @@ export function discoverBundledPlugins(): void {
     const plugin = mod.default
 
     if (!plugin?.id || typeof plugin.register !== 'function') {
-      console.warn(`[plugins] ${path} has no valid default HermesPlugin export — skipped`)
+      console.warn(`[plugins] ${path} has no valid default EternalPlugin export — skipped`)
 
       continue
     }

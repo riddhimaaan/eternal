@@ -32,13 +32,13 @@ function installMatchMedia(matches: boolean) {
 function installWindowStateBridge() {
   const off = vi.fn()
 
-  window.hermesDesktop = {
+  window.eternalDesktop = {
     onWindowStateChanged: vi.fn(callback => {
       windowStateCallback = callback
 
       return off
     })
-  } as unknown as typeof window.hermesDesktop
+  } as unknown as typeof window.eternalDesktop
 
   return off
 }
@@ -73,7 +73,7 @@ describe('StatusPulse', () => {
     played.length = 0
     windowStateCallback = undefined
     Reflect.deleteProperty(HTMLElement.prototype, 'animate')
-    delete (window as unknown as { hermesDesktop?: unknown }).hermesDesktop
+    delete (window as unknown as { eternalDesktop?: unknown }).eternalDesktop
     vi.useRealTimers()
     vi.unstubAllGlobals()
     vi.restoreAllMocks()

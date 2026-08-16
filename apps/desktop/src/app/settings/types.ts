@@ -1,8 +1,8 @@
 import type { Dispatch, SetStateAction } from 'react'
 
-import type { HermesGateway } from '@/hermes'
+import type { EternalGateway } from '@/eternal'
 import type { IconComponent } from '@/lib/icons'
-import type { EnvVarInfo } from '@/types/hermes'
+import type { EnvVarInfo } from '@/types/eternal'
 
 export type SettingsView =
   | 'about'
@@ -19,7 +19,7 @@ export type SettingsView =
 export type EnvPatch = Partial<Pick<EnvVarInfo, 'is_set' | 'redacted_value'>>
 
 export interface SettingsPageProps {
-  gateway?: HermesGateway | null
+  gateway?: EternalGateway | null
   onClose: () => void
   onConfigSaved?: () => void
   onMainModelChanged?: (provider: string, model: string) => void

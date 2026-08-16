@@ -26,7 +26,7 @@ import {
   useQuery,
   useQueryClient,
   useValue
-} from '@hermes/plugin-sdk'
+} from '@eternal/plugin-sdk'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 
 import {

@@ -10,14 +10,14 @@ covers the operational concerns: starting them all together, viewing logs
 across profiles, preventing the host from sleeping, and recovering from common
 launchd/systemd quirks.
 
-If you only run one Hermes agent, you don't need this page — see
+If you only run one Eternal agent, you don't need this page — see
 [Profiles](./profiles.md) for the basics. And if your instances live on
 *different* machines that one desktop app should reach simultaneously, see
-[Connecting Desktop to Many Hermes Instances](./multi-connection-desktop.md).
+[Connecting Desktop to Many Eternal Instances](./multi-connection-desktop.md).
 
 ## When to use this
 
-You want this setup when you have two or more Hermes agents that should all
+You want this setup when you have two or more Eternal agents that should all
 be online at the same time. Common reasons:
 
 - A personal assistant on one Telegram bot and a coding agent on another
@@ -27,17 +27,17 @@ be online at the same time. Common reasons:
   memory and skills
 
 Every profile already gets its own per-platform LaunchAgent
-(`ai.hermes.gateway-<name>.plist`) or systemd user service
-(`hermes-gateway-<name>.service`). This guide adds the patterns for managing
+(`ai.eternal.gateway-<name>.plist`) or systemd user service
+(`eternal-gateway-<name>.service`). This guide adds the patterns for managing
 them collectively.
 
 ## Quick start
 
 ```bash
 # Create profiles (once)
-hermes profile create coder
-hermes profile create personal-bot
-hermes profile create research
+eternal profile create coder
+eternal profile create personal-bot
+eternal profile create research
 
 # Configure each
 coder setup
@@ -87,11 +87,11 @@ Set the flag on the **default profile** (it owns the multiplexer) and restart
 its gateway:
 
 ```bash
-hermes config set gateway.multiplex_profiles true
-hermes gateway restart
+eternal config set gateway.multiplex_profiles true
+eternal gateway restart
 ```
 
-Equivalently, in the default profile's `~/.hermes/config.yaml`:
+Equivalently, in the default profile's `~/.eternal/config.yaml`:
 
 ```yaml
 gateway:
@@ -105,7 +105,7 @@ credentials, and routes each inbound message to the profile it belongs to. Each
 turn resolves the routed profile's config, skills, memory, SOUL, **and provider
 keys** — credentials are never shared across profiles.
 
-You do **not** run `hermes gateway start` for the secondary profiles — the
+You do **not** run `eternal gateway start` for the secondary profiles — the
 default gateway serves them. See the contract changes below.
 
 ### What changes when multiplexing is on
@@ -115,7 +115,7 @@ moment the flag is off.
 
 #### 1. Secondary profiles must not start their own gateway
 
-With a multiplexer running, a named-profile `hermes gateway start` / `run` is a
+With a multiplexer running, a named-profile `eternal gateway start` / `run` is a
 **hard error**, pointing you back at the multiplexer:
 
 ```
@@ -164,7 +164,7 @@ Authentication follows the profile named in the URL. Unprefixed endpoints keep
 using the default listener's existing credentials.
 
 - `/p/coder/...` API-server requests must use `API_SERVER_KEY` from
-  `~/.hermes/profiles/coder/.env`; the default listener key is rejected.
+  `~/.eternal/profiles/coder/.env`; the default listener key is rejected.
 - A webhook route that targets `coder` must declare `profile: coder` beside
   its existing route-specific `secret` in the default profile's
   `config.yaml`. That secret is then accepted only at
@@ -203,8 +203,8 @@ migration, no orphaned history.
 #### 5. One PID/lock and one status surface
 
 There is a single process-level PID and lock (the multiplexer, under the default
-home). `hermes status` reports the multiplexer and the profiles it serves;
-`hermes status -p <name>` slices to one profile. Each profile still writes its
+home). `eternal status` reports the multiplexer and the profiles it serves;
+`eternal status -p <name>` slices to one profile. Each profile still writes its
 own `runtime_status.json` under its own home, so existing per-profile readers
 keep working.
 
@@ -292,7 +292,7 @@ default-profile behavior.
 
 The CLI ships with single-profile lifecycle commands. To act across every
 profile, wrap them in a shell loop. Put the snippet below in
-`~/.local/bin/hermes-gateways` and `chmod +x` it:
+`~/.local/bin/eternal-gateways` and `chmod +x` it:
 
 ```sh
 #!/bin/sh
@@ -302,16 +302,16 @@ set -eu
 profiles="default coder personal-bot research"
 
 usage() {
-  echo "Usage: hermes-gateways {start|stop|restart|status|list}"
+  echo "Usage: eternal-gateways {start|stop|restart|status|list}"
 }
 
 run_for_profile() {
   profile="$1"
   action="$2"
   if [ "$profile" = "default" ]; then
-    hermes gateway "$action"
+    eternal gateway "$action"
   else
-    hermes -p "$profile" gateway "$action"
+    eternal -p "$profile" gateway "$action"
   fi
 }
 
@@ -324,7 +324,7 @@ case "$action" in
     done
     ;;
   list)
-    hermes gateway list
+    eternal gateway list
     ;;
   *)
     usage
@@ -336,16 +336,16 @@ esac
 Then:
 
 ```bash
-hermes-gateways start      # start every configured profile
-hermes-gateways stop       # stop every configured profile
-hermes-gateways restart    # restart all
-hermes-gateways status     # status across all
-hermes-gateways list       # delegates to `hermes gateway list`
+eternal-gateways start      # start every configured profile
+eternal-gateways stop       # stop every configured profile
+eternal-gateways restart    # restart all
+eternal-gateways status     # status across all
+eternal-gateways list       # delegates to `eternal gateway list`
 ```
 
 :::tip
-The `default` profile is targeted with `hermes gateway <action>` (no `-p`),
-not `hermes -p default gateway <action>`. The wrapper above handles both forms.
+The `default` profile is targeted with `eternal gateway <action>` (no `-p`),
+not `eternal -p default gateway <action>`. The wrapper above handles both forms.
 :::
 
 ## Manage one profile
@@ -362,7 +362,7 @@ coder gateway install    # create the LaunchAgent / systemd unit
 coder gateway uninstall  # remove the service file
 ```
 
-These are equivalent to `hermes -p coder gateway <action>` — useful if a
+These are equivalent to `eternal -p coder gateway <action>` — useful if a
 profile alias is not on `PATH` or if you target profiles dynamically from a
 script.
 
@@ -373,11 +373,11 @@ never clash:
 
 | Platform | Path                                                              |
 | -------- | ----------------------------------------------------------------- |
-| macOS    | `~/Library/LaunchAgents/ai.hermes.gateway-<profile>.plist`        |
-| Linux    | `~/.config/systemd/user/hermes-gateway-<profile>.service`         |
+| macOS    | `~/Library/LaunchAgents/ai.eternal.gateway-<profile>.plist`        |
+| Linux    | `~/.config/systemd/user/eternal-gateway-<profile>.service`         |
 
-The default profile keeps the historical names: `ai.hermes.gateway.plist` /
-`hermes-gateway.service`.
+The default profile keeps the historical names: `ai.eternal.gateway.plist` /
+`eternal-gateway.service`.
 
 ## Viewing logs
 
@@ -385,35 +385,35 @@ Each profile writes to its own log files:
 
 ```bash
 # Default profile
-tail -f ~/.hermes/logs/gateway.log
-tail -f ~/.hermes/logs/gateway.error.log
+tail -f ~/.eternal/logs/gateway.log
+tail -f ~/.eternal/logs/gateway.error.log
 
 # Named profile
-tail -f ~/.hermes/profiles/<name>/logs/gateway.log
-tail -f ~/.hermes/profiles/<name>/logs/gateway.error.log
+tail -f ~/.eternal/profiles/<name>/logs/gateway.log
+tail -f ~/.eternal/profiles/<name>/logs/gateway.error.log
 ```
 
 Stream every profile's log simultaneously:
 
 ```bash
-tail -f ~/.hermes/logs/gateway.log ~/.hermes/profiles/*/logs/gateway.log
+tail -f ~/.eternal/logs/gateway.log ~/.eternal/profiles/*/logs/gateway.log
 ```
 
 The CLI also has a structured log viewer:
 
 ```bash
-hermes logs -f                  # follow default profile
-hermes -p coder logs -f         # follow one profile
-hermes logs --help              # filters, levels, JSON output
+eternal logs -f                  # follow default profile
+eternal -p coder logs -f         # follow one profile
+eternal logs --help              # filters, levels, JSON output
 ```
 
 ## Identify what's actually running
 
 ```bash
-hermes profile list             # profiles + model + gateway state
-hermes-gateways status          # full status across every profile
-launchctl list | grep hermes    # macOS — PIDs and labels
-systemctl --user list-units 'hermes-gateway-*'   # Linux — units
+eternal profile list             # profiles + model + gateway state
+eternal-gateways status          # full status across every profile
+launchctl list | grep eternal    # macOS — PIDs and labels
+systemctl --user list-units 'eternal-gateway-*'   # Linux — units
 ```
 
 ## Editing configuration
@@ -421,18 +421,18 @@ systemctl --user list-units 'hermes-gateway-*'   # Linux — units
 Every profile keeps its config inside its own directory:
 
 ```
-~/.hermes/profiles/<name>/
+~/.eternal/profiles/<name>/
 ├── .env              # API keys, bot tokens (chmod 600)
 ├── config.yaml       # model, provider, toolsets, gateway settings
 └── SOUL.md           # personality / system prompt
 ```
 
-The default profile uses `~/.hermes/` directly with the same three files.
+The default profile uses `~/.eternal/` directly with the same three files.
 
 Edit them with any editor or via the CLI:
 
 ```bash
-hermes config set model.model anthropic/claude-sonnet-4    # default profile
+eternal config set model.model anthropic/claude-sonnet-4    # default profile
 coder config set model.model openai/gpt-5                  # named profile
 ```
 
@@ -441,7 +441,7 @@ After editing `.env` or `config.yaml`, restart the affected gateway:
 ```bash
 coder gateway restart
 # or, for everything:
-hermes-gateways restart
+eternal-gateways restart
 ```
 
 ## Keeping the host awake
@@ -456,7 +456,7 @@ to sleep when idle. Two patterns:
 ```bash
 caffeinate -dis                    # block display, idle, and system sleep
 caffeinate -dis -t 28800           # same, auto-exit after 8 hours
-caffeinate -i -w $(cat ~/.hermes/gateway.pid) &   # awake while default gateway runs
+caffeinate -i -w $(cat ~/.eternal/gateway.pid) &   # awake while default gateway runs
 
 # Persistent: run in background and forget
 nohup caffeinate -dis >/dev/null 2>&1 &
@@ -487,7 +487,7 @@ use a third-party tool.
 
 ```bash
 # Inhibit suspend while a command runs
-systemd-inhibit --what=idle:sleep --who=hermes --why="gateways running" \
+systemd-inhibit --what=idle:sleep --who=eternal --why="gateways running" \
   sleep infinity &
 
 # Allow user services to keep running after logout (recommended)
@@ -495,7 +495,7 @@ sudo loginctl enable-linger "$USER"
 ```
 
 After enabling lingering, your systemd user units (including
-`hermes-gateway-<profile>.service`) continue running across SSH disconnects
+`eternal-gateway-<profile>.service`) continue running across SSH disconnects
 and reboots.
 
 ## Token-conflict safety
@@ -508,17 +508,17 @@ To audit:
 
 ```bash
 grep -H 'TELEGRAM_BOT_TOKEN\|DISCORD_BOT_TOKEN' \
-     ~/.hermes/.env ~/.hermes/profiles/*/.env
+     ~/.eternal/.env ~/.eternal/profiles/*/.env
 ```
 
 ## Updating the code
 
-`hermes update` pulls the latest code once and syncs new bundled skills into
+`eternal update` pulls the latest code once and syncs new bundled skills into
 every profile:
 
 ```bash
-hermes update
-hermes-gateways restart
+eternal update
+eternal-gateways restart
 ```
 
 User-modified skills are never overwritten.
@@ -527,7 +527,7 @@ User-modified skills are never overwritten.
 
 ### "Could not find service in domain for user gui: 501"
 
-You ran `hermes gateway start` after a previous `hermes gateway stop`. The
+You ran `eternal gateway start` after a previous `eternal gateway stop`. The
 CLI's `stop` does a full `launchctl unload`, which removes the service from
 launchd's registry. The CLI catches this specific error on `start` and
 automatically re-loads the plist (`↻ launchd job was unloaded; reloading
@@ -538,8 +538,8 @@ service definition`). The service starts normally. Nothing to fix.
 If a profile's gateway shows `not running` but a process is still alive:
 
 ```bash
-ps -ef | grep "hermes_cli.*-p <profile>"
-cat ~/.hermes/profiles/<profile>/gateway.pid
+ps -ef | grep "eternal_cli.*-p <profile>"
+cat ~/.eternal/profiles/<profile>/gateway.pid
 kill -TERM <pid>          # graceful
 kill -KILL <pid>          # if that fails after a few seconds
 <profile> gateway start
@@ -549,16 +549,16 @@ kill -KILL <pid>          # if that fails after a few seconds
 
 ```bash
 # macOS
-launchctl unload ~/Library/LaunchAgents/ai.hermes.gateway-<profile>.plist
-launchctl load   ~/Library/LaunchAgents/ai.hermes.gateway-<profile>.plist
+launchctl unload ~/Library/LaunchAgents/ai.eternal.gateway-<profile>.plist
+launchctl load   ~/Library/LaunchAgents/ai.eternal.gateway-<profile>.plist
 
 # Linux
-systemctl --user restart hermes-gateway-<profile>.service
+systemctl --user restart eternal-gateway-<profile>.service
 ```
 
 ### Health check
 
 ```bash
-hermes doctor                  # default profile
-hermes -p <profile> doctor     # one profile
+eternal doctor                  # default profile
+eternal -p <profile> doctor     # one profile
 ```

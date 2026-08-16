@@ -1,5 +1,5 @@
 import { ALL_PROFILES, normalizeProfileKey } from '@/store/profile'
-import type { SessionInfo } from '@/types/hermes'
+import type { SessionInfo } from '@/types/eternal'
 
 /** Return the sessions visible in one sidebar profile scope, or the original unified list for All profiles. */
 export function filterSessionsByProfileScope(sessions: SessionInfo[], profileScope: string): SessionInfo[] {

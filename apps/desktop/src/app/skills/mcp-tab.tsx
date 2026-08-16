@@ -22,13 +22,13 @@ import {
   getMcpCatalog,
   getMcpOAuthFlow,
   getUsageAnalytics,
-  type HermesGateway,
+  type EternalGateway,
   installMcpCatalogEntry,
   type McpCatalogEntry,
   type McpTestResult,
   saveMcpServers,
   testMcpServer
-} from '@/hermes'
+} from '@/eternal'
 import { type Translations, useI18n } from '@/i18n'
 import { compactNumber } from '@/lib/format'
 import { brandFor, brandGlyphStyle } from '@/lib/mcp-brands'
@@ -41,9 +41,9 @@ import { cn } from '@/lib/utils'
 import { notify, notifyError } from '@/store/notifications'
 import { $activeGatewayProfile, normalizeProfileKey } from '@/store/profile'
 import { $activeSessionId } from '@/store/session'
-import type { HermesConfigRecord } from '@/types/hermes'
+import type { EternalConfigRecord } from '@/types/eternal'
 
-import { hermesConfigCacheWriter, useHermesConfigRecord } from '../hooks/use-config-record'
+import { eternalConfigCacheWriter, useEternalConfigRecord } from '../hooks/use-config-record'
 import { useOnProfileSwitch } from '../hooks/use-on-profile-switch'
 import { DetailPane, ICON_BUTTON, MASTER_DETAIL_WIDE_COLS } from '../master-detail'
 import { PanelAddButton, PanelEmpty } from '../overlays/panel'
@@ -64,7 +64,7 @@ const wrapDoc = (entries: McpServers) => pretty({ mcpServers: entries })
 const isServerShape = (value: Record<string, unknown>) =>
   typeof value.command === 'string' || typeof value.url === 'string'
 
-// Cursor/Claude write `type`; Hermes reads `transport`. Normalize on the way
+// Cursor/Claude write `type`; Eternal reads `transport`. Normalize on the way
 // in so pasted configs behave identically under the CLI/TUI loader.
 function normalizeEntry(entry: Record<string, unknown>): Record<string, unknown> {
   if (typeof entry.type === 'string' && entry.transport === undefined) {
@@ -98,13 +98,13 @@ function parseServersDoc(raw: string): McpServers {
   return Object.fromEntries(Object.entries(map).map(([name, entry]) => [name, normalizeEntry(entry)]))
 }
 
-function getServers(config: HermesConfigRecord | null): McpServers {
+function getServers(config: EternalConfigRecord | null): McpServers {
   const raw = config?.mcp_servers
 
   return raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as McpServers) : {}
 }
 
-// The runtime gate is `enabled: false` — the same flag `hermes mcp` and the
+// The runtime gate is `enabled: false` — the same flag `eternal mcp` and the
 // agent's MCP loader read.
 const serverEnabled = (server: Record<string, unknown>) => server.enabled !== false
 
@@ -367,7 +367,7 @@ function scanServerBlocks(text: string): ServerBlock[] {
   return blocks
 }
 
-export function McpTab({ gateway, profile }: { gateway: HermesGateway | null; profile?: null | string }) {
+export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; profile?: null | string }) {
   const { t } = useI18n()
   const m = t.settings.mcp
   const activeSessionId = useStore($activeSessionId)
@@ -392,9 +392,9 @@ export function McpTab({ gateway, profile }: { gateway: HermesGateway | null; pr
     refetch: refetchConfig,
     dataUpdatedAt: configUpdatedAt,
     errorUpdatedAt: configErroredAt
-  } = useHermesConfigRecord(profile)
+  } = useEternalConfigRecord(profile)
 
-  const setConfig = hermesConfigCacheWriter(profile)
+  const setConfig = eternalConfigCacheWriter(profile)
 
   // True from a profile switch until the config query resettles for the new
   // profile. Until then `config` (and thus `servers`) still holds profile A's
@@ -633,7 +633,7 @@ export function McpTab({ gateway, profile }: { gateway: HermesGateway | null; pr
         serverName,
         start: name => authMcpServer(name, profile ?? undefined),
         status: flowId => getMcpOAuthFlow(flowId, profile ?? undefined),
-        openExternal: url => window.hermesDesktop.openExternal(url)
+        openExternal: url => window.eternalDesktop.openExternal(url)
       })
 
       const result: McpTestResult = { ok: true, tools: flow.tools ?? [] }
@@ -748,7 +748,7 @@ export function McpTab({ gateway, profile }: { gateway: HermesGateway | null; pr
     }
   }
 
-  // Whole-map replace (NOT saveHermesConfig, which deep-merges and so can never
+  // Whole-map replace (NOT saveEternalConfig, which deep-merges and so can never
   // delete a server, drop `enabled: false`, or remove a nested field). Only
   // after the replace lands do we write the cache through + reload live sessions.
   // Returns false when the profile switched mid-save: the write hit profile A's

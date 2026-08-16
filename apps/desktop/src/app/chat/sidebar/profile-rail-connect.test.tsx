@@ -23,7 +23,7 @@ vi.mock('@/i18n', () => ({
       common: { cancel: 'Cancel' },
       profiles: {
         allProfiles: 'All profiles',
-        connectGateway: 'Connect another Hermes gateway…',
+        connectGateway: 'Connect another Eternal gateway…',
         failedLoadSoul: 'Failed to load SOUL.md',
         failedSaveSoul: 'Failed to save SOUL.md',
         importProfile: 'Import profile…',
@@ -66,7 +66,7 @@ vi.mock('./use-profile-prewarm', () => ({
   useProfilePrewarm: () => ({ cancelPrewarm: vi.fn(), startPrewarm: vi.fn() })
 }))
 
-vi.mock('@/hermes', () => ({
+vi.mock('@/eternal', () => ({
   getProfileSoul: vi.fn().mockResolvedValue({ content: '' }),
   updateProfileSoul: vi.fn()
 }))
@@ -80,7 +80,7 @@ describe('ProfileRail multi-gateway entry point', () => {
   it('deep-links to Settings → Connections from the rail', () => {
     render(<ProfileRail />)
 
-    const pill = screen.getByRole('button', { name: 'Connect another Hermes gateway…' })
+    const pill = screen.getByRole('button', { name: 'Connect another Eternal gateway…' })
     fireEvent.click(pill)
 
     expect(navigate).toHaveBeenCalledWith('/settings?tab=connections')
@@ -91,7 +91,7 @@ describe('ProfileRail multi-gateway entry point', () => {
 
     // The whole point is first-run discoverability: the pill must not be
     // gated behind multiProfile the way the default↔all toggle is.
-    expect(screen.getByRole('button', { name: 'Connect another Hermes gateway…' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Connect another Eternal gateway…' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Manage profiles…' })).toBeTruthy()
   })
 })

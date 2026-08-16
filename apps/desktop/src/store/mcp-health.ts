@@ -12,7 +12,7 @@
  * the other just learned.
  */
 
-import { getHermesConfigRecord, type McpTestResult, testMcpServer } from '@/hermes'
+import { getEternalConfigRecord, type McpTestResult, testMcpServer } from '@/eternal'
 import { translateNow } from '@/i18n'
 import { classifyProbe, freshProbe, probeCache, probeKey } from '@/lib/mcp-probe-cache'
 import { notify } from '@/store/notifications'
@@ -96,7 +96,7 @@ async function sweep(): Promise<void> {
   let config: Record<string, unknown>
 
   try {
-    config = await getHermesConfigRecord()
+    config = await getEternalConfigRecord()
   } catch {
     // Backend unreachable / mid-restart — the next interval tick retries.
     return

@@ -62,7 +62,7 @@ function makeFakeUnixTerminal(srcRoot) {
 // ─── classifyNativeBinary tests ─────────────────────────────────────
 
 test('classifyNativeBinary detects ELF as linux', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0x7f, 0x45, 0x4c, 0x46, 0x00, 0x00]))
@@ -73,7 +73,7 @@ test('classifyNativeBinary detects ELF as linux', () => {
 })
 
 test('classifyNativeBinary detects Mach-O 64-bit BE as darwin', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0xfe, 0xed, 0xfa, 0xcf, 0x00, 0x00]))
@@ -84,7 +84,7 @@ test('classifyNativeBinary detects Mach-O 64-bit BE as darwin', () => {
 })
 
 test('classifyNativeBinary detects Mach-O 64-bit LE (CIGAM_64) as darwin', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0xcf, 0xfa, 0xed, 0xfe, 0x00, 0x00]))
@@ -95,7 +95,7 @@ test('classifyNativeBinary detects Mach-O 64-bit LE (CIGAM_64) as darwin', () =>
 })
 
 test('classifyNativeBinary detects Mach-O 32-bit BE as darwin', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0xfe, 0xed, 0xfa, 0xce, 0x00, 0x00]))
@@ -106,7 +106,7 @@ test('classifyNativeBinary detects Mach-O 32-bit BE as darwin', () => {
 })
 
 test('classifyNativeBinary detects Mach-O 32-bit LE (CIGAM) as darwin', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0xce, 0xfa, 0xed, 0xfe, 0x00, 0x00]))
@@ -117,7 +117,7 @@ test('classifyNativeBinary detects Mach-O 32-bit LE (CIGAM) as darwin', () => {
 })
 
 test('classifyNativeBinary detects Fat/Universal BE (cafebabe) as darwin', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0xca, 0xfe, 0xba, 0xbe, 0x00, 0x00]))
@@ -128,7 +128,7 @@ test('classifyNativeBinary detects Fat/Universal BE (cafebabe) as darwin', () =>
 })
 
 test('classifyNativeBinary detects Fat/Universal LE (bebafeca / FAT_CIGAM) as darwin', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0xbe, 0xba, 0xfe, 0xca, 0x00, 0x00]))
@@ -139,7 +139,7 @@ test('classifyNativeBinary detects Fat/Universal LE (bebafeca / FAT_CIGAM) as da
 })
 
 test('classifyNativeBinary detects PE (MZ) as win32', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0x4d, 0x5a, 0x00, 0x00, 0x00, 0x00]))
@@ -150,7 +150,7 @@ test('classifyNativeBinary detects PE (MZ) as win32', () => {
 })
 
 test('classifyNativeBinary returns null for unrecognized magic', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const f = join(tmp, 'test.node')
     fs.writeFileSync(f, Buffer.from([0x00, 0x00, 0x00, 0x00, 0x00, 0x00]))
@@ -177,7 +177,7 @@ test('classifyNativeBinary returns null for a missing file', () => {
 // 5. Validation rejects a binary whose magic bytes don't match the target.
 
 test('cross-target: host build/Release is NOT staged for a foreign platform', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'node-pty')
     const destRoot = join(tmp, 'dest')
@@ -207,7 +207,7 @@ test('cross-target: host build/Release is NOT staged for a foreign platform', ()
 })
 
 test('cross-target: matching prebuild IS staged for a foreign target', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'node-pty')
     const destRoot = join(tmp, 'dest')
@@ -237,7 +237,7 @@ test('cross-target: matching prebuild IS staged for a foreign target', () => {
 })
 
 test('cross-target: foreign target with no prebuild throws (fail closed)', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'node-pty')
     const destRoot = join(tmp, 'dest')
@@ -258,7 +258,7 @@ test('cross-target: foreign target with no prebuild throws (fail closed)', () =>
 })
 
 test('host-target: host build/Release IS staged for a matching target', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'node-pty')
     const destRoot = join(tmp, 'dest')
@@ -281,7 +281,7 @@ test('host-target: host build/Release IS staged for a matching target', () => {
 test.skipIf(process.platform === 'win32')(
   'host-target: staged node-pty resolves an already-unpacked helper and preserves executable helpers',
   async () => {
-    const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+    const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
     try {
       const srcRoot = join(tmp, 'node-pty')
       const destRoot = join(tmp, 'dest')
@@ -306,7 +306,7 @@ test.skipIf(process.platform === 'win32')(
       const stagedUnixTerminal = await import(stagedUnixTerminalUrl.href)
       const unpackedHelper = join(
         tmp,
-        'Hermes.app',
+        'Eternal.app',
         'Contents',
         'Resources',
         'app.asar.unpacked',
@@ -339,7 +339,7 @@ test.skipIf(process.platform === 'win32')(
 )
 
 test('validation rejects a staged binary with the wrong platform magic', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'node-pty')
     const destRoot = join(tmp, 'dest')
@@ -376,7 +376,7 @@ function makeFakeGetWindows(srcRoot, { version = '9.3.0', bindings = [] } = {}) 
 }
 
 test('win32 staging skips the darwin binding the tarball bundles on every platform', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')
@@ -401,7 +401,7 @@ test('win32 staging skips the darwin binding the tarball bundles on every platfo
 })
 
 test('win32 staging rejects a binding dir that claims win32 but holds a foreign binary', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')
@@ -420,7 +420,7 @@ test('win32 staging rejects a binding dir that claims win32 but holds a foreign 
 })
 
 test('win32-x64 staging fails when only foreign bindings exist', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')
@@ -439,7 +439,7 @@ test('win32-x64 staging fails when only foreign bindings exist', () => {
 })
 
 test('win32-arm64 staging omits incompatible bindings and keeps the fail-soft JS surface', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')
@@ -461,7 +461,7 @@ test('win32-arm64 staging omits incompatible bindings and keeps the fail-soft JS
 })
 
 test('win32 staging self-heals through the rebuild hook when the binding is missing', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')
@@ -491,7 +491,7 @@ test('win32 staging self-heals through the rebuild hook when the binding is miss
 })
 
 test('win32 staging reports the recovery steps when the rebuild hook produces nothing', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')
@@ -513,7 +513,7 @@ test('win32 staging reports the recovery steps when the rebuild hook produces no
 })
 
 test('staging refuses a get-windows version the lib/windows.js rewrite was not verified against', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')
@@ -530,7 +530,7 @@ test('staging refuses a get-windows version the lib/windows.js rewrite was not v
 })
 
 test('darwin staging ships the Swift helper executable and the rewritten windows.js', () => {
-  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'hermes-stage-'))
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
   try {
     const srcRoot = join(tmp, 'get-windows')
     const destRoot = join(tmp, 'dest')

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const GESTURES_KEY = 'hermes.desktop.composerPopout.gesturesEnabled'
-const LEGACY_ENABLED_KEY = 'hermes.desktop.composerPopout.enabled'
-const ZONES_KEY = 'hermes.desktop.composerPopout.zones.v1'
+const GESTURES_KEY = 'eternal.desktop.composerPopout.gesturesEnabled'
+const LEGACY_ENABLED_KEY = 'eternal.desktop.composerPopout.enabled'
+const ZONES_KEY = 'eternal.desktop.composerPopout.zones.v1'
 
 const loadStore = () => import('./composer-popout')
 

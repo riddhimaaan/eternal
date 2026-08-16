@@ -58,15 +58,15 @@ test('parent marker resolver reports one diagnostic for a shared failed probe', 
 
 test('parentWatchdogEnv emits an exact identity when the marker is available', () => {
   assert.deepEqual(parentWatchdogEnv(42, 'winms:1723456789123', 'nonce-1'), {
-    HERMES_PARENT_NONCE: 'nonce-1',
-    HERMES_PARENT_PID: '42',
-    HERMES_PARENT_START_MARKER: 'winms:1723456789123'
+    ETERNAL_PARENT_NONCE: 'nonce-1',
+    ETERNAL_PARENT_PID: '42',
+    ETERNAL_PARENT_START_MARKER: 'winms:1723456789123'
   })
 })
 
 test('parentWatchdogEnv atomically falls back to PID-only identity', () => {
   assert.deepEqual(parentWatchdogEnv(42, null, 'unused-nonce'), {
-    HERMES_PARENT_PID: '42'
+    ETERNAL_PARENT_PID: '42'
   })
   assert.throws(() => parentWatchdogEnv(42, '', 'nonce-1'), /marker and nonce must be non-empty/)
   assert.throws(() => parentWatchdogEnv(42, 'winms:1723456789123', ''), /marker and nonce must be non-empty/)

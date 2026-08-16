@@ -10,7 +10,7 @@ import { takeGatewaySurvivor } from './gateway-hmr-survivor'
 import { useGatewayBoot } from './use-gateway-boot'
 
 // End-to-end-ish repro of the "remote VPS → stuck on CONNECTING, no Settings"
-// bug that drives the REAL useGatewayBoot hook + REAL HermesGateway through a
+// bug that drives the REAL useGatewayBoot hook + REAL EternalGateway through a
 // fake WebSocket we fully control. No Docker / no real port: from the desktop's
 // point of view a "remote VPS" is just a WebSocket that opens once and later
 // refuses to reopen, so that is exactly (and only) what we fake.
@@ -136,7 +136,7 @@ function Harness({
     handleGatewayEvent: () => undefined,
     onConnectionReady: () => undefined,
     onGatewayReady: () => undefined,
-    refreshHermesConfig: async () => undefined,
+    refreshEternalConfig: async () => undefined,
     refreshSessions: refreshSessions ?? (async () => undefined)
   })
 
@@ -165,7 +165,7 @@ beforeEach(() => {
   FakeWebSocket.instances = []
   connectionApplied = null
   ;(globalThis as { WebSocket: unknown }).WebSocket = FakeWebSocket
-  ;(window as { hermesDesktop?: unknown }).hermesDesktop = fakeDesktop()
+  ;(window as { eternalDesktop?: unknown }).eternalDesktop = fakeDesktop()
   $gatewayState.set('idle')
   $desktopBoot.set({
     error: null,
@@ -199,8 +199,8 @@ afterEach(() => {
   $connection.set(null)
   vi.useRealTimers()
   ;(globalThis as { WebSocket: unknown }).WebSocket = originalWebSocket
-  delete (window as { hermesDesktop?: unknown }).hermesDesktop
-  window.localStorage.removeItem('hermes.desktop.workspace-cwd')
+  delete (window as { eternalDesktop?: unknown }).eternalDesktop
+  window.localStorage.removeItem('eternal.desktop.workspace-cwd')
   $currentCwd.set('')
 })
 
@@ -221,9 +221,9 @@ async function advanceBackoff() {
 }
 
 describe('useGatewayBoot remote reconnect loop (real hook, fake socket)', () => {
-  it('INITIAL boot against a dead VPS: getConnection hangs (waitForHermes) → app sits in the connecting combo, then fails', async () => {
+  it('INITIAL boot against a dead VPS: getConnection hangs (waitForEternal) → app sits in the connecting combo, then fails', async () => {
     // The report's actual path: a fresh launch pointed at an unreachable VPS.
-    // startHermes()'s remote branch awaits waitForHermes() for 45s before it
+    // startEternal()'s remote branch awaits waitForEternal() for 45s before it
     // throws, so the renderer's `await desktop.getConnection()` stays pending
     // that whole window. During it: gatewayState is still 'idle' (connect was
     // never reached) and boot.error is null → connecting=true → the fullscreen
@@ -236,7 +236,7 @@ describe('useGatewayBoot remote reconnect loop (real hook, fake socket)', () => 
           rejectConn = reject
         })
     )
-    ;(window as { hermesDesktop?: unknown }).hermesDesktop = desktop
+    ;(window as { eternalDesktop?: unknown }).eternalDesktop = desktop
 
     render(<Harness />)
     await flushAsync()
@@ -248,10 +248,10 @@ describe('useGatewayBoot remote reconnect loop (real hook, fake socket)', () => 
     expect($desktopBoot.get().error).toBeNull()
     // ^ connecting === true here → fullscreen CONNECTING, no Settings.
 
-    // After ~45s waitForHermes gives up and getConnection rejects → boot()
+    // After ~45s waitForEternal gives up and getConnection rejects → boot()
     // catch → failDesktopBoot → the BootFailureOverlay recovery surface.
     await act(async () => {
-      rejectConn(new Error('Hermes backend did not become ready: timeout'))
+      rejectConn(new Error('Eternal backend did not become ready: timeout'))
       await vi.advanceTimersByTimeAsync(0)
     })
 
@@ -343,7 +343,7 @@ describe('useGatewayBoot remote reconnect loop (real hook, fake socket)', () => 
     // The version-skew report: gateway WS connects fine, but refreshSessions()
     // rejects (e.g. older backend 404s an endpoint the fallback didn't cover,
     // or a transient read error). That must NOT reject boot() into
-    // failDesktopBoot's "Hermes couldn't start" overlay — the socket is open
+    // failDesktopBoot's "Eternal couldn't start" overlay — the socket is open
     // and the app is fully usable with an empty sidebar.
     const refreshSessions = vi.fn(async () => {
       throw new Error('404: {"detail":"No such API endpoint: /api/profiles/sessions/sidebar"}')
@@ -373,14 +373,14 @@ describe('useGatewayBoot remote reconnect loop (real hook, fake socket)', () => 
     desktop.settings = {
       getDefaultProjectDir: vi.fn(async () => ({
         defaultLabel: 'C:\\Users\\sonny',
-        dir: 'C:\\Hermes',
-        resolvedCwd: 'C:\\Hermes'
+        dir: 'C:\\Eternal',
+        resolvedCwd: 'C:\\Eternal'
       })),
       pickDefaultProjectDir: vi.fn(async () => undefined),
       setDefaultProjectDir: vi.fn(async () => undefined)
     }
     desktop.sanitizeWorkspaceCwd = vi.fn(async (cwd: string) => ({ cwd }))
-    ;(window as { hermesDesktop?: unknown }).hermesDesktop = desktop
+    ;(window as { eternalDesktop?: unknown }).eternalDesktop = desktop
 
     // Record the cwd at the exact moment the gateway opens its WebSocket: if
     // the seed moved back post-connect, this would still be '' here and the
@@ -400,14 +400,14 @@ describe('useGatewayBoot remote reconnect loop (real hook, fake socket)', () => 
     render(<Harness />)
     await flushAsync()
 
-    expect(cwdAtConnect).toBe('C:\\Hermes')
-    expect($currentCwd.get()).toBe('C:\\Hermes')
+    expect(cwdAtConnect).toBe('C:\\Eternal')
+    expect($currentCwd.get()).toBe('C:\\Eternal')
   })
 
   it('FIX: primary sleep/wake reconnect dials the window backend, not the active secondary profile', async () => {
     const desktop = fakeDesktop()
 
-    ;(window as { hermesDesktop?: unknown }).hermesDesktop = desktop
+    ;(window as { eternalDesktop?: unknown }).eternalDesktop = desktop
 
     render(<Harness />)
     await flushAsync()

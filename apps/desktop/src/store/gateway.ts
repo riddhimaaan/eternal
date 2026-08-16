@@ -1,7 +1,7 @@
-import { backendScopeKey, type ConnectionState, type GatewayEvent, resolveGatewayWsUrl } from '@hermes/shared'
+import { backendScopeKey, type ConnectionState, type GatewayEvent, resolveGatewayWsUrl } from '@eternal/shared'
 import { atom } from 'nanostores'
 
-import { HermesGateway, setApiRequestConnection } from '@/hermes'
+import { EternalGateway, setApiRequestConnection } from '@/eternal'
 import { reconnectBackoffDelayMs } from '@/lib/reconnect-backoff'
 import { markNativeNotifyBaseline } from '@/store/notify-baseline'
 import { setConnection, setGatewayState } from '@/store/session'
@@ -20,7 +20,7 @@ const normKey = (profile: string | null | undefined): string => (profile ?? '').
 
 // Read connection state through a call so TS control-flow analysis doesn't
 // narrow the getter to a constant across guards (it genuinely changes).
-const isOpen = (gateway: HermesGateway | null): boolean => gateway?.connectionState === 'open'
+const isOpen = (gateway: EternalGateway | null): boolean => gateway?.connectionState === 'open'
 
 interface RegistryConfig {
   onEvent: (event: GatewayEvent) => void
@@ -33,7 +33,7 @@ interface Secondary {
   profile: string
   /** Registry connection serving this socket; null = the local/legacy path. */
   connectionId: null | string
-  gateway: HermesGateway
+  gateway: EternalGateway
   offEvent: () => void
   offState: () => void
   reconnectTimer: ReturnType<typeof setTimeout> | null
@@ -57,14 +57,14 @@ interface Secondary {
 // runtime behavior is identical to plain module state.
 interface GatewayRegistryState {
   config: RegistryConfig | null
-  primaryGateway: HermesGateway | null
+  primaryGateway: EternalGateway | null
   primaryProfile: string
   activeKey: string
   secondaries: Map<string, Secondary>
-  $gateway: ReturnType<typeof atom<HermesGateway | null>>
+  $gateway: ReturnType<typeof atom<EternalGateway | null>>
 }
 
-const STATE_KEY = Symbol.for('hermes.desktop.gatewayRegistryState')
+const STATE_KEY = Symbol.for('eternal.desktop.gatewayRegistryState')
 
 function createRegistryState(): GatewayRegistryState {
   return {
@@ -76,7 +76,7 @@ function createRegistryState(): GatewayRegistryState {
     // The active gateway instance, exposed for inline message-stream
     // components (inline ClarifyTool, model overlays) that call gateway
     // methods without the instance threaded down through props.
-    $gateway: atom<HermesGateway | null>(null)
+    $gateway: atom<EternalGateway | null>(null)
   }
 }
 
@@ -120,7 +120,7 @@ export function emitLocalGatewayEvent(event: GatewayEvent): void {
   g.config?.onEvent(event)
 }
 
-export function setPrimaryGateway(gateway: HermesGateway | null, profile = 'default'): void {
+export function setPrimaryGateway(gateway: EternalGateway | null, profile = 'default'): void {
   g.primaryGateway = gateway
   g.primaryProfile = normKey(profile)
 }
@@ -129,7 +129,7 @@ export function isActivePrimary(): boolean {
   return g.activeKey === g.primaryProfile
 }
 
-export function activeGateway(): HermesGateway | null {
+export function activeGateway(): EternalGateway | null {
   if (g.activeKey === g.primaryProfile) {
     return g.primaryGateway
   }
@@ -183,7 +183,7 @@ function setActive(profile: string): void {
   const gateway = activeGateway()
   g.$gateway.set(gateway)
   setGatewayState(gateway?.connectionState ?? 'closed')
-  // Push the active scope's registry connection into the hermes module (null
+  // Push the active scope's registry connection into the eternal module (null
   // for the local pool) so connection-building WS calls (pluginSocket) resolve
   // through the same source of truth every activation path maintains here —
   // registry-agent activations included, not just profile switches.
@@ -198,7 +198,7 @@ function clearTimer(entry: Secondary): void {
 }
 
 async function openSecondary(entry: Secondary): Promise<void> {
-  const desktop = window.hermesDesktop
+  const desktop = window.eternalDesktop
 
   if (!desktop) {
     return
@@ -287,7 +287,7 @@ function isMissingConnectionError(error: unknown): boolean {
 }
 
 function createSecondary(profile: string, connectionId: null | string = null): Secondary {
-  const gateway = new HermesGateway()
+  const gateway = new EternalGateway()
   const scope = backendScopeKey(connectionId, profile)
 
   const entry: Secondary = {
@@ -334,7 +334,7 @@ function createSecondary(profile: string, connectionId: null | string = null): S
 // poisons the active gateway with "not connected" even though the primary is
 // open right next to it.
 async function sharedPrimaryRoute(profile: string): Promise<boolean> {
-  const desktop = window.hermesDesktop
+  const desktop = window.eternalDesktop
 
   if (!desktop) {
     return false
@@ -389,8 +389,8 @@ export async function openGatewayForAgent(connectionId: null | string, profile: 
     return openGatewayForProfile(profile)
   }
 
-  if (!window.hermesDesktop?.getConnectionFor) {
-    throw new Error('This Desktop build cannot dial registry connections. Update Hermes Desktop.')
+  if (!window.eternalDesktop?.getConnectionFor) {
+    throw new Error('This Desktop build cannot dial registry connections. Update Eternal Desktop.')
   }
 
   const entry = g.secondaries.get(scope) ?? createSecondary(profile, connectionId)
@@ -408,8 +408,8 @@ export async function ensureGatewayForAgent(connectionId: null | string, profile
     return ensureGatewayForProfile(profile)
   }
 
-  if (!window.hermesDesktop?.getConnectionFor) {
-    throw new Error('This Desktop build cannot dial registry connections. Update Hermes Desktop.')
+  if (!window.eternalDesktop?.getConnectionFor) {
+    throw new Error('This Desktop build cannot dial registry connections. Update Eternal Desktop.')
   }
 
   let entry = g.secondaries.get(scope)
@@ -480,7 +480,7 @@ export async function ensureGatewayForProfile(profile: string): Promise<void> {
 
 // Reconnect the active gateway after a transient request failure. Primary
 // reconnects are owned by use-gateway-boot, so we only drive secondaries here.
-export async function ensureActiveGatewayOpen(): Promise<HermesGateway | null> {
+export async function ensureActiveGatewayOpen(): Promise<EternalGateway | null> {
   if (g.activeKey === g.primaryProfile) {
     return g.primaryGateway
   }
@@ -514,7 +514,7 @@ export function reconnectSecondaryGateways(): void {
 // Keep the idle reaper from killing a backend we still need: ping every live
 // secondary. The active one is pinged separately (touchActiveGatewayBackend).
 export function touchSecondaryGateways(): void {
-  const desktop = window.hermesDesktop
+  const desktop = window.eternalDesktop
 
   for (const entry of g.secondaries.values()) {
     if (entry.wantOpen) {

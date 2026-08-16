@@ -8,7 +8,7 @@ const state = {
   sshUser: 'operator',
   sshPort: 2222,
   sshKeyPath: '/keys/linux',
-  sshRemoteHermesPath: '/opt/hermes'
+  sshRemoteEternalPath: '/opt/eternal'
 }
 
 describe('selectSshHost', () => {
@@ -19,7 +19,7 @@ describe('selectSshHost', () => {
       sshUser: '',
       sshPort: null,
       sshKeyPath: '',
-      sshRemoteHermesPath: ''
+      sshRemoteEternalPath: ''
     })
   })
 
@@ -33,11 +33,11 @@ describe('selectSshHost', () => {
       enrichSelectedSshHost(selected, 'mac-box', {
         identityFile: '~/.ssh/id_ed25519',
         port: 22,
-        user: 'hermes'
+        user: 'eternal'
       })
     ).toMatchObject({
       sshHost: 'mac-box',
-      sshUser: 'hermes',
+      sshUser: 'eternal',
       sshPort: null,
       sshKeyPath: '~/.ssh/id_ed25519'
     })

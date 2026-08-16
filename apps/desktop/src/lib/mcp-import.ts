@@ -15,7 +15,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isServerShape = (value: Record<string, unknown>) =>
   typeof value.command === 'string' || typeof value.url === 'string'
 
-// Cursor/Claude write `type`; Hermes reads `transport` (same normalization the
+// Cursor/Claude write `type`; Eternal reads `transport` (same normalization the
 // MCP tab applies to pasted JSON).
 function normalizeEntry(entry: Record<string, unknown>): Record<string, unknown> {
   if (typeof entry.type === 'string' && entry.transport === undefined) {
