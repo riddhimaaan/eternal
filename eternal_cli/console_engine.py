@@ -929,20 +929,6 @@ class EternalConsoleEngine:
             confirmation="Send this message?",
         )
 
-        portal_paths = [("info",), ("tools",)]
-        _register_command_family(
-            self,
-            root="portal",
-            paths=portal_paths,
-            summaries=_adder_summaries("eternal_cli.portal_cli", "add_parser"),
-            handler_factory=lambda fixed: _adder_handler(
-                "portal",
-                fixed,
-                "eternal_cli.portal_cli",
-                "add_parser",
-            ),
-        )
-
         _register_command_family(
             self,
             root="project",
@@ -1212,8 +1198,6 @@ class EternalConsoleEngine:
             ("profile", "alias"): "`profile alias` creates shell wrappers and is not available in Eternal Console.",
             ("skills", "config"): "`skills config` is interactive and is not available in Eternal Console.",
             ("skills", "publish"): "`skills publish` is not available in Eternal Console.",
-            ("portal", "login"): "`portal login` is interactive and is not available in Eternal Console.",
-            ("portal", "open"): "`portal open` opens a browser and is not available in Eternal Console.",
             ("kanban", "tail"): "`kanban tail` streams output and is not available in Eternal Console.",
             ("kanban", "watch"): "`kanban watch` streams output and is not available in Eternal Console.",
             ("kanban", "daemon"): "`kanban daemon` starts a service and is not available in Eternal Console.",

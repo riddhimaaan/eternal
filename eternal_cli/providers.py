@@ -54,11 +54,6 @@ ETERNAL_OVERLAYS: Dict[str, EternalOverlay] = {
         is_aggregator=True,
         base_url_env_var="OPENROUTER_BASE_URL",
     ),
-    "nous": EternalOverlay(
-        transport="openai_chat",
-        auth_type="oauth_device_code",
-        base_url_override="https://inference-api.nousresearch.com/v1",
-    ),
     "openai-codex": EternalOverlay(
         transport="codex_responses",
         auth_type="oauth_external",
@@ -412,7 +407,6 @@ ALIASES: Dict[str, str] = {
 
 _LABEL_OVERRIDES: Dict[str, str] = {
     "moa": "Mixture of Agents",
-    "nous": "Nous Portal",
     "openai-codex": "ChatGPT or Codex Subscription",
     "copilot-acp": "GitHub Copilot ACP",
     "stepfun": "StepFun Step Plan",

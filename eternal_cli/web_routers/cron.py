@@ -43,7 +43,6 @@ _trigger_cron_job_sync = late("_trigger_cron_job_sync")
 _delete_cron_job_sync = late("_delete_cron_job_sync")
 _find_cron_job_profile = late("_find_cron_job_profile")
 _fire_cron_job_for_profile = late("_fire_cron_job_for_profile")
-_forward_cron_fire_to_gateway = late("_forward_cron_fire_to_gateway")
 _notify_cron_provider_for_profile = late("_notify_cron_provider_for_profile")
 _call_cron_for_profile = late("_call_cron_for_profile")
 _raise_if_cron_registration_error = late("_raise_if_cron_registration_error")
@@ -122,79 +121,6 @@ async def trigger_cron_job(job_id: str, profile: Optional[str] = None):
 @router.delete("/api/cron/jobs/{job_id}")
 async def delete_cron_job(job_id: str, profile: Optional[str] = None):
     return await _run_cron_dashboard_io(_delete_cron_job_sync, job_id, profile)
-
-
-@router.post("/api/cron/fire")
-async def cron_fire_webhook(request: Request):
-    """Chronos managed-cron fire webhook (NAS -> agent) — gateway forwarder.
-
-    Authenticated by a short-lived NAS-minted JWT (verified by the pluggable
-    Chronos fire-verifier), NOT the dashboard session cookie — so this path is
-    in ``PUBLIC_API_PATHS`` to bypass the dashboard auth gate, and the JWT is
-    the real gate.
-
-    The dashboard is only the PUBLIC DOOR here (on hosted deployments the Fly
-    proxy exposes exactly one port, the dashboard's). Cron execution belongs
-    to the GATEWAY process, which owns the live platform adapters — required
-    for relay-fronted logical platforms (their only sender is the live relay
-    adapter) and E2EE rooms, neither of which the dashboard's standalone send
-    path can serve. So after verifying the JWT this handler FORWARDS the fire
-    to the gateway api_server's own ``/api/cron/fire`` on loopback and passes
-    the gateway's response through (the gateway re-verifies the JWT — defense
-    in depth, no new trust link).
-
-    Gateway unreachable (scale-to-zero wake still booting, restart window,
-    api_server disabled) → 503, so NAS retries per the Chronos contract
-    (non-2xx = retryable). The store CAS claim de-dupes the eventual double
-    fire. Deliberately NO local-execution fallback: delivering from the wrong
-    process is worse than a delayed retry.
-    """
-    from plugins.cron_providers.chronos.verify import get_fire_verifier
-
-    auth = request.headers.get("Authorization", "")
-    token = auth[7:].strip() if auth.startswith("Bearer ") else ""
-
-    cfg = await asyncio.to_thread(load_config)
-    claims = get_fire_verifier()(
-        token=token,
-        expected_audience=cfg_get(cfg, "cron", "chronos", "expected_audience", default=""),
-        jwks_or_key=cfg_get(cfg, "cron", "chronos", "nas_jwks_url", default="") or None,
-        issuer=cfg_get(cfg, "cron", "chronos", "portal_url", default="") or None,
-    )
-    if claims is None:
-        return JSONResponse({"error": "invalid fire token"}, status_code=401)
-
-    try:
-        body = await request.json()
-    except Exception:
-        body = {}
-    job_id = (body or {}).get("job_id") if isinstance(body, dict) else None
-    if not job_id:
-        return JSONResponse({"error": "missing job_id"}, status_code=400)
-
-    # _find_cron_job_profile walks every profile and lists its jobs (file
-    # I/O per profile) — run it off the event loop like the other cron
-    # dashboard endpoints.
-    profile = await _run_cron_dashboard_io(_find_cron_job_profile, job_id)
-    if not profile:
-        # Job is gone (cancelled / completed) — nothing to fire. 200 so NAS
-        # does not retry a fire that is intentionally absent.
-        return JSONResponse({"status": "gone", "job_id": job_id}, status_code=200)
-
-    forwarded = await _forward_cron_fire_to_gateway(profile, job_id, auth)
-    if forwarded is None:
-        return JSONResponse(
-            {
-                "error": "gateway unreachable; retry",
-                "job_id": job_id,
-                "profile": profile,
-            },
-            status_code=503,
-        )
-    status_code, gateway_body = forwarded
-    if isinstance(gateway_body, dict):
-        gateway_body.setdefault("job_id", job_id)
-    return JSONResponse(gateway_body, status_code=status_code)
 
 
 @router.get("/api/cron/blueprints")

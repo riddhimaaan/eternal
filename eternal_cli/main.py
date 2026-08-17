@@ -11318,7 +11318,7 @@ _BUILTIN_SUBCOMMANDS = frozenset(
         "dump", "egress", "fallback", "gateway", "hooks", "import", "import-agent", "insights",
         "gui", "desktop", "kanban", "login", "logout", "logs", "lsp", "mcp", "memory", "migrate", "moa",
         "journey", "memory-graph", "learning",
-        "model", "monitoring", "pack", "pairing", "pause", "pets", "plugins", "portal", "profile",
+        "model", "monitoring", "pack", "pairing", "pause", "pets", "plugins", "profile",
         "project", "proxy",
         "prompt-size",
         "resume",
@@ -12322,12 +12322,6 @@ def main():
     # webhook command  (parser built in eternal_cli/subcommands/webhook.py)
     # =========================================================================
     build_webhook_parser(subparsers, cmd_webhook=cmd_webhook)
-
-    # =========================================================================
-    # portal command — Nous Portal status + Tool Gateway routing
-    # =========================================================================
-    from eternal_cli.portal_cli import add_parser as _add_portal_parser
-    _add_portal_parser(subparsers)
 
     # =========================================================================
     # kanban command — multi-profile collaboration board

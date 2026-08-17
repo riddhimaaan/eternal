@@ -12329,7 +12329,6 @@ from eternal_cli.web_routers.cron import (  # noqa: E402,F401 — legacy re-expo
     resume_cron_job,
     trigger_cron_job,
     delete_cron_job,
-    cron_fire_webhook,
     list_cron_blueprints,
     instantiate_blueprint,
 )
@@ -12690,72 +12689,6 @@ def _gateway_fire_endpoint(profile: str, home: Path) -> str:
     if multiplex and profile != "default":
         return f"http://127.0.0.1:{port}/p/{profile}/api/cron/fire"
     return f"http://127.0.0.1:{port}/api/cron/fire"
-
-
-async def _forward_cron_fire_to_gateway(
-    profile: str, job_id: str, authorization: str
-) -> Optional[Tuple[int, Dict[str, Any]]]:
-    """Forward a Chronos fire callback to the gateway api_server on loopback.
-
-    The dashboard is the hosted deployment's only public HTTP door (Fly proxy
-    → internal_port 9119), but cron execution belongs to the GATEWAY process:
-    it owns the live platform adapters, so delivery works for relay-fronted
-    logical platforms and E2EE rooms — the standalone path the dashboard used
-    to run cannot serve either. This forwards the fire byte-preserved (same
-    job_id, same NAS bearer — the gateway re-verifies the JWT itself) and
-    passes the gateway's response through.
-
-    Returns ``(status_code, body)`` from the gateway, or ``None`` when the
-    gateway is unreachable (not started yet after a scale-to-zero wake,
-    restarting, or api_server disabled) — the caller maps that to 503 so NAS
-    retries per the Chronos contract (non-2xx = retryable; the store CAS
-    de-dupes the eventual double fire).
-    """
-    _profile_name, home = _cron_profile_home(profile)
-    url = _gateway_fire_endpoint(_profile_name, home)
-    import httpx
-
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.post(
-                url,
-                json={"job_id": job_id},
-                headers={"Authorization": authorization},
-            )
-    except Exception as exc:
-        _log.warning(
-            "cron fire forward to %s failed (%s: %s); returning 503 for NAS retry",
-            url, type(exc).__name__, exc,
-        )
-        return None
-    try:
-        body = resp.json()
-    except Exception:
-        body = {"raw": (resp.text or "")[:500]}
-    if not isinstance(body, dict):
-        body = {"raw": body}
-    return resp.status_code, body
-
-
-
-
-# ---------------------------------------------------------------------------
-# Automation Blueprints — parameterized automation blueprints. The dashboard renders the
-# slot schema as a form; submitting instantiates a real cron job via the same
-# create_job path. See cron/blueprint_catalog.py for the single source of truth.
-# ---------------------------------------------------------------------------
-
-
-
-
-# ---------------------------------------------------------------------------
-# MCP server endpoints — list / add / remove / test.
-#
-# Wraps the same config data layer the CLI uses (eternal_cli.mcp_config), so
-# servers managed here show up under `eternal mcp list` and vice versa.  Secrets
-# in stdio `env` blocks are redacted on read; the agent picks them up from
-# config.yaml at session start exactly as with CLI-added servers.
-# ---------------------------------------------------------------------------
 
 
 def _normalize_mcp_server_create(
