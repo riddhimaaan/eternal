@@ -112,7 +112,11 @@ AUTH_LOCK_TIMEOUT_SECONDS = 15.0
 # Nous Portal defaults
 DEFAULT_NOUS_PORTAL_URL = "https://portal.nousresearch.com"
 DEFAULT_NOUS_INFERENCE_URL = "https://inference-api.nousresearch.com/v1"
-DEFAULT_NOUS_CLIENT_ID = "eternal-cli"
+# NOT ours to rename. This identifier is registered on Nous Research's OAuth
+# server; the rebrand changed it to "eternal-cli" and the server answers
+# 400 invalid_client ("Unsupported OAuth client_id"), which broke the login
+# option outright. Same class as the Hermes model IDs called out in NOTICE.
+DEFAULT_NOUS_CLIENT_ID = "hermes-cli"
 NOUS_INFERENCE_INVOKE_SCOPE = "inference:invoke"
 NOUS_BILLING_MANAGE_SCOPE = "billing:manage"
 DEFAULT_NOUS_SCOPE = NOUS_INFERENCE_INVOKE_SCOPE

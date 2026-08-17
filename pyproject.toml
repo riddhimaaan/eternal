@@ -383,7 +383,13 @@ override-dependencies = [
   # Remove this line when alibabacloud-tea-openapi lifts the cap.
   "cryptography>=50,<51",
 ]
-exclude-newer = "14 days"
+# Absolute, not relative. A rolling window ("14 days") re-derives a new cutoff on
+# every invocation, so `uv sync --locked` / `uv lock --check` can never match the
+# committed lockfile and fails on every install and every CI run — silently
+# dropping the hash-verified install tier documented in scripts/install.sh. Pinning
+# the cutoff keeps the supply-chain intent for any future re-resolve while making
+# the lockfile reproducible. Bump this date deliberately when refreshing pins.
+exclude-newer = "2026-08-02T17:24:01.616235358Z"
 # h2: temporary exclude-newer exception for the CVE-2026-71554 (GHSA-6hr6-w5qg-qmwg,
 # request-smuggling) fix in 4.4.1, published 2026-08-03. Remove after 2026-08-17.
 # aiohttp, cryptography: same shape — the advisory fixes are newer than the
