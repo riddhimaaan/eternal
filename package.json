@@ -27,13 +27,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NousResearch/Eternal-Agent.git"
+    "url": "git+https://github.com/riddhimaaan/eternal.git"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/NousResearch/Eternal-Agent/issues"
+    "url": "https://github.com/riddhimaaan/eternal/issues"
   },
-  "homepage": "https://github.com/NousResearch/Eternal-Agent#readme",
+  "homepage": "https://github.com/riddhimaaan/eternal#readme",
   "devDependencies": {
     "@eslint/js": "9.39.5",
     "typescript-eslint": "8.64.0",

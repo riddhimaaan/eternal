@@ -266,30 +266,29 @@ describe('SkillsView toolset management', () => {
     expect(await screen.findByText(/Deep research steps/)).toBeTruthy()
   })
 
-  it('hub picker refuses to reinstall an already-installed skill', async () => {
+  it('hub picker does not frame the upstream docs site', async () => {
     const { notify } = await import('@/store/notifications')
     const { EmbeddedHubPicker } = await import('./embedded-hub-picker')
 
-    render(<EmbeddedHubPicker installedNames={new Set(['web-research'])} profile={null} />)
+    const { container } = render(
+      <EmbeddedHubPicker installedNames={new Set(['web-research'])} profile={null} />
+    )
 
-    // The picker is expanded by default — the hub iframe is live on mount.
-    expect(document.querySelector('iframe')).toBeTruthy()
+    // The embed is disabled: no cross-origin frame, and no listener for the
+    // picks it used to post. See HUB_EMBED_ENABLED for why.
+    expect(container.querySelector('iframe')).toBeNull()
 
     await act(async () => {
       window.dispatchEvent(
         new MessageEvent('message', {
-          data: { type: 'eternal-skill-pick', name: 'web-research', identifier: 'web-research' },
+          data: { type: 'eternal-skill-pick', name: 'not-installed', identifier: 'not-installed' },
           origin: 'https://hermes-agent.nousresearch.com'
         })
       )
     })
 
-    // Refused with an informational toast, no install action spawned.
-    await waitFor(() =>
-      expect(vi.mocked(notify)).toHaveBeenCalledWith(
-        expect.objectContaining({ title: '"web-research" is already installed' })
-      )
-    )
+    // A pick from that origin must not reach the install pipeline at all.
+    expect(vi.mocked(notify)).not.toHaveBeenCalled()
   })
 
   it('shows a vision explainer that deep-links to Settings → Models', async () => {

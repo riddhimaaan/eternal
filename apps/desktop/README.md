@@ -185,7 +185,7 @@ rm "$HOME/.eternal/eternal-agent/.eternal-bootstrap-complete"
 # Rebuild a broken Python venv
 rm -rf "$HOME/.eternal/eternal-agent/venv"
 # Reset a stuck macOS microphone prompt (macOS only)
-tccutil reset Microphone com.nousresearch.eternal
+tccutil reset Microphone com.riddhimaaan.eternal
 ```
 
 **Windows (PowerShell):**

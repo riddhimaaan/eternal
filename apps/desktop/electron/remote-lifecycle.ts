@@ -140,7 +140,7 @@ async function locateEternal(ssh, remoteEternalPath) {
     //   - version checking: `<python> --version` printed "Python x.y.z" instead of
     //     the Eternal version, and
     //   - capability probing: `<python> serve --help` failed entirely.
-    // See https://github.com/NousResearch/hermes-agent/issues/74411
+    // See https://github.com/riddhimaaan/eternal/issues/74411
     return candidate
   }
 
@@ -200,7 +200,7 @@ async function locateEternal(ssh, remoteEternalPath) {
 
   const err: any = new Error(
     'Eternal is not installed on the remote host (could not find a `eternal` executable). ' +
-      'Install it on the remote with:  curl -fsSL https://hermes-agent.nousresearch.com/install.sh | sh  ' +
+      'Install it on the remote with:  curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | sh  ' +
       '— or set the Eternal path explicitly in the SSH connection settings.'
   )
 

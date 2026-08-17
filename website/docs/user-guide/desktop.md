@@ -339,7 +339,7 @@ rm "$HOME/.eternal/eternal-agent/.eternal-bootstrap-complete"
 rm -rf "$HOME/.eternal/eternal-agent/venv"
 
 # Reset a stuck macOS microphone prompt
-tccutil reset Microphone com.nousresearch.eternal
+tccutil reset Microphone com.riddhimaaan.eternal
 ```
 
 ### "Build desktop app" stuck on Electron download
@@ -415,7 +415,7 @@ detected and never re-signed.
 One-time note: changing the signing identity (including the first update after
 this fix) changes the app's identity once, so macOS will re-prompt one final
 time. Grants are stable from then on. If a permission gets stuck, reset it with
-`tccutil reset All com.nousresearch.eternal` and re-grant.
+`tccutil reset All com.riddhimaaan.eternal` and re-grant.
 
 ## See also
 

@@ -404,12 +404,12 @@ def _make_signable_app(desktop_dir: Path) -> Path:
     (ent_dir / "entitlements.mac.inherit.plist").write_text("<plist/>", encoding="utf-8")
 
     app = desktop_dir / "release" / "mac-arm64" / "Eternal.app"
-    _write_info_plist(app, "com.nousresearch.eternal")
+    _write_info_plist(app, "com.riddhimaaan.eternal")
     (app / "Contents" / "MacOS").mkdir(parents=True)
     (app / "Contents" / "MacOS" / "Eternal").write_text("", encoding="utf-8")
 
     helper = app / "Contents" / "Frameworks" / "Eternal Helper.app"
-    _write_info_plist(helper, "com.nousresearch.eternal.helper")
+    _write_info_plist(helper, "com.riddhimaaan.eternal.helper")
 
     native_dir = app / "Contents" / "Resources" / "app.asar.unpacked" / "node_modules" / "pty"
     native_dir.mkdir(parents=True)

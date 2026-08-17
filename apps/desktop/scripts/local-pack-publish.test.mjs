@@ -88,8 +88,11 @@ describe('local desktop pack stays out of the publish path', () => {
 
     assert.ok(Array.isArray(configs) && configs.length > 0)
     assert.equal(configs[0].provider, 'github')
-    assert.equal(configs[0].owner, 'NousResearch')
-    assert.equal(configs[0].repo, 'eternal-agent')
+    // Must be OUR repository. Publishing resolves from the `repository` field
+    // in apps/desktop/package.json, so a stale upstream owner here would aim
+    // releases at Nous Research's repo.
+    assert.equal(configs[0].owner, 'riddhimaaan')
+    assert.equal(configs[0].repo, 'eternal')
   })
 
   test('a package without the repository field is what breaks resolution', async () => {

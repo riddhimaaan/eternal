@@ -19,6 +19,22 @@ import { $paneHeightOverride, setPaneHeightOverride } from '@/store/panes'
 const HUB_ORIGIN = 'https://hermes-agent.nousresearch.com'
 const HUB_PICKER_URL = `${HUB_ORIGIN}/docs/skills?embed=picker`
 
+// The embed is OFF, for two independent reasons:
+//
+//  1. It cannot work. Only our half of the picker contract was rebranded. The
+//     page above still posts `hermes-skill-pick`; the listener below requires
+//     `eternal-skill-pick`. The origin check passes, the type check drops the
+//     message, and "+ Add to this Agent" silently does nothing. The sending
+//     half runs on a host we do not control, so renaming cannot fix it.
+//  2. Framing Nous Research's branded docs inside Eternal implies exactly the
+//     affiliation that NOTICE disclaims, and lets a third-party page choose
+//     which install command runs on our users' machines.
+//
+// The local "Update all" action does not use the frame and stays enabled. To
+// bring browsing back, point HUB_ORIGIN at our own docs site, serve an
+// `?embed=picker` view from it, and match the type string it posts.
+const HUB_EMBED_ENABLED: boolean = false
+
 // Hub viewport height: persisted through the shared pane store (same one the
 // terminal/editor panes use), dragged from the section's TOP edge — "pull the
 // hub up" — clamped so neither the hub nor the skills list above vanishes.
@@ -91,7 +107,7 @@ export function EmbeddedHubPicker({ installedNames, profile }: EmbeddedHubPicker
   // through the same store pipeline the hub rows use, so the action log,
   // optimistic flips, and Skills-list refresh all come for free.
   useEffect(() => {
-    if (!open) {
+    if (!open || !HUB_EMBED_ENABLED) {
       return undefined
     }
 
@@ -152,12 +168,14 @@ export function EmbeddedHubPicker({ installedNames, profile }: EmbeddedHubPicker
             {updating && <Loader2 className="size-3 animate-spin" />}
             {updating ? h.updating : h.updateAll}
           </Button>
-          <Button onClick={() => setOpen(v => !v)} size="xs" variant="text">
-            {open ? h.pickerHide : h.pickerBrowse}
-          </Button>
+          {HUB_EMBED_ENABLED && (
+            <Button onClick={() => setOpen(v => !v)} size="xs" variant="text">
+              {open ? h.pickerHide : h.pickerBrowse}
+            </Button>
+          )}
         </div>
       </div>
-      {open && (
+      {open && HUB_EMBED_ENABLED && (
         <div className="grid gap-1 px-3 pb-2">
           {/* Resizable viewport: height comes from the top-edge drag sash
               above (persisted; double-click resets). The iframe is rendered

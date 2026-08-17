@@ -1,4 +1,4 @@
-import { execFile, execFileSync, spawn } from 'node:child_process'
+import { execFile, execFileSync, spawn, spawnSync } from 'node:child_process'
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import http from 'node:http'
@@ -236,6 +236,7 @@ import {
 } from './remote-liveness'
 import { missingRendererAssets } from './renderer-bundle'
 import { attachRendererConsoleCapture, formatRendererBoundaryReport } from './renderer-log'
+import { seedBundledRuntime } from './seed-bundled-runtime'
 import {
   buildSessionWindowUrl,
   chatWindowWebPreferences,
@@ -1074,12 +1075,12 @@ app.setName(APP_NAME)
 // Windows toast notifications silently no-op unless an AppUserModelID is set:
 // `new Notification().show()` returns without error and nothing appears. The
 // AUMID must match the installed Start Menu shortcut's AUMID, which
-// electron-builder derives from the build `appId` (com.nousresearch.eternal) —
+// electron-builder derives from the build `appId` (com.riddhimaaan.eternal) —
 // keep this string in sync with package.json `build.appId`. macOS/Linux don't
 // need this, so gate it on Windows. (Fixes: desktop approval/turn notifications
 // never firing on Windows.)
 if (IS_WINDOWS) {
-  app.setAppUserModelId('com.nousresearch.eternal')
+  app.setAppUserModelId('com.riddhimaaan.eternal')
 }
 
 // Seed the native About panel with the live Eternal version. This is refreshed
@@ -4014,6 +4015,59 @@ function activeRuntimeState() {
   return classifyActiveRuntime(readBootstrapMarker(), BOOTSTRAP_MARKER_SCHEMA_VERSION, isActiveRuntimeUsable())
 }
 
+/**
+ * Where the staged agent runtime lives: alongside the app's other resources in
+ * a packaged build, or in the build output when running from source.
+ */
+function bundledRuntimeDir() {
+  const override = process.env.ETERNAL_DESKTOP_AGENT_RUNTIME
+
+  if (override) {
+    return override
+  }
+
+  return IS_PACKAGED && process.resourcesPath
+    ? path.join(process.resourcesPath, 'agent-runtime')
+    : path.join(APP_ROOT, 'build', 'agent-runtime')
+}
+
+/**
+ * Install the bundled runtime if there is no usable install yet.
+ *
+ * Deliberately synchronous and best-effort: it runs on the backend-resolution
+ * path, and a failure must degrade to the existing bootstrap rungs rather than
+ * block launch. Everything it does is logged, since it is otherwise invisible.
+ */
+function seedBundledRuntimeIfNeeded() {
+  try {
+    const result = seedBundledRuntime(
+      { activeRoot: ACTIVE_ETERNAL_ROOT, bundleDir: bundledRuntimeDir(), venvRoot: VENV_ROOT },
+      {
+        copyDir: (from, to) => fs.cpSync(from, to, { recursive: true }),
+        existsSync: target => fs.existsSync(target),
+        log: message => rememberLog(message),
+        mkdirSync: target => fs.mkdirSync(target, { recursive: true }),
+        run: (command, args) =>
+          spawnSync(command, args, { encoding: 'utf8', windowsHide: true }) as {
+            status: number | null
+            stderr?: string
+            stdout?: string
+          }
+      }
+    )
+
+    if (result.outcome === 'failed') {
+      rememberLog(`[seed] bundled runtime install failed, falling back to bootstrap: ${result.error}`)
+    }
+
+    return result
+  } catch (err) {
+    rememberLog(`[seed] bundled runtime install threw, falling back to bootstrap: ${String(err)}`)
+
+    return { outcome: 'failed' as const }
+  }
+}
+
 function writeBootstrapMarker(payload) {
   fs.mkdirSync(path.dirname(BOOTSTRAP_COMPLETE_MARKER), { recursive: true })
 
@@ -4308,6 +4362,15 @@ function resolveEternalBackend(backendArgs) {
   //    builds could leave a healthy install behind without the marker. If the
   //    active runtime is usable, launch it directly; only fall through to
   //    bootstrap when the runtime itself is unusable.
+  //
+  //    Before asking, give the bundled runtime a chance to become that install.
+  //    Seeding is what makes a packaged build self-contained: it turns the
+  //    staged resources into a real source tree + venv, after which the checks
+  //    below pass and the network bootstrap is never reached. It is a no-op
+  //    when an install already exists or no bundle shipped, so the pre-existing
+  //    paths behave exactly as before.
+  seedBundledRuntimeIfNeeded()
+
   const activeRuntime = activeRuntimeState()
 
   if (activeRuntime.shouldUseActiveRuntime && !bootstrapRepairRequested) {

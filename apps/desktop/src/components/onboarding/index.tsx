@@ -101,7 +101,9 @@ const API_KEY_OPTIONS: ApiKeyOption[] = [
     id: 'local',
     name: 'Local / custom endpoint',
     envKey: 'OPENAI_BASE_URL',
-    docsUrl: 'https://github.com/NousResearch/hermes-agent#bring-your-own-endpoint',
+    // No "get a key" page applies to a self-hosted endpoint, and our README has
+    // no such anchor. Empty string hides the link (see DocsLink below).
+    docsUrl: '',
     placeholder: 'http://127.0.0.1:8000/v1'
   }
 ]

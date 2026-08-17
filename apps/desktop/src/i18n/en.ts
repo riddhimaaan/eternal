@@ -829,7 +829,7 @@ export const en: Translations = {
       sshErrHostKey:
         'The host key has CHANGED since you last connected. Verify this is expected, then run ssh-keygen -R <host> and reconnect.',
       sshErrNotInstalled:
-        'Eternal is not installed on the remote host. Install it there (curl -fsSL https://hermes-agent.nousresearch.com/install.sh | sh) or set the Eternal path.',
+        'Eternal is not installed on the remote host. Install it there (curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | sh) or set the Eternal path.',
       sshErrPlatform:
         'Unsupported remote platform. Eternal Desktop SSH mode supports Linux, macOS, and Windows remote hosts.',
       sshErrTimeout: 'SSH connection timed out. The host may be unreachable or asleep.',
