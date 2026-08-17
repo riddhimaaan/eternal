@@ -8,7 +8,6 @@ import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
 import {
   Archive,
-  BarChart3,
   Bell,
   Download,
   Globe,
@@ -33,7 +32,6 @@ import { SKILLS_ROUTE } from '../routes'
 
 import { AboutSettings } from './about-settings'
 import { AppearanceSettings } from './appearance-settings'
-import { BillingSettings } from './billing'
 import { ConfigSettings } from './config-settings'
 import { ConnectionsSettings } from './connections-settings'
 import { SECTIONS } from './constants'
@@ -54,7 +52,6 @@ const SETTINGS_VIEWS: readonly SettingsViewId[] = [
   'keybinds',
   'keys',
   'notifications',
-  'billing',
   'plugins',
   'sessions',
   'about'
@@ -163,13 +160,6 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
         id: 'notifications',
         label: t.settings.nav.notifications,
         onSelect: () => setActiveView('notifications')
-      },
-      {
-        active: activeView === 'billing',
-        icon: BarChart3,
-        id: 'billing',
-        label: t.settings.nav.billing,
-        onSelect: () => setActiveView('billing')
       },
       {
         active: activeView === 'providers',
@@ -338,8 +328,6 @@ export function SettingsView({ onClose, onConfigSaved, onMainModelChanged }: Set
             <KeysSettings view={keysView} />
           ) : activeView === 'notifications' ? (
             <NotificationsSettings />
-          ) : activeView === 'billing' ? (
-            <BillingSettings />
           ) : activeView === 'plugins' ? (
             <PluginsSettings />
           ) : (
