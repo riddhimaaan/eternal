@@ -23,6 +23,30 @@ def isolated_home(tmp_path, monkeypatch):
     import importlib
     from eternal_cli import model_catalog
     importlib.reload(model_catalog)
+
+    # We no longer ship a catalog host — the default was Nous-owned and is now
+    # empty, which makes get_catalog() short-circuit before any fetch. These
+    # tests exist to cover the fetch/cache/fallback machinery itself, so give
+    # them a host to fetch from. Two URLs, because the fallback-chain tests
+    # need a primary and a secondary.
+    monkeypatch.setattr(
+        model_catalog, "DEFAULT_CATALOG_URL", "https://primary.invalid/model-catalog.json"
+    )
+    monkeypatch.setattr(
+        model_catalog,
+        "DEFAULT_CATALOG_FALLBACK_URLS",
+        ("https://fallback.invalid/model-catalog.json",),
+    )
+    monkeypatch.setattr(
+        model_catalog,
+        "_load_catalog_config",
+        lambda: {
+            "enabled": True,
+            "url": model_catalog.DEFAULT_CATALOG_URL,
+            "ttl_hours": model_catalog.DEFAULT_TTL_HOURS,
+            "providers": {},
+        },
+    )
     yield home
     model_catalog.reset_cache()
 
@@ -137,11 +161,11 @@ class TestFallbackChain:
     releases (opus 4.8, etc.) never reach the picker.
     """
 
-    PRIMARY = "https://hermes-agent.nousresearch.com/docs/api/model-catalog.json"
-    FALLBACK = (
-        "https://raw.githubusercontent.com/NousResearch/hermes-agent"
-        "/main/website/static/api/model-catalog.json"
-    )
+    # Must match the hosts the isolated_home fixture installs. The real ones
+    # were Nous-owned and are gone; what this class covers is the walk from
+    # primary to fallback, which is host-agnostic.
+    PRIMARY = "https://primary.invalid/model-catalog.json"
+    FALLBACK = "https://fallback.invalid/model-catalog.json"
 
     def test_uses_primary_when_it_succeeds(self, isolated_home):
         from eternal_cli import model_catalog

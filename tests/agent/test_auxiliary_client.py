@@ -112,7 +112,6 @@ class TestResolveTaskProviderModel:
         [
             "anthropic",
             "minimax-oauth",
-            "nous",
             "openai-codex",
             "qwen-oauth",
             "xai-oauth",
@@ -4520,7 +4519,7 @@ class TestFastModelTier:
             "stepfun/step-3.7-flash:free": {},
         }
         with patch("eternal_cli.models.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("nous") == "~openai/gpt-mini-latest"
+            assert ac._fast_model_from_catalog("openrouter") == "~openai/gpt-mini-latest"
 
     def test_catalog_match_skips_reasoning_batch_and_embedding_lookalikes(self):
         """Substring matching must not pick a thinker, a queue, or an encoder."""
@@ -4533,7 +4532,7 @@ class TestFastModelTier:
             "google/gemini-3.6-flash": {},
         }
         with patch("eternal_cli.models.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("nous") == "google/gemini-3.6-flash"
+            assert ac._fast_model_from_catalog("openrouter") == "google/gemini-3.6-flash"
 
     def test_catalog_match_skips_the_non_chat_siblings_of_a_chat_model(self):
         """A provider names its speech and image endpoints after the chat model
@@ -4547,7 +4546,7 @@ class TestFastModelTier:
             "openai/gpt-4o-mini": {},
         }
         with patch("eternal_cli.models.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("nous") == "openai/gpt-4o-mini"
+            assert ac._fast_model_from_catalog("openrouter") == "openai/gpt-4o-mini"
 
     def test_catalog_match_takes_the_newest_of_a_family(self):
         """The bare family rungs must land on the current generation.
@@ -4564,7 +4563,7 @@ class TestFastModelTier:
             "openai/gpt-10-mini": {},
         }
         with patch("eternal_cli.models.fetch_models_with_pricing", return_value=catalog):
-            assert ac._fast_model_from_catalog("nous") == "openai/gpt-10-mini"
+            assert ac._fast_model_from_catalog("openrouter") == "openai/gpt-10-mini"
 
     def test_catalog_fetch_is_authenticated(self):
         """Most /v1/models endpoints need a key; anonymously they 401.

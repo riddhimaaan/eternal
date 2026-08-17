@@ -155,7 +155,7 @@ def _fetch_manifest(url: str, timeout: float) -> dict[str, Any] | None:
 def _fetch_manifest_with_fallback(
     primary_url: str,
     timeout: float,
-    fallback_urls: tuple[str, ...] = DEFAULT_CATALOG_FALLBACK_URLS,
+    fallback_urls: tuple[str, ...] | None = None,
 ) -> dict[str, Any] | None:
     """Try ``primary_url`` first, then walk ``fallback_urls``.
 
@@ -163,7 +163,15 @@ def _fetch_manifest_with_fallback(
     every URL fails. Skips fallback URLs identical to the primary so an
     operator who configured the catalog URL to point at the raw GitHub
     copy doesn't double-fetch.
+
+    ``fallback_urls`` defaults to None and resolves to the module constant at
+    CALL time, not definition time. Binding the constant as a default argument
+    froze it at import, so reassigning DEFAULT_CATALOG_FALLBACK_URLS later --
+    to self-host a manifest, or to point the chain somewhere in a test -- had
+    no effect on this function.
     """
+    if fallback_urls is None:
+        fallback_urls = DEFAULT_CATALOG_FALLBACK_URLS
     data = _fetch_manifest(primary_url, timeout)
     if data is not None:
         return data
