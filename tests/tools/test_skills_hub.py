@@ -1756,6 +1756,12 @@ class TestLoadEternalIndex:
 
         cache_file = tmp_path / "eternal-index.json"
         monkeypatch.setattr(hub, "_eternal_index_cache_file", lambda: cache_file)
+        # There is no default index host any more, and _load_eternal_index
+        # returns early when the URL is empty. Configure one so the tests in
+        # this class still exercise the fetch path they exist to cover.
+        monkeypatch.setattr(
+            hub, "ETERNAL_INDEX_URL", "https://example.invalid/skills-index.json"
+        )
         return cache_file
 
     def test_fetch_does_not_request_brotli(self, monkeypatch, tmp_path):

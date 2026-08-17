@@ -16,7 +16,10 @@ import { $paneHeightOverride, setPaneHeightOverride } from '@/store/panes'
 // to the parent window. We validate the origin and route the install through
 // the standard hub action pipeline (background action + tailed log + Skills
 // list invalidation), scoped to the Capabilities profile selector.
-const HUB_ORIGIN = 'https://hermes-agent.nousresearch.com'
+// Empty: we host no hub. This pointed at hermes-agent.nousresearch.com.
+// Unused while HUB_EMBED_ENABLED is false (see below); set both to bring
+// embedded browsing back against our own docs site.
+const HUB_ORIGIN = ''
 const HUB_PICKER_URL = `${HUB_ORIGIN}/docs/skills?embed=picker`
 
 // The embed is OFF, for two independent reasons:

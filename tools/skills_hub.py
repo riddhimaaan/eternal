@@ -4167,7 +4167,11 @@ def check_for_skill_updates(
 # Eternal centralized index source
 # ---------------------------------------------------------------------------
 
-ETERNAL_INDEX_URL = "https://hermes-agent.nousresearch.com/docs/api/skills-index.json"
+# No default index host. This pointed at hermes-agent.nousresearch.com, which
+# we do not own. This is only ONE of several skill sources -- GitHub taps and
+# skills.sh remain -- so an empty URL narrows discovery rather than breaking
+# it. Point it at your own index of the same schema to re-enable.
+ETERNAL_INDEX_URL = ""
 ETERNAL_INDEX_TTL = 6 * 3600  # 6 hours
 
 
@@ -4182,6 +4186,11 @@ def _load_eternal_index() -> Optional[dict]:
     We cache it locally for ETERNAL_INDEX_TTL seconds to avoid repeated
     downloads within a session.
     """
+    # No index host configured -- this source is disabled. Other sources
+    # (GitHub taps, skills.sh) still populate the hub.
+    if not ETERNAL_INDEX_URL.strip():
+        return None
+
     # Check local cache
     eternal_index_cache_file = _eternal_index_cache_file()
     if eternal_index_cache_file.exists():

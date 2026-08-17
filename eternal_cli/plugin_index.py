@@ -26,10 +26,12 @@ from eternal_constants import get_eternal_home
 
 logger = logging.getLogger(__name__)
 
-# Canonical index location. Override via config key ``plugins.index_url``.
-DEFAULT_INDEX_URL = (
-    "https://raw.githubusercontent.com/NousResearch/hermes-plugin-index/main/index.json"
-)
+# No default index host. This pointed at NousResearch/hermes-plugin-index,
+# a namespace we do not own. Empty means "bundled seed only": load_index
+# already degrades remote -> stale cache -> SEED_INDEX_PATH, so an empty URL
+# simply lands on the seed. Set ``plugins.index_url`` in config.yaml to serve
+# your own index of the same schema.
+DEFAULT_INDEX_URL = ""
 
 # Cache the fetched index for 24 hours; a stale cache is still preferred over
 # the bundled seed when the remote is unreachable.
@@ -187,6 +189,10 @@ def _write_cache(text: str) -> None:
 def _fetch_remote() -> Optional[List[PluginIndexEntry]]:
     """Fetch and parse the remote index; cache the raw payload on success."""
     url = get_index_url()
+    # No index host configured -- skip the network entirely rather than
+    # failing an HTTP call against "" on every refresh.
+    if not url.strip():
+        return None
     try:
         import httpx
 

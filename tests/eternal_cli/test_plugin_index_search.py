@@ -252,6 +252,12 @@ class TestLoadIndex:
 
         import httpx
 
+        # There is no default index host any more, and _fetch_remote skips the
+        # network when the URL is empty. Configure one so this still exercises
+        # the remote path it is here to test.
+        monkeypatch.setattr(
+            plugin_index, "get_index_url", lambda: "https://example.invalid/index.json"
+        )
         monkeypatch.setattr(httpx, "get", lambda *a, **k: FakeResponse())
         entries, source = load_index()
         assert source == "remote"
