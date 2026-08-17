@@ -89,10 +89,19 @@ describe('seedBundledRuntime', () => {
 
     expect(result.outcome).toBe('seeded')
     expect(deps.copyDir).toHaveBeenCalledWith(path.join(BUNDLE, 'source'), ACTIVE)
+    expect(deps.copyDir).toHaveBeenCalledWith(path.join(BUNDLE, 'python'), path.join(ACTIVE, 'python'))
 
     const [venvCall, pipCall] = deps.calls
 
-    expect(venvCall).toEqual([bundledPythonPath(BUNDLE, 'linux'), '-m', 'venv', '--copies', VENV])
+    // Built from the COPIED interpreter under activeRoot, never from the one
+    // inside the bundle. venv --copies copies the binary but pyvenv.cfg still
+    // records the creating interpreter's path in `home`, and CPython reads
+    // `home` to find its stdlib -- so creating from the bundle bakes the app
+    // directory into the venv. Under an AppImage that path is a per-launch
+    // /tmp/.mount_XXXXXX which is gone by the next start, leaving a venv whose
+    // python cannot import `encodings` and an app that works exactly once.
+    expect(venvCall).toEqual([bundledPythonPath(ACTIVE, 'linux'), '-m', 'venv', '--copies', VENV])
+    expect(venvCall[0].startsWith(BUNDLE)).toBe(false)
 
     // The offline guarantee: --no-index means a missing wheel fails loudly here
     // instead of silently fetching from PyPI on the user's first launch.

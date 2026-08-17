@@ -64,8 +64,8 @@ async function stampExeIdentity(exe, desktopRoot = resolve(import.meta.dirname, 
     'version-string': {
       ProductName: 'Eternal',
       FileDescription: 'Eternal',
-      CompanyName: 'Nous Research',
-      LegalCopyright: 'Copyright (c) 2026 Nous Research'
+      CompanyName: 'Riddhimaaan',
+      LegalCopyright: 'Copyright (c) 2026 Riddhimaaan; portions (c) 2025 Nous Research (MIT)'
     }
   })
 

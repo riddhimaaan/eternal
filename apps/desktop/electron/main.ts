@@ -1090,7 +1090,7 @@ if (IS_WINDOWS) {
 app.setAboutPanelOptions({
   applicationName: APP_NAME,
   applicationVersion: resolveEternalVersion(),
-  copyright: 'Copyright © 2026 Nous Research'
+  copyright: 'Copyright © 2026 Riddhimaaan. Built on Hermes Agent, © 2025 Nous Research (MIT) — see NOTICE.'
 })
 
 // Custom scheme for streaming audio/video into the renderer. Local paths read

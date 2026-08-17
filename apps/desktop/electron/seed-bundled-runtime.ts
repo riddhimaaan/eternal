@@ -140,13 +140,31 @@ export function seedBundledRuntime(options: SeedOptions, deps: SeedDeps): SeedRe
     mkdirSync(activeRoot)
     copyDir(path.join(bundle, 'source'), activeRoot)
 
-    const bundledPython = bundledPythonPath(bundle, platform)
+    // Copy the interpreter OUT of the bundle before building the venv against
+    // it. `venv --copies` copies the binary but pyvenv.cfg still records the
+    // CREATING interpreter's path in `home`/`executable`, and CPython reads
+    // `home` to locate its standard library. Building straight from
+    // bundleDir therefore bakes the app's own directory into the venv.
+    //
+    // For an AppImage that is fatal rather than merely fragile: it mounts at a
+    // fresh /tmp/.mount_XXXXXX every launch, so the path recorded on first run
+    // is gone by the second. The venv's python then dies with "No module named
+    // 'encodings'", the runtime reads as unusable, and the app drops back to
+    // first-run setup on every subsequent launch -- it works exactly once.
+    //
+    // Copying to activeRoot/python first gives pyvenv.cfg a path that outlives
+    // the mount. Costs ~80 MB on disk, which is the right trade for a runtime
+    // that survives a restart.
+    const stablePythonRoot = path.join(activeRoot, 'python')
+    log('[seed] installing interpreter')
+    copyDir(path.join(bundle, 'python'), stablePythonRoot)
+
+    const bundledPython = bundledPythonPath(activeRoot, platform)
 
     log('[seed] creating venv')
 
-    // --copies, not symlinks: the bundled interpreter lives inside the app
-    // directory, which an update or an uninstall can replace or remove. A
-    // symlinked venv would break the moment that happens.
+    // --copies, not symlinks: a symlink back into the bundle would break for
+    // the same reason described above.
     const venvResult = run(bundledPython, ['-m', 'venv', '--copies', venvRoot])
 
     if (venvResult.status !== 0) {

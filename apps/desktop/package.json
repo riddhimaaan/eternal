@@ -288,7 +288,7 @@
     },
     "linux": {
       "category": "Development",
-      "maintainer": "Nous Research <support@nousresearch.com>",
+      "maintainer": "Riddhimaaan <riddhimaaan@users.noreply.github.com>",
       "synopsis": "Native desktop shell for Eternal Agent.",
       "target": [
         "AppImage",
