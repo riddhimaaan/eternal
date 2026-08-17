@@ -301,19 +301,22 @@ def dev_gate_open() -> bool:
 # a dev/staging build at another plane. It is NOT the inference base_url.
 # ---------------------------------------------------------------------------
 
-#: Production Skill Sync plane. Overridable per the resolution order below.
-DEFAULT_SYNC_BASE_URL = "https://gateway-gateway.nousresearch.com"
+#: No default sync plane. This pointed at gateway-gateway.nousresearch.com,
+#: which we do not own. Skill sync is already off unless sync.enabled (or the
+#: ETERNAL_SYNC_ENABLED bridge) is set, so an empty default just means an
+#: operator who turns sync on must also say where it syncs to.
+DEFAULT_SYNC_BASE_URL = ""
 
 def resolve_sync_base_url() -> Optional[str]:
     """Resolve the sync-plane base URL.
 
     Order: ETERNAL_SYNC_BASE_URL env bridge -> config.yaml ``sync.base_url`` ->
-    the production plane. Returns a base without a trailing slash (e.g.
+    the built-in default. Returns a base without a trailing slash (e.g.
     ``https://host``); the ``/v1/sync/`` prefix is appended by the client.
 
-    The production default means a normal user never configures a URL — the
-    env var and config key exist to point a dev/staging build at another
-    plane. Returns None only if the default is somehow blanked out.
+    There is no built-in default any more, so this returns None unless an
+    operator configures a plane. Sync is off by default regardless, so None is
+    the normal case rather than an error.
     """
     env = os.getenv("ETERNAL_SYNC_BASE_URL")
     if env and env.strip():

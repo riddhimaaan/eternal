@@ -725,23 +725,28 @@ class TestEnvConfig:
         monkeypatch.setenv("ETERNAL_SYNC_BASE_URL", "https://plane.example/")
         assert ssc.resolve_sync_base_url() == "https://plane.example"
 
-    def test_base_url_defaults_to_production(self, monkeypatch):
-        # With nothing configured a user must still reach the real plane —
-        # otherwise every sync command fails with "no base URL configured".
+    def test_base_url_is_none_without_configuration(self, monkeypatch):
+        # There is no built-in plane any more — we removed the Nous-hosted one
+        # and host none of our own. Sync is off by default, so None here is the
+        # normal case; callers must treat it as "sync not configured" rather
+        # than falling back to some default host.
         monkeypatch.delenv("ETERNAL_SYNC_BASE_URL", raising=False)
         monkeypatch.setattr("eternal_cli.config.load_config", lambda: {}, raising=False)
-        assert ssc.resolve_sync_base_url() == ssc.DEFAULT_SYNC_BASE_URL
+        assert ssc.resolve_sync_base_url() is None
 
-    def test_default_is_a_bare_https_origin(self):
-        # The client appends /v1/sync/, so the default must be a scheme+host
-        # origin with no trailing slash and no path.
+    def test_resolved_url_is_a_bare_origin(self, monkeypatch):
+        # The client appends /v1/sync/, so whatever an operator configures must
+        # resolve to a scheme+host origin with no trailing slash and no path.
+        # This invariant outlived the default it was originally written for.
         from urllib.parse import urlparse
 
-        parsed = urlparse(ssc.DEFAULT_SYNC_BASE_URL)
+        monkeypatch.setenv("ETERNAL_SYNC_BASE_URL", "https://plane.example/")
+        resolved = ssc.resolve_sync_base_url()
+        parsed = urlparse(resolved)
         assert parsed.scheme == "https"
         assert parsed.netloc
         assert parsed.path == ""
-        assert not ssc.DEFAULT_SYNC_BASE_URL.endswith("/")
+        assert not resolved.endswith("/")
 
     def test_config_overrides_default(self, monkeypatch):
         monkeypatch.delenv("ETERNAL_SYNC_BASE_URL", raising=False)
