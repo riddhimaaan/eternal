@@ -162,10 +162,8 @@ ETERNAL_AGENT_HELP_GUIDANCE = (
     "configuring, setting up, using, extending, or troubleshooting it — or when "
     "you need to understand your own features, tools, or capabilities, load the "
     "`eternal-agent` skill with skill_view(name='eternal-agent') for guidance and "
-    "proven workflows. ETERNAL is built on the open-source Hermes Agent engine, so "
-    "the upstream documentation at https://hermes-agent.nousresearch.com/docs "
-    "still describes most behaviour accurately and is the authoritative reference "
-    "when the two differ."
+    "proven workflows. That skill is the authoritative reference for Eternal's "
+    "own behaviour."
 )
 
 MEMORY_GUIDANCE = (
