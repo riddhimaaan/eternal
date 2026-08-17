@@ -29,7 +29,7 @@ class TestGatewayLifecyclePattern:
         "eternal gateway restart",
         "eternal gateway stop",
         "eternal  gateway  restart",         # double spaces
-        "Hermez Gateway Restart".lower().replace("z", "s"),  # case handled
+        "Eternal Gateway Restart".lower(),   # mixed case handled
         "ETERNAL GATEWAY RESTART",           # uppercase
     ])
     def test_eternal_gateway_commands(self, text):

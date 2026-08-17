@@ -1,6 +1,6 @@
 ---
 name: eternal-agent
-description: "Use, configure, theme, extend, and orchestrate Eternal Agent."
+description: "Use, configure, theme, extend, and orchestrate Eternal."
 version: 3.1.0
 author: Eternal Agent + Teknium
 license: MIT

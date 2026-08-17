@@ -39,7 +39,7 @@ SAMPLE = _index_doc(
             "description": "Generative media workspace plugin.",
             "author": "NousResearch",
             "tags": ["media", "image-gen"],
-            "repo": "NousResearch/eternal-media-studio",
+            "repo": "NousResearch/hermes-media-studio",
             "ref": "e" * 40,
         },
         {
@@ -47,7 +47,7 @@ SAMPLE = _index_doc(
             "description": "Telegram secretary bot with owner approval.",
             "author": "NousResearch",
             "tags": ["telegram", "gateway"],
-            "repo": "NousResearch/eternal-telegram-business",
+            "repo": "NousResearch/hermes-telegram-business",
             "ref": "f" * 40,
             "capabilities": ["platform"],
         },
@@ -56,7 +56,7 @@ SAMPLE = _index_doc(
             "description": "Reference plugin for structured LLM access.",
             "author": "NousResearch",
             "tags": ["example", "llm"],
-            "repo": "NousResearch/eternal-example-plugins",
+            "repo": "NousResearch/hermes-example-plugins",
             "subdir": "plugin-llm-example",
             "ref": "a" * 40,
             "capabilities": ["commands", "llm"],
@@ -99,9 +99,9 @@ class TestParsing:
         ]
         assert entries[2].subdir == "plugin-llm-example"
         assert entries[2].install_identifier == (
-            "NousResearch/eternal-example-plugins/plugin-llm-example"
+            "NousResearch/hermes-example-plugins/plugin-llm-example"
         )
-        assert entries[0].install_identifier == "NousResearch/eternal-media-studio"
+        assert entries[0].install_identifier == "NousResearch/hermes-media-studio"
 
     def test_parses_bare_list_form(self):
         entries = _parse_entries(SAMPLE["plugins"])
@@ -285,7 +285,7 @@ class TestResolveName:
 
     def test_exact_unique(self):
         entry, candidates = resolve_name(self.entries, "eternal-media-studio")
-        assert entry is not None and entry.repo == "NousResearch/eternal-media-studio"
+        assert entry is not None and entry.repo == "NousResearch/hermes-media-studio"
 
     def test_case_insensitive(self):
         entry, _ = resolve_name(self.entries, "Eternal-Media-Studio")
@@ -337,7 +337,7 @@ class TestInstallResolution:
         monkeypatch.setattr(plugins_cmd, "_install_plugin_core", fake_core)
         with pytest.raises(SystemExit):
             plugins_cmd.cmd_install("eternal-media-studio", enable=False)
-        assert captured["identifier"] == "NousResearch/eternal-media-studio"
+        assert captured["identifier"] == "NousResearch/hermes-media-studio"
         assert captured["ref"] == "e" * 40
 
     def test_install_explicit_ref_beats_index_pin(self, eternal_home, monkeypatch):
@@ -430,7 +430,7 @@ class TestCmdSearch:
         assert payload["source"] == "seed"
         assert payload["query"] == "telegram"
         assert payload["results"][0]["name"] == "eternal-telegram-business"
-        assert payload["results"][0]["repo"] == "NousResearch/eternal-telegram-business"
+        assert payload["results"][0]["repo"] == "NousResearch/hermes-telegram-business"
         assert payload["results"][0]["ref"] == "f" * 40
         assert "audited" in payload["note"]
 

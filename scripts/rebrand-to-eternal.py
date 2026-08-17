@@ -29,6 +29,23 @@ import sys
 # Order matters: longer / more specific patterns first.
 # ---------------------------------------------------------------------------
 PROTECTED = [
+    # Whole URLs into upstream Nous properties. The narrower host and repo
+    # patterns below only protect the part they match, so the *path* after them
+    # still got rebranded — producing links that resolve to a real site but a
+    # page or file that never existed there (docs/guides/build-a-eternal-plugin,
+    # hermes-agent/blob/main/eternal_cli/commands.py). Protect the whole URL.
+    # The character class stops at Markdown and quoting delimiters so a link in
+    # `[text](url)` or `"url"` does not swallow its terminator.
+    r"https?://hermes-agent\.nousresearch\.com/[^\s)\]\"'`<>]*",
+    r"https?://(?:raw\.githubusercontent|github)\.com/NousResearch/hermes-agent/[^\s)\]\"'`<>]*",
+    # Any Nous-owned identifier: GitHub repositories, Docker images, and
+    # HuggingFace datasets under the NousResearch org. We do not own that
+    # namespace, so renaming inside it invents repositories that do not exist
+    # (e.g. the plugin index and the example-plugins repo the installer reads).
+    # Listed first so the longest Nous-owned name wins over the narrower
+    # hermes-agent entries below.
+    r"NousResearch/[A-Za-z0-9._-]*[Hh]ermes[A-Za-z0-9._-]*",
+    r"nousresearch/[A-Za-z0-9._-]*hermes[A-Za-z0-9._-]*",
     # Upstream repository and install endpoints. These are real, live URLs.
     r"NousResearch/hermes-agent",
     r"nousresearch/hermes-agent",
@@ -62,6 +79,10 @@ PROTECTED = [
     r"[Hh]ermes-brain",
     # The engine ETERNAL is built on, named as prose in the system prompt.
     r"Hermes Agent engine",
+    # Titles of upstream documentation pages we link out to. These name a page
+    # on Nous's site, so they must keep its title — and "a Eternal Plugin" is
+    # not English either.
+    r"Build a Hermes Plugin",
     # The non-agentic model detector. This regex must keep matching real Hermes
     # 3/4 model names; renaming it silently disables the warning.
     r"_NOUS_HERMES_NON_AGENTIC_RE",
@@ -73,6 +94,14 @@ PROTECTED = [
     r"pi@hermes",
     r"agent@hermes",
     # Test fixture identifiers that encode the literal string.
+    # The bare model-family token in the edit-format table. It sits in a list of
+    # families (claude / gemini / qwen / hermes / llama ...), so renaming it stops
+    # Hermes models matching and silently changes the guidance they are given.
+    r'"hermes", "llama"',
+    # Fixtures for the non-agentic detector: these must stay real Hermes model
+    # ids or the test asserts against names no model ever had.
+    r"hermes_4_70b",
+    r"hermes2-pro",
     r"hermes-3a7b9c14d2e8",
     r"hermes-7d4f9c8b-2026",
     r"hermes-123",
@@ -90,6 +119,9 @@ PROTECTED = [
 
 # Files whose content is never rewritten (identity records, lockfiles, binaries).
 SKIP_CONTENT = {
+    # This script. It quotes both names by necessity, so rewriting it turns
+    # every rule into "eternal" -> "eternal" and destroys the tool.
+    "rebrand-to-eternal.py",
     ".mailmap",
     "package-lock.json",
     "uv.lock",
@@ -103,6 +135,12 @@ SKIP_DIRS = {
     "__pycache__",
     "contributors",
     ".pytest-cache",
+    # Generated caches and build metadata. pytest's real directory is spelled
+    # with an underscore, so the hyphenated entry above never matched it.
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache",
+    "eternal_agent.egg-info",
     "release",
     "linux-unpacked",
     "dist",
@@ -139,12 +177,13 @@ def substitute(text: str) -> str:
 
 
 def rename_path(path: str) -> str:
-    """Apply the same swap to a single path component set."""
-    return (
-        path.replace("HERMES", "ETERNAL")
-        .replace("Hermes", "Eternal")
-        .replace("hermes", "eternal")
-    )
+    """Apply the same swap to a single path component.
+
+    Goes through ``substitute`` so the protected list applies to filenames too:
+    ``test_nous_hermes_non_agentic.py`` names a protected identifier, and
+    renaming the file leaves it describing a detector that no longer exists.
+    """
+    return substitute(path)
 
 
 def should_skip_dir(name: str) -> bool:

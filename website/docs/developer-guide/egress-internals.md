@@ -314,5 +314,5 @@ The CLI uses argparse, so `--help` is a good first probe for "did my new flag re
 - User-facing setup + troubleshooting: [Egress proxy](https://hermes-agent.nousresearch.com/docs/user-guide/egress/iron-proxy)
 - Docker backend internals: [Docker](https://hermes-agent.nousresearch.com/docs/user-guide/docker)
 - Bitwarden Secrets Manager integration: [`eternal secrets bitwarden`](https://hermes-agent.nousresearch.com/docs/user-guide/secrets/bitwarden)
-- CLI command reference: [`eternal egress`](https://hermes-agent.nousresearch.com/docs/reference/cli-commands#eternal-egress)
+- CLI command reference: [`eternal egress`](https://hermes-agent.nousresearch.com/docs/reference/cli-commands#hermes-egress)
 - Sandbox-injected environment variables: [Egress proxy (sandbox-injected)](https://hermes-agent.nousresearch.com/docs/reference/environment-variables#egress-proxy-sandbox-injected)

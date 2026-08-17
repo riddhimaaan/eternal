@@ -1,6 +1,6 @@
 ---
 name: eternal-plugin-authoring
-description: "Write, install, enable, and verify Eternal plugins: manifest, register(ctx), tools, hooks, slash commands, providers."
+description: "Write, install, enable, and verify Eternal plugins."
 version: 1.0.0
 author: ETERNAL
 license: MIT

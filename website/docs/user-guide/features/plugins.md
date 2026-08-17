@@ -478,7 +478,7 @@ index and keep working exactly as before. An explicit `--ref <sha>` always
 overrides the index pin.
 
 **How the index is fetched.** The index lives at a canonical URL
-(`https://raw.githubusercontent.com/NousResearch/eternal-plugin-index/main/index.json`,
+(`https://raw.githubusercontent.com/NousResearch/hermes-plugin-index/main/index.json`,
 overridable via `eternal config set plugins.index_url <url>`). Fetches are
 cached under `~/.eternal/cache/plugin_index.json` for 24 hours; when the
 remote is unreachable the stale cache is used, and when there is no cache at
@@ -492,10 +492,10 @@ all a bundled seed copy ships with Eternal — so search works fully offline.
   "description": "Generative media workspace plugin.",
   "author": "NousResearch",
   "tags": ["media", "image-gen"],
-  "repo": "NousResearch/eternal-media-studio",
+  "repo": "NousResearch/hermes-media-studio",
   "ref": "<40-char commit SHA>",
   "subdir": null,
-  "homepage": "https://github.com/NousResearch/eternal-media-studio",
+  "homepage": "https://github.com/NousResearch/hermes-media-studio",
   "capabilities": ["tools", "dashboard"],
   "api_version": 1,
   "added_at": "2026-08-12"
@@ -508,7 +508,7 @@ SHA, and optional `subdir` supports monorepos. The bundled seed file
 
 **Submitting a plugin.** The index is maintained as a plain JSON file —
 submit a pull request to the
-[eternal-plugin-index](https://github.com/NousResearch/eternal-plugin-index)
+[eternal-plugin-index](https://github.com/NousResearch/hermes-plugin-index)
 repository adding your entry (name, description, author, tags, `owner/repo`,
 and a pinned commit SHA). Review covers the entry's *metadata* only.
 
