@@ -31,6 +31,7 @@ import {
 import nodePty from 'node-pty'
 
 import { classifyActiveRuntime } from './active-runtime-state'
+import { decideLinuxSandbox } from './linux-sandbox'
 import { stopBackendChild as stopBackendChildImpl, stopBackendTreesForUpdate } from './backend-child'
 import { dashboardFallbackArgs, sourceDeclaresServe } from './backend-command'
 import { createBackendConnectionState } from './backend-connection-state'
@@ -425,6 +426,42 @@ if (PASSWORD_STORE.warning) {
 if (PASSWORD_STORE.store) {
   app.commandLine.appendSwitch('password-store', PASSWORD_STORE.store)
   console.log(`[eternal] using password-store backend: ${PASSWORD_STORE.store}`)
+}
+
+// Linux Chromium-sandbox fallback.
+//
+// Ubuntu 23.10+/Debian 12+ restrict unprivileged user namespaces, so Chromium
+// demands a root-owned 4755 chrome-sandbox helper instead. deb/rpm installs get
+// that from electron-builder's post-install; an AppImage is a mounted squashfs
+// and cannot carry a SUID bit, so without this the app FATAL-exits before any
+// window appears -- and a desktop launcher discards stderr, so the user sees
+// nothing happen at all. Must run before app `ready` so the switch reaches
+// child processes.
+//
+// `eternal desktop` already made this call in Python, but that path prompts for
+// sudo and only runs from the CLI. This makes a normal double-click work.
+{
+  const linuxSandbox = decideLinuxSandbox(
+    path.join(path.dirname(process.execPath), 'chrome-sandbox'),
+    {
+      env: process.env,
+      getuid: typeof process.getuid === 'function' ? () => process.getuid!() : undefined,
+      lstatSync: (p: string) => fs.lstatSync(p),
+      platform: process.platform,
+      readFileSync: (p: string, enc: 'utf-8') => fs.readFileSync(p, enc)
+    }
+  )
+
+  if (linuxSandbox.disableSandbox) {
+    app.commandLine.appendSwitch('no-sandbox')
+    console.warn(
+      linuxSandbox.reason === 'env-override'
+        ? '[eternal] Chromium sandbox disabled by ELECTRON_DISABLE_SANDBOX=1.'
+        : '[eternal] Chromium sandbox disabled: this host restricts unprivileged user ' +
+          'namespaces and no root-owned SUID chrome-sandbox helper is available. ' +
+          'Install the .deb/.rpm instead of the AppImage to keep the sandbox enabled.'
+    )
+  }
 }
 
 // Windows sandbox / GPU breakpoint crash recovery (#38216).
