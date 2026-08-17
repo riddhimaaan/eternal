@@ -166,11 +166,14 @@ class TestFreshInstall:
     def test_reconfigure_on_fresh_install_falls_through(self, fresh_install):
         args = _make_setup_args(reconfigure=True)
 
+        # Mode 1 is Blank Slate. (Mode 0 used to be the Nous Portal quick
+        # setup; that option is gone, so 0 is now Full setup, which runs every
+        # section inline rather than dispatching to a single function.)
         with ExitStack() as stack:
             m = _enter_fresh_install_patches(
                 stack,
-                prompt=("eternal_cli.setup.prompt_choice", {"return_value": 0}),
-                first="eternal_cli.setup._run_first_time_quick_setup",
+                prompt=("eternal_cli.setup.prompt_choice", {"return_value": 1}),
+                first="eternal_cli.setup._run_blank_slate_setup",
             )
             from eternal_cli.setup import run_setup_wizard
             run_setup_wizard(args)

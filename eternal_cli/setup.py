@@ -3016,17 +3016,13 @@ def run_setup_wizard(args):
         setup_mode = prompt_choice(
             "How would you like to set up Eternal?",
             [
-                "Quick Setup (Nous Portal) — free OAuth login, no API keys, model + tools (recommended)",
                 "Full setup — configure every provider, tool & option yourself (bring your own keys)",
                 "Blank Slate — everything off except the bare minimum; opt in to each capability",
             ],
             0,
         )
 
-        if setup_mode == 0:
-            _run_first_time_quick_setup(config, eternal_home, is_existing)
-            return
-        if setup_mode == 2:
+        if setup_mode == 1:
             _run_blank_slate_setup(config, eternal_home, is_existing)
             return
 
@@ -3078,85 +3074,6 @@ def run_setup_wizard(args):
         print_info(f"Previous config backed up to: {_backup_path}")
         print_info("If setup changed a value you customized, restore it with:")
         print_info(f"  cp {_backup_path} {config_path}")
-    _print_setup_summary(config, eternal_home)
-
-
-def _run_first_time_quick_setup(config: dict, eternal_home, is_existing: bool):
-    """Streamlined first-time setup via Nous Portal: OAuth, model, terminal & messaging.
-
-    Routes straight to the Nous Portal provider — runs the device-code OAuth
-    login, picks a Nous model, then configures the terminal backend and (optionally)
-    a messaging platform. Applies sensible defaults for everything else (agent
-    settings, tools); the user can customize later via ``eternal setup <section>``
-    or switch providers with ``eternal model``.
-    """
-    from eternal_cli.config import load_config
-
-    # Step 1: Nous Portal — OAuth login + model selection.
-    # _model_flow_nous() handles both the logged-out path (device-code OAuth,
-    # which selects a model internally) and the already-logged-in path (curated
-    # Nous model picker). Provider is set to "nous" by the login/model save.
-    print()
-    print_header("Nous Portal")
-    print_info("One subscription, 300+ models, plus the Tool Gateway:")
-    print_info("  web search, image generation, TTS, browser automation.")
-    print_info("Sign up: https://portal.nousresearch.com/manage-subscription")
-    print()
-    try:
-        from eternal_cli.main import _model_flow_nous
-        _model_flow_nous(config)
-    except (KeyboardInterrupt, EOFError):
-        print()
-        print_info("Nous Portal setup cancelled.")
-    except Exception as exc:
-        logger.debug("_model_flow_nous error during quick setup: %s", exc)
-        print_warning(f"Nous Portal setup encountered an error: {exc}")
-        print_info("You can try again later with: eternal model")
-
-    # Re-sync the wizard's config dict from disk — _model_flow_nous (and the
-    # underlying login/model save) write via their own load/save cycle, and the
-    # wizard's later save_config(config) must not clobber those values (#4172).
-    _refreshed = load_config()
-    config.clear()
-    config.update(_refreshed)
-
-    # Step 2: Terminal Backend — where commands run is a core decision
-    setup_terminal_backend(config)
-
-    # Step 3: Apply defaults for everything else
-    _apply_default_agent_settings(config)
-
-    save_config(config)
-
-    # Step 4: Offer messaging gateway setup
-    print()
-    gateway_choice = prompt_choice(
-        "Connect a messaging platform? (Telegram, Discord, etc.)",
-        [
-            "Set up messaging now (recommended)",
-            "Skip — set up later with 'eternal setup gateway'",
-        ],
-        0,
-    )
-
-    if gateway_choice == 0:
-        setup_gateway(config)
-        save_config(config)
-    else:
-        # Messaging skipped — still install/start the gateway service so cron
-        # jobs run and platforms come alive as soon as tokens are added later
-        # (e.g. via `eternal import` from another machine).
-        from eternal_cli.gateway import ensure_gateway_service
-        ensure_gateway_service(context="setup")
-
-    print()
-    print_success("Setup complete! You're ready to go.")
-    print()
-    print_info("  Configure all settings:    eternal setup")
-    if gateway_choice != 0:
-        print_info("  Connect Telegram/Discord:  eternal setup gateway")
-    print()
-
     _print_setup_summary(config, eternal_home)
 
 
