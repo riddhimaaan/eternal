@@ -251,15 +251,14 @@ class ProviderConfig:
 
 
 PROVIDER_REGISTRY: Dict[str, ProviderConfig] = {
-    "nous": ProviderConfig(
-        id="nous",
-        name="Nous Portal",
-        auth_type="oauth_device_code",
-        portal_base_url=DEFAULT_NOUS_PORTAL_URL,
-        inference_base_url=DEFAULT_NOUS_INFERENCE_URL,
-        client_id=DEFAULT_NOUS_CLIENT_ID,
-        scope=DEFAULT_NOUS_SCOPE,
-    ),
+    # No "nous" entry. This registry is one of the sources
+    # provider_catalog() unions into the desktop Accounts tab, so while it
+    # existed the app still offered "Nous Portal — RECOMMENDED" as a
+    # connectable account even after the provider plugin, the model overlay
+    # and the explicit Accounts card had all been removed. The remaining
+    # DEFAULT_NOUS_* constants and the `provider == "nous"` error branches
+    # below are unreachable through this path and belong to the deferred deep
+    # clean, not here.
     "openai-codex": ProviderConfig(
         id="openai-codex",
         name="OpenAI Codex",

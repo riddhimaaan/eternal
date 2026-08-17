@@ -401,7 +401,13 @@ function Header() {
   )
 }
 
-export const FEATURED_ID = 'nous'
+// No featured provider. This was 'nous', which rendered a highlighted
+// "RECOMMENDED" card steering every new user into Nous Portal's subscription.
+// With that provider gone the id matches nothing, `featured` resolves to null,
+// and the account list renders flat with every option visible -- which is the
+// right shape for bring-your-own-key onboarding. Set this to a provider id
+// again only if there is a deliberate default worth promoting.
+export const FEATURED_ID = ''
 const SHOW_ALL_KEY = 'eternal-onboarding-show-all-v1'
 
 const readShowAll = () => {

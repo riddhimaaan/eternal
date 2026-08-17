@@ -86,3 +86,31 @@ def test_each_provider_lands_on_the_tab_its_auth_type_dictates():
             assert d.slug in accounts, f"{d.slug} (accounts tab) missing from /api/providers/oauth"
 
 
+
+
+def test_removed_nous_provider_does_not_resurface_from_any_source():
+    """The Nous Portal provider must be gone from EVERY source that feeds the
+    provider surface, not just the one you happened to edit.
+
+    Regression guard for a real whack-a-mole: removing the provider plugin, the
+    model overlay and the explicit Accounts card each looked sufficient, and the
+    desktop still rendered "Nous Portal — RECOMMENDED". Membership is a UNION --
+    provider_catalog() folds in auth.PROVIDER_REGISTRY and
+    models.CANONICAL_PROVIDERS, and _build_oauth_catalog() folds that into the
+    hand-tuned cards -- so any single surviving entry puts the provider back on
+    screen.
+
+    A naive `"nous" in CANONICAL_PROVIDERS` is NOT a valid check: that list
+    holds ProviderEntry tuples, so the membership test silently reports False
+    for a slug that is present. Compare against .slug.
+    """
+    from eternal_cli.auth import PROVIDER_REGISTRY
+    from eternal_cli.models import CANONICAL_PROVIDERS
+    from eternal_cli.providers import ETERNAL_OVERLAYS
+    from eternal_cli.web_server import _build_oauth_catalog
+
+    assert "nous" not in [p.slug for p in CANONICAL_PROVIDERS]
+    assert "nous" not in PROVIDER_REGISTRY
+    assert "nous" not in ETERNAL_OVERLAYS
+    assert "nous" not in [p["id"] for p in _build_oauth_catalog()]
+    assert "nous" not in [d.slug for d in provider_catalog()]

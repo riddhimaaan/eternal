@@ -56,32 +56,27 @@ afterEach(() => {
 })
 
 describe('onboarding Picker', () => {
-  it('features Nous Portal and hides other providers behind a disclosure', () => {
-    setProviders([provider('anthropic', 'Anthropic Claude'), provider('nous', 'Nous Portal')])
+  it('shows every provider up front with nothing promoted as recommended', () => {
+    // There is no featured provider any more. FEATURED_ID was 'nous', which
+    // rendered a highlighted RECOMMENDED card steering new users into a
+    // subscription we no longer ship. With no featured id the disclosure never
+    // collapses, so every option is visible immediately -- the right shape for
+    // bring-your-own-key onboarding.
+    setProviders([provider('anthropic', 'Anthropic Claude'), provider('openai-codex', 'OpenAI Codex / ChatGPT')])
     render(<Picker ctx={ctx} />)
 
-    expect(screen.getByText('Nous Portal')).toBeTruthy()
-    expect(screen.getByText('Recommended')).toBeTruthy()
-    // Fireworks stays behind the disclosure with the other alternatives; only
-    // Nous Portal is visible before the user expands the list.
-    expect(screen.queryByText('Fireworks AI')).toBeNull()
-    expect(screen.queryByText('Anthropic API Key')).toBeNull()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Other providers' }))
-
+    expect(screen.queryByText('Recommended')).toBeNull()
     expect(screen.getByText('Fireworks AI')).toBeTruthy()
     expect(screen.getByText('Anthropic API Key')).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Collapse' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Other providers' })).toBeNull()
   })
 
-  it('shows Fireworks first in the expanded list, ahead of other OAuth providers', () => {
+  it('shows Fireworks first in the list, ahead of other OAuth providers', () => {
     setProviders([
       provider('openai-codex', 'OpenAI Codex / ChatGPT'),
-      provider('minimax-oauth', 'MiniMax'),
-      provider('nous', 'Nous Portal')
+      provider('minimax-oauth', 'MiniMax')
     ])
     render(<Picker ctx={ctx} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Other providers' }))
 
     const labels = screen
       .getAllByRole('button')
@@ -89,8 +84,7 @@ describe('onboarding Picker', () => {
       .filter(text => /Nous Portal|Fireworks AI|ChatGPT or Codex|MiniMax|OpenRouter/.test(text))
 
     const indexOf = (needle: string) => labels.findIndex(text => text.includes(needle))
-    expect(indexOf('Nous Portal')).toBeGreaterThanOrEqual(0)
-    expect(indexOf('Fireworks AI')).toBeGreaterThan(indexOf('Nous Portal'))
+    expect(indexOf('Fireworks AI')).toBeGreaterThanOrEqual(0)
     expect(indexOf('ChatGPT or Codex')).toBeGreaterThan(indexOf('Fireworks AI'))
     expect(indexOf('MiniMax')).toBeGreaterThan(indexOf('ChatGPT or Codex'))
   })

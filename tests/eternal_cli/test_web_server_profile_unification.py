@@ -264,7 +264,10 @@ class TestProfileScopedModel:
             "/api/model/set",
             json={
                 "scope": "main",
-                "provider": "nous",
+                # Any provider that differs from the "openrouter" snapshot
+                # exercises the two-axis drift path; this was "nous" until that
+                # provider was removed.
+                "provider": "fireworks",
                 "model": "new/model",
                 "confirm_expensive_model": True,
                 "profile": "worker_beta",
