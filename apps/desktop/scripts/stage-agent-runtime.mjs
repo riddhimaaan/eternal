@@ -608,7 +608,26 @@ async function main() {
   }
 
   if (!opts.force && isAlreadyStaged(opts)) {
-    log(`already staged for ${opts.platform}-${opts.arch} (Python ${PY_VERSION}) — use --force to re-stage`)
+    // The cache key is platform/arch/pythonVersion only — it says nothing about
+    // the SOURCE. Returning here outright meant every Python change silently
+    // failed to reach the bundle: you could fix a backend bug, rebuild, ship,
+    // and users would still run the tree that was staged first. That is how a
+    // rebuilt AppImage kept serving a provider that had been deleted from the
+    // repo hours earlier.
+    //
+    // Python and wheels are the expensive parts (an 80 MB interpreter download
+    // and 36 MB of wheels resolved against it), and they genuinely are keyed by
+    // platform/arch/version — keep caching those. Source is a 42 MB local copy
+    // that takes well under a second, so re-stage it unconditionally rather
+    // than trying to guess whether it changed.
+    if (opts.skipSource) {
+      log(`already staged for ${opts.platform}-${opts.arch} (Python ${PY_VERSION}); --skip-source given, leaving source as-is`)
+
+      return
+    }
+
+    log(`already staged for ${opts.platform}-${opts.arch} (Python ${PY_VERSION}) — refreshing source, reusing interpreter + wheels`)
+    stageSource(opts.out, readPackagingMetadata())
 
     return
   }
