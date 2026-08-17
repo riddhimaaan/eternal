@@ -42,6 +42,15 @@ const REPO_ROOT = path.resolve(APP_ROOT, '../..')
 const PBS_RELEASE = process.env.ETERNAL_PBS_RELEASE || '20250818'
 const PY_VERSION = process.env.ETERNAL_PY_VERSION || '3.11.13'
 
+// Platforms whose bundle has actually been built and launched. The staging and
+// seeding code is written for the others, but none of it has been run, and the
+// interpreter trim list only maps the Linux layout — so a Windows or macOS
+// build would ship an untrimmed, unverified runtime that fails at the user's
+// first launch rather than at build time. Refuse instead, and make opting in an
+// explicit act.
+const VERIFIED_PLATFORMS = new Set(['linux'])
+const UNVERIFIED_OVERRIDE = 'ETERNAL_ALLOW_UNVERIFIED_PLATFORM'
+
 const PBS_TRIPLES = {
   'darwin-arm64': 'aarch64-apple-darwin',
   'darwin-x64': 'x86_64-apple-darwin',
@@ -588,6 +597,16 @@ function isAlreadyStaged(opts) {
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
 
+  if (!VERIFIED_PLATFORMS.has(opts.platform) && !process.env[UNVERIFIED_OVERRIDE]) {
+    fail(
+      `staging is only verified on ${[...VERIFIED_PLATFORMS].join(', ')}; refusing to build a ${opts.platform} bundle.\n` +
+        '  Nothing about the non-Linux path has been run end-to-end, and the\n' +
+        '  interpreter trim list only maps the Linux layout, so the result would\n' +
+        '  ship unverified and fail at a user\'s first launch instead of here.\n' +
+        `  Set ${UNVERIFIED_OVERRIDE}=1 to stage one anyway and test it yourself.`
+    )
+  }
+
   if (!opts.force && isAlreadyStaged(opts)) {
     log(`already staged for ${opts.platform}-${opts.arch} (Python ${PY_VERSION}) — use --force to re-stage`)
 
@@ -615,6 +634,16 @@ async function main() {
 
   if (!opts.skipWheels) {
     stageWheels(opts.out, meta, opts, stagedPython)
+  }
+
+  // The manifest describes what is on disk, so only rewrite it when this run
+  // actually staged something. Skipping every stage and still stamping the
+  // manifest relabels an existing bundle as a platform it was never built for,
+  // which then reads as up-to-date to isAlreadyStaged().
+  if (opts.skipSource && opts.skipWheels && opts.skipPython) {
+    log('nothing staged; leaving the existing manifest untouched')
+
+    return
   }
 
   const manifest = {
