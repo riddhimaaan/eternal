@@ -21,7 +21,7 @@ import subprocess
 from pathlib import Path
 from urllib.parse import urlparse
 
-from eternal_constants import get_eternal_home
+from eternal_constants import ETERNAL_ATTRIBUTION_URL, get_eternal_home
 from typing import Any, Dict, List, Optional, Tuple
 from utils import base_url_host_matches, base_url_hostname, normalize_proxy_env_vars
 from agent.secret_scope import get_secret as _get_secret
@@ -878,7 +878,7 @@ def build_anthropic_client(
         # HTTP-Referer + X-Title + EternalAgent User-Agent.
         kwargs["api_key"] = api_key
         kwargs["default_headers"] = {
-            "HTTP-Referer": "https://hermes-agent.nousresearch.com",
+            "HTTP-Referer": ETERNAL_ATTRIBUTION_URL,
             "X-Title": "Eternal Agent",
             "User-Agent": f"EternalAgent/{_ETERNAL_VERSION}",
             **( {"anthropic-beta": ",".join(common_betas)} if common_betas else {} )
@@ -925,7 +925,7 @@ def build_anthropic_client(
         # route builds its client right here and never sees the profile. Merge
         # the same set on top of whatever auth branch ran above.
         headers = dict(kwargs.get("default_headers") or {})
-        headers.setdefault("HTTP-Referer", "https://hermes-agent.nousresearch.com")
+        headers.setdefault("HTTP-Referer", ETERNAL_ATTRIBUTION_URL)
         headers.setdefault("X-Title", "Eternal Agent")
         headers.setdefault("User-Agent", f"EternalAgent/{_ETERNAL_VERSION}")
         kwargs["default_headers"] = headers

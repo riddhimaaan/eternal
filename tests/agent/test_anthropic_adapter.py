@@ -27,6 +27,7 @@ from agent.anthropic_adapter import (
     run_oauth_setup_token,
 )
 from agent.transports import get_transport
+from eternal_constants import ETERNAL_ATTRIBUTION_URL
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ class TestBuildAnthropicClient:
             )
             kwargs = mock_sdk.Anthropic.call_args[1]
             headers = kwargs["default_headers"]
-            assert headers["HTTP-Referer"] == "https://hermes-agent.nousresearch.com"
+            assert headers["HTTP-Referer"] == ETERNAL_ATTRIBUTION_URL
             assert headers["X-Title"] == "Eternal Agent"
             assert headers["User-Agent"].startswith("EternalAgent/")
             # Auth branch is unchanged: x-api-key via api_key, betas kept.

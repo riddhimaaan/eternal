@@ -163,7 +163,7 @@ def aux_probe_mode():
 from agent.credential_pool import load_pool
 from agent.model_metadata import MINIMUM_CONTEXT_LENGTH, get_model_context_length
 from eternal_cli.config import get_eternal_home
-from eternal_constants import OPENROUTER_BASE_URL
+from eternal_constants import ETERNAL_ATTRIBUTION_URL, OPENROUTER_BASE_URL
 from utils import base_url_host_matches, base_url_hostname, env_float, is_truthy_value, model_forces_max_completion_tokens, normalize_proxy_env_vars
 
 logger = logging.getLogger(__name__)
@@ -1018,7 +1018,7 @@ _PROVIDERS_WITHOUT_VISION: frozenset = frozenset({
 # `X-Title` is the canonical attribution header OpenRouter's dashboard
 # reads; the previous `X-OpenRouter-Title` label was not recognized there.
 _OR_HEADERS_BASE = {
-    "HTTP-Referer": "https://hermes-agent.nousresearch.com",
+    "HTTP-Referer": ETERNAL_ATTRIBUTION_URL,
     "X-Title": "Eternal Agent",
     "X-OpenRouter-Categories": "productivity,cli-agent",
 }
@@ -1139,7 +1139,7 @@ def build_nvidia_nim_headers(base_url: str | None) -> dict:
 from eternal_cli import __version__ as _ETERNAL_VERSION
 
 _AI_GATEWAY_HEADERS = {
-    "HTTP-Referer": "https://hermes-agent.nousresearch.com",
+    "HTTP-Referer": ETERNAL_ATTRIBUTION_URL,
     "X-Title": "Eternal Agent",
     "User-Agent": f"EternalAgent/{_ETERNAL_VERSION}",
 }

@@ -100,7 +100,7 @@ def _discord_request(
         headers={
             "Authorization": f"Bot {token}",
             "Content-Type": "application/json",
-            "User-Agent": "Eternal-Agent (https://github.com/NousResearch/hermes-agent)",
+            "User-Agent": "Eternal-Agent (https://github.com/riddhimaaan/eternal)",
         },
     )
 

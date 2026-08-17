@@ -1579,6 +1579,14 @@ FINISH_REASON_LENGTH = "length"
 OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 OPENROUTER_MODELS_URL = f"{OPENROUTER_BASE_URL}/models"
 
+# Single source of truth for the HTTP-Referer / User-Agent attribution value
+# sent to OpenRouter-family providers. This used to be hardcoded at eleven
+# separate call sites as hermes-agent.nousresearch.com, which meant every
+# request our users made advertised someone else's project -- and meant the
+# rebrand had eleven independent chances to miss one. Import this rather than
+# writing the URL again.
+ETERNAL_ATTRIBUTION_URL = "https://github.com/riddhimaaan/eternal"
+
 AI_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh/v1"
 
 

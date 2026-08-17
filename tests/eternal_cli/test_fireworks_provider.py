@@ -23,6 +23,7 @@ if "dotenv" not in sys.modules:
 
 from eternal_cli.auth import resolve_api_key_provider_credentials
 from eternal_cli.models import CANONICAL_PROVIDERS, _PROVIDER_LABELS, normalize_provider
+from eternal_constants import ETERNAL_ATTRIBUTION_URL
 
 
 @pytest.fixture(autouse=True)
@@ -160,7 +161,7 @@ class TestFireworksAuxiliary:
         client, model, kwargs = self._resolve("fireworks")
         assert client is not None
         headers = kwargs.get("default_headers", {})
-        assert headers["HTTP-Referer"] == "https://hermes-agent.nousresearch.com"
+        assert headers["HTTP-Referer"] == ETERNAL_ATTRIBUTION_URL
         assert headers["X-Title"] == "Eternal Agent"
         assert kwargs["base_url"] == "https://api.fireworks.ai/inference/v1"
 

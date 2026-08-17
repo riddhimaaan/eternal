@@ -21,7 +21,7 @@ from providers.base import ProviderProfile
 # rotation. Without them OpenCode only sees the OpenAI SDK's generic
 # "OpenAI/Python x.y.z" User-Agent and can't tell the traffic is Eternal Agent.
 _ATTRIBUTION_HEADERS = {
-    "HTTP-Referer": "https://hermes-agent.nousresearch.com",
+    "HTTP-Referer": "https://github.com/riddhimaaan/eternal",
     "X-Title": "Eternal Agent",
     "User-Agent": f"EternalAgent/{_ETERNAL_VERSION}",
 }

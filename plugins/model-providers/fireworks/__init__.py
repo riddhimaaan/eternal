@@ -28,7 +28,7 @@ fireworks = ProviderProfile(
     # generic profile.default_headers path, so they survive switch_model and
     # credential rotation.
     default_headers={
-        "HTTP-Referer": "https://hermes-agent.nousresearch.com",
+        "HTTP-Referer": "https://github.com/riddhimaaan/eternal",
         "X-Title": "Eternal Agent",
         "User-Agent": f"EternalAgent/{_ETERNAL_VERSION}",
     },
