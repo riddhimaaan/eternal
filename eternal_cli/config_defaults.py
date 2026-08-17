@@ -2615,8 +2615,12 @@ DEFAULT_CONFIG = {
     # update model picker lists without shipping a eternal-agent release.
     # The default URL is served by the docs site GitHub Pages deploy.
     "model_catalog": {
-        "enabled": True,
-        "url": "https://hermes-agent.nousresearch.com/docs/api/model-catalog.json",
+        "enabled": False,
+        # Empty by default -- we host no curation manifest. Point this at your
+        # own JSON (same schema) and flip enabled to true to use one. While
+        # empty, the picker uses each provider's live API plus the in-repo
+        # fallback lists, which is the behaviour every caller already handles.
+        "url": "",
         # Disk cache TTL in hours.  Beyond this, the CLI refetches on the
         # next /model or `eternal model` invocation; network failures
         # silently fall back to the stale cache.

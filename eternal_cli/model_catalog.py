@@ -62,18 +62,21 @@ logger = logging.getLogger(__name__)
 # Constants
 # ---------------------------------------------------------------------------
 
-DEFAULT_CATALOG_URL = (
-    "https://hermes-agent.nousresearch.com/docs/api/model-catalog.json"
-)
-# Fallback fetch chain. The Docusaurus site is served through Vercel, which
-# occasionally returns HTTP 403 + x-vercel-mitigated: challenge for non-
-# browser clients (urllib, curl). When that happens the disk cache goes
-# stale and new model releases never reach the picker. The raw GitHub URL
-# is the same manifest published from the same repo and is not bot-gated,
-# so we fall through to it whenever the primary URL fails.
-DEFAULT_CATALOG_FALLBACK_URLS: tuple[str, ...] = (
-    "https://raw.githubusercontent.com/NousResearch/hermes-agent/main/website/static/api/model-catalog.json",
-)
+# No default catalog host. This used to fetch a curation manifest from
+# hermes-agent.nousresearch.com, which we neither own nor want to depend on.
+#
+# Nothing breaks by leaving this empty: the manifest only ever supplied
+# curation metadata (ordering, descriptions, per-provider defaults) layered
+# on top of real model lists. The picker's actual inventory comes from each
+# provider's own live API -- openrouter.ai/api/v1/models and friends -- with
+# the in-repo lists (OPENROUTER_MODELS et al.) as the offline fallback. The
+# getters below return None when the manifest is absent, which is exactly
+# the "use the in-repo fallback" signal callers already handle.
+#
+# The machinery is kept so a self-hosted manifest can be dropped in later:
+# set model_catalog.enabled = true and model_catalog.url in config.yaml.
+DEFAULT_CATALOG_URL = ""
+DEFAULT_CATALOG_FALLBACK_URLS: tuple[str, ...] = ()
 DEFAULT_TTL_HOURS = 1
 DEFAULT_FETCH_TIMEOUT = 8.0
 SUPPORTED_SCHEMA_VERSION = 1
@@ -275,6 +278,11 @@ def get_catalog(*, force_refresh: bool = False) -> dict[str, Any]:
 
     cfg = _load_catalog_config()
     if not cfg["enabled"]:
+        return {}
+
+    # No manifest host configured. Return empty rather than attempting a fetch
+    # against "", so callers fall straight through to their in-repo lists.
+    if not str(cfg["url"] or "").strip():
         return {}
 
     ttl_seconds = max(0.0, cfg["ttl_hours"] * 3600.0)
