@@ -6,6 +6,10 @@ import json
 import subprocess
 
 
+# The search term must be a real trigram of the word inserted below. The
+# rebrand rewrote the word ('hermes' -> 'eternal') and left the query 'erm'
+# in place, which does not occur in it — the probe then reported 0 matches
+# and this test failed against a perfectly good image.
 _SQLITE_PROBE = r"""
 import json
 import sqlite3
@@ -17,7 +21,7 @@ try:
     db.execute("CREATE VIRTUAL TABLE docs USING fts5(content, tokenize='trigram')")
     db.execute("INSERT INTO docs VALUES ('eternal')")
     matches = db.execute(
-        "SELECT count(*) FROM docs WHERE docs MATCH 'erm'"
+        "SELECT count(*) FROM docs WHERE docs MATCH 'ern'"
     ).fetchone()[0]
 finally:
     db.close()
