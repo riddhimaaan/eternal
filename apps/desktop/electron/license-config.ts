@@ -17,7 +17,11 @@
  * Safe to commit — it can only verify keys, never mint them. The private half
  * signs every licence you issue and must never be in this repository.
  */
-export const LICENSE_PUBLIC_KEY_PEM = process.env.ETERNAL_LICENSE_PUBLIC_KEY || ''
+export const LICENSE_PUBLIC_KEY_PEM =
+  process.env.ETERNAL_LICENSE_PUBLIC_KEY ||
+  `-----BEGIN PUBLIC KEY-----
+MCowBQYDK2VwAyEAof2VePQyjeEA0nH2fLE0lC2gCaH2J3VDgM8oeJV1SbE=
+-----END PUBLIC KEY-----`
 
 /**
  * The deployed licence service, e.g. https://eternal-license.you.workers.dev
@@ -25,7 +29,8 @@ export const LICENSE_PUBLIC_KEY_PEM = process.env.ETERNAL_LICENSE_PUBLIC_KEY || 
  * Empty means the app never asks anyone. Signatures still verify locally, so a
  * key cannot be forged — but it also cannot be withdrawn.
  */
-export const LICENSE_SERVICE_URL = process.env.ETERNAL_LICENSE_SERVICE_URL || ''
+export const LICENSE_SERVICE_URL =
+  process.env.ETERNAL_LICENSE_SERVICE_URL || 'https://eternal-license.riddhimanbania381.workers.dev'
 
 /** True once a public key exists to check against. */
 export function licenseGateConfigured(): boolean {

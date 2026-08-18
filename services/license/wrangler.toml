@@ -6,10 +6,9 @@ compatibility_date = "2026-08-01"
 # once a week, so this stays free well past any realistic number of customers.
 
 # Created with: npx wrangler kv namespace create REVOKED
-# Paste the printed id below.
 [[kv_namespaces]]
 binding = "REVOKED"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "9d6cbb7638a04a5db853ef47b658d171"
 
 # LICENSE_PUBLIC_KEY is set as a secret, not here:
 #   npx wrangler secret put LICENSE_PUBLIC_KEY

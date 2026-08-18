@@ -67,6 +67,20 @@ npx wrangler kv key put --binding=REVOKED "cust_0001" "refunded 2026-08-20"
 Takes effect the next time that install checks in, within a week. The stored
 note is for you; it is never sent to the customer.
 
+**It will not appear instantly, and that is normal.** Cloudflare KV caches the
+absence of a key for up to a minute, so for a short while after you revoke, the
+service can still answer `valid`. Verified during setup: the same key returned
+`valid` immediately after revoking and `revoked` fifteen seconds later. If you
+are testing a revocation, wait a minute before concluding anything is broken.
+
+## Deployed
+
+    https://eternal-license.riddhimanbania381.workers.dev
+
+Checked end to end on 2026-08-19: a genuine key returned `valid`, a key signed
+with a different keypair returned `invalid`, malformed input returned `invalid`,
+a revoked key returned `revoked`, and another customer's key was unaffected.
+
 ## What this service knows about your customers
 
 Nothing, and that is on purpose. It stores no keys, no identifiers, no
