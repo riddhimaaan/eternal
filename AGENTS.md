@@ -4,6 +4,12 @@ Instructions for AI coding assistants and developers working on the eternal-agen
 
 **Never give up on the right solution.**
 
+> **New here? Read [`ETERNAL-CONTEXT.md`](ETERNAL-CONTEXT.md) first.**
+> This file covers *how the code works*. `ETERNAL-CONTEXT.md` covers what this
+> project is commercially, its full history since the fork from Hermes Agent,
+> the infrastructure it depends on, what is still open, and the constraints
+> that apply to anyone — human or AI — working on it.
+
 ## What Eternal Is
 
 Eternal is a personal AI agent that runs the same agent core across a CLI, a
