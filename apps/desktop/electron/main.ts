@@ -98,6 +98,7 @@ import {
   upsertConnection
 } from './connection-registry'
 import { describeCrashReason, installCrashForensics } from './crash-forensics'
+import { decideCrashReporting, scrubEvent } from './crash-reporting'
 import { adoptServedDashboardToken } from './dashboard-token'
 import { loadOrCreateInstallationId, sshOwnershipId } from './desktop-installation'
 import { formatDesktopLogLine } from './desktop-log-line'
@@ -722,6 +723,95 @@ function resolveEternalHome() {
 
 const ETERNAL_HOME = resolveEternalHome()
 
+/**
+ * The address crash reports are sent to.
+ *
+ * Empty by default and overridable by environment, so a build reports nowhere
+ * until one is configured, and so the destination can move — self-hosted
+ * GlitchTip, a hosted service — without touching this code. A DSN is a write-
+ * only identifier that ships inside every copy of the app; it is not a secret,
+ * but it is also not baked in until there is somewhere real to send to.
+ */
+const CRASH_REPORT_DSN = process.env.ETERNAL_CRASH_DSN || ''
+
+/** The user's answer, or undefined when they have not been asked yet. */
+function readCrashConsent() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(DESKTOP_CRASH_CONFIG_PATH, 'utf8'))
+
+    return typeof parsed?.consent === 'boolean' ? parsed.consent : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function writeCrashConsent(consent) {
+  try {
+    fs.mkdirSync(path.dirname(DESKTOP_CRASH_CONFIG_PATH), { recursive: true })
+    writeFileAtomic(DESKTOP_CRASH_CONFIG_PATH, JSON.stringify({ consent, answeredAt: Date.now() }, null, 2), 'utf8')
+  } catch (error) {
+    rememberLog(`[crash] could not save the crash-reporting choice: ${error?.message || error}`)
+  }
+}
+
+/**
+ * Start crash reporting, if this launch is allowed to.
+ *
+ * Every report passes through scrubEvent first — see crash-reporting.ts for
+ * what that removes and why. The SDK is imported lazily so a build that
+ * reports nowhere never loads it at all.
+ */
+function startCrashReporting() {
+  const decision = decideCrashReporting({
+    consent: readCrashConsent(),
+    dsn: CRASH_REPORT_DSN,
+    env: process.env,
+    isPackaged: IS_PACKAGED
+  })
+
+  if (!decision.enabled) {
+    rememberLog(`[crash] reporting off (${decision.reason})`)
+
+    return false
+  }
+
+  try {
+     
+    const Sentry = require('@sentry/electron/main')
+
+    Sentry.init({
+      dsn: decision.dsn,
+      release: app.getVersion(),
+      // Crashes only. Performance tracing would stream ordinary usage of a
+      // local-first product to a server, which is not what was consented to.
+      tracesSampleRate: 0,
+      // Breadcrumbs are a running log of what the user did; they routinely
+      // carry file paths and prompt text.
+      maxBreadcrumbs: 0,
+      // Last line before anything leaves the machine. Returning null drops the
+      // event entirely, so a scrubbing failure sends nothing rather than raw.
+      beforeSend(event) {
+        try {
+          return scrubEvent(event, app.getPath('home'))
+        } catch (error) {
+          rememberLog(`[crash] dropped a report, scrubbing failed: ${error?.message || error}`)
+
+          return null
+        }
+      }
+    })
+
+    rememberLog('[crash] reporting on')
+
+    return true
+  } catch (error) {
+    // Never let reporting break startup: this runs before the window exists.
+    rememberLog(`[crash] could not start reporting: ${error?.message || error}`)
+
+    return false
+  }
+}
+
 function pathWithEternalManagedNode(...entries) {
   const managed = eternalManagedNodePathEntries(ETERNAL_HOME).filter(directoryExists)
 
@@ -757,6 +847,9 @@ const DESKTOP_CONNECTIONS_REGISTRY_PATH = path.join(app.getPath('userData'), 'co
 const DESKTOP_INSTALLATION_PATH = path.join(app.getPath('userData'), 'desktop-installation.json')
 const DESKTOP_UPDATE_CONFIG_PATH = path.join(app.getPath('userData'), 'updates.json')
 const DESKTOP_WINDOW_STATE_PATH = path.join(app.getPath('userData'), 'window-state.json')
+// Crash-reporting consent. Its own file so the answer survives every other
+// settings change, and so a user can delete exactly this one to be asked again.
+const DESKTOP_CRASH_CONFIG_PATH = path.join(app.getPath('userData'), 'crash-reporting.json')
 const DESKTOP_BACKEND_OWNERSHIP_PATH = path.join(app.getPath('userData'), 'backend-ownership.json')
 // active-profile.json records which Eternal profile the desktop launches its
 // local backend as. When set, startEternal() passes `eternal --profile <name>
@@ -12973,6 +13066,25 @@ const claimedAmbientCue = createEventDeduper()
 // The first caller within the window gets true; peers get false and stay quiet.
 ipcMain.handle('eternal:ambient:claim', (_event, key) => !claimedAmbientCue(String(key ?? '')))
 
+// Crash-reporting consent. Reading is separate from setting so the renderer can
+// tell "not asked yet" (undefined) from a stored answer and only prompt once.
+ipcMain.handle('eternal:crash-reporting-state', () => ({
+  consent: readCrashConsent(),
+  configured: Boolean(CRASH_REPORT_DSN)
+}))
+
+ipcMain.handle('eternal:set-crash-reporting', (_event, consent) => {
+  const value = Boolean(consent)
+  writeCrashConsent(value)
+
+  // Takes effect on the next launch rather than mid-session: starting the SDK
+  // here would report from a process the user had not consented to when it
+  // began, and stopping it cannot un-send what already went.
+  rememberLog(`[crash] consent set to ${value}; applies on next launch`)
+
+  return { consent: value }
+})
+
 ipcMain.handle('eternal:notify', (_event, payload) => {
   if (!Notification.isSupported()) {
     return false
@@ -14533,6 +14645,11 @@ app.on('open-url', (event, url) => {
 })
 
 app.whenReady().then(() => {
+  // First thing after ready: a crash during the rest of startup is exactly the
+  // kind this exists to catch. Returns false and logs when reporting is off,
+  // which is the default until a user opts in.
+  startCrashReporting()
+
   const systemCa = installWindowsSystemCaTrust(tls)
 
   if (systemCa.applied) {

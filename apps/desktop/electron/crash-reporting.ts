@@ -21,9 +21,26 @@ export interface CrashReportingInputs {
   isPackaged: boolean
 }
 
-export type CrashReportingDecision =
-  | { enabled: false; reason: 'no-consent' | 'not-asked' | 'no-dsn' | 'disabled-by-env' | 'dev-build' }
-  | { enabled: true; dsn: string }
+export type CrashReportingOffReason =
+  | 'no-consent'
+  | 'not-asked'
+  | 'no-dsn'
+  | 'disabled-by-env'
+  | 'dev-build'
+
+/**
+ * One flat shape rather than a discriminated union on `enabled`. The Electron
+ * build compiles with strictNullChecks off, where TypeScript cannot narrow such
+ * a union — so the union would have type-checked here and failed at its only
+ * real call site. Optional fields say the same thing and work in both.
+ */
+export interface CrashReportingDecision {
+  enabled: boolean
+  /** Why reporting is off. Absent when enabled. */
+  reason?: CrashReportingOffReason
+  /** Where reports go. Present only when enabled. */
+  dsn?: string
+}
 
 /** Lets a user turn reporting off without opening the app. */
 export const DISABLE_ENV = 'ETERNAL_DISABLE_CRASH_REPORTS'
