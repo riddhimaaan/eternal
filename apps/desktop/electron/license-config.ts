@@ -32,6 +32,14 @@ MCowBQYDK2VwAyEAof2VePQyjeEA0nH2fLE0lC2gCaH2J3VDgM8oeJV1SbE=
 export const LICENSE_SERVICE_URL =
   process.env.ETERNAL_LICENSE_SERVICE_URL || 'https://eternal-license.riddhimanbania381.workers.dev'
 
+/**
+ * Where to send someone who does not have a key yet.
+ *
+ * Empty hides the link entirely rather than shipping a dead one, which is the
+ * right default until the landing page is public and has a price on it.
+ */
+export const LICENSE_PURCHASE_URL = process.env.ETERNAL_LICENSE_PURCHASE_URL || ''
+
 /** True once a public key exists to check against. */
 export function licenseGateConfigured(): boolean {
   return Boolean(LICENSE_PUBLIC_KEY_PEM.trim())

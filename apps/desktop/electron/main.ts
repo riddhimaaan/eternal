@@ -99,6 +99,13 @@ import {
 } from './connection-registry'
 import { describeCrashReason, installCrashForensics } from './crash-forensics'
 import { decideCrashReporting, scrubEvent } from './crash-reporting'
+import { LICENSE_PUBLIC_KEY_PEM, LICENSE_PURCHASE_URL, LICENSE_SERVICE_URL } from './license-config'
+import {
+  activateLicenseKey,
+  confirmLicenseWithService,
+  evaluateStoredLicense,
+  licenseNeedsConfirmation
+} from './license-store'
 import { adoptServedDashboardToken } from './dashboard-token'
 import { loadOrCreateInstallationId, sshOwnershipId } from './desktop-installation'
 import { formatDesktopLogLine } from './desktop-log-line'
@@ -851,6 +858,48 @@ const DESKTOP_WINDOW_STATE_PATH = path.join(app.getPath('userData'), 'window-sta
 // Crash-reporting consent. Its own file so the answer survives every other
 // settings change, and so a user can delete exactly this one to be asked again.
 const DESKTOP_CRASH_CONFIG_PATH = path.join(app.getPath('userData'), 'crash-reporting.json')
+const DESKTOP_LICENSE_PATH = path.join(app.getPath('userData'), 'license.json')
+
+/** A day, for the periodic licence check. */
+const LICENSE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
+
+/**
+ * Ask the licence service whether the stored key is still good.
+ *
+ * Deliberately silent. Its only job is to notice a withdrawn key, and its
+ * failure is never the customer's problem — an outage of ours must not produce
+ * so much as a warning on a licence that is perfectly valid.
+ */
+async function confirmLicense(): Promise<void> {
+  if (!LICENSE_SERVICE_URL) {
+    return
+  }
+
+  try {
+    await confirmLicenseWithService({
+      file: DESKTOP_LICENSE_PATH,
+      publicKeyPem: LICENSE_PUBLIC_KEY_PEM,
+      serviceUrl: LICENSE_SERVICE_URL,
+      now: Date.now()
+    })
+  } catch {
+    // confirmLicenseWithService already swallows the expected failures; this
+    // is the belt to its braces, because nothing about a background check is
+    // worth taking the app down for.
+  }
+}
+
+/** Check on start, then once a day for a copy that stays open for weeks. */
+function scheduleLicenseChecks(): void {
+  const check = () => {
+    if (licenseNeedsConfirmation(DESKTOP_LICENSE_PATH, Date.now())) {
+      void confirmLicense()
+    }
+  }
+
+  check()
+  setInterval(check, LICENSE_CHECK_INTERVAL_MS).unref?.()
+}
 const DESKTOP_BACKEND_OWNERSHIP_PATH = path.join(app.getPath('userData'), 'backend-ownership.json')
 // active-profile.json records which Eternal profile the desktop launches its
 // local backend as. When set, startEternal() passes `eternal --profile <name>
@@ -13069,6 +13118,33 @@ ipcMain.handle('eternal:ambient:claim', (_event, key) => !claimedAmbientCue(Stri
 
 // Crash-reporting consent. Reading is separate from setting so the renderer can
 // tell "not asked yet" (undefined) from a stored answer and only prompt once.
+ipcMain.handle('eternal:license-state', () => ({
+  ...evaluateStoredLicense({
+    file: DESKTOP_LICENSE_PATH,
+    publicKeyPem: LICENSE_PUBLIC_KEY_PEM,
+    now: Date.now()
+  }),
+  purchaseUrl: LICENSE_PURCHASE_URL
+}))
+
+ipcMain.handle('eternal:license-activate', (_event, key) => {
+  const decision = activateLicenseKey({
+    file: DESKTOP_LICENSE_PATH,
+    publicKeyPem: LICENSE_PUBLIC_KEY_PEM,
+    key: typeof key === 'string' ? key : '',
+    now: Date.now()
+  })
+
+  // A key that just verified locally is already good enough to run on. Asking
+  // the service happens behind the customer rather than in front of them, so a
+  // slow network never stands between paying and starting.
+  if (decision.usable) {
+    void confirmLicense()
+  }
+
+  return decision
+})
+
 ipcMain.handle('eternal:crash-reporting-state', () => ({
   consent: readCrashConsent(),
   configured: Boolean(CRASH_REPORT_DSN)
@@ -14650,6 +14726,7 @@ app.whenReady().then(() => {
   // kind this exists to catch. Returns false and logs when reporting is off,
   // which is the default until a user opts in.
   startCrashReporting()
+  scheduleLicenseChecks()
 
   const systemCa = installWindowsSystemCaTrust(tls)
 

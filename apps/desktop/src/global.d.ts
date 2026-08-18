@@ -9,11 +9,34 @@ import type {
 } from './store/pet-overlay'
 import type { QuickEntryStatePush, QuickEntryStatus, QuickEntrySubmitPayload } from './store/quick-entry'
 
+export interface DesktopLicenseDecision {
+  state:
+    | 'not-enforced'
+    | 'unlicensed'
+    | 'invalid'
+    | 'expired'
+    | 'revoked'
+    | 'active'
+    | 'active-unconfirmed'
+    | 'stale'
+  usable: boolean
+  message?: string
+}
+
+export interface DesktopLicenseState extends DesktopLicenseDecision {
+  /** Empty when no purchase page is configured, in which case show no link. */
+  purchaseUrl: string
+}
+
 export {}
 
 declare global {
   interface Window {
     eternalDesktop: {
+      // Licence gate. `usable` is the only field that decides whether the app
+      // may run; the rest is for what to tell the customer.
+      getLicenseState: () => Promise<DesktopLicenseState>
+      activateLicense: (key: string) => Promise<DesktopLicenseDecision>
       // Resolve a backend connection. Omit `profile` (or pass the primary) for
       // the window's backend; pass a named profile to lazily spawn/reuse that
       // profile's backend from the pool.

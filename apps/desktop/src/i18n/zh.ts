@@ -2616,6 +2616,21 @@ export const zh: Translations = {
     }
   },
 
+  license: {
+    activateTitle: '激活 Eternal',
+    activateDesc: '请粘贴购买 Eternal 时收到的许可证密钥。',
+    invalidTitle: '该密钥无效',
+    expiredTitle: '您的许可证已过期',
+    revokedTitle: '该许可证已被撤销',
+    keyLabel: '许可证密钥',
+    keyPlaceholder: 'ETERNAL-…',
+    activate: '激活',
+    activating: '正在检查…',
+    purchase: '购买许可证',
+    offlineNote: '在本机验证，无需联网。',
+    emptyKey: '请先粘贴您的许可证密钥。',
+    unexpected: '检查该密钥时出现问题，请重试。'
+  },
   install: {
     stageStates: {
       pending: '等待中',

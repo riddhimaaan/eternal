@@ -16,6 +16,7 @@ import { useLocation, useNavigate } from 'react-router'
 import { graftRefreshedTailOntoBackfill } from '@/app/chat/transcript-backfill'
 import { formatRefValue } from '@/components/assistant-ui/directive-text'
 import { BootFailureOverlay } from '@/components/boot-failure-overlay'
+import { LicenseOverlay } from '@/components/license-overlay'
 import { DesktopInstallOverlay } from '@/components/desktop-install-overlay'
 import { FindBar } from '@/components/find-bar'
 import { GatewayConnectingOverlay } from '@/components/gateway-connecting-overlay'
@@ -1074,6 +1075,7 @@ export function ContribWiring({ children }: { children: ReactNode }) {
       <UpdatesOverlay />
       <GatewayConnectingOverlay />
       <BootFailureOverlay />
+      <LicenseOverlay />
       <CommandPalette />
       <PetGenerateOverlay />
       <SessionSwitcher />

@@ -1,6 +1,11 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 
 contextBridge.exposeInMainWorld('eternalDesktop', {
+  // Licence gate: read the current verdict, and hand over a key the customer
+  // typed. Verification happens in the main process against the embedded
+  // public key — the renderer is never trusted to decide this.
+  getLicenseState: () => ipcRenderer.invoke('eternal:license-state'),
+  activateLicense: key => ipcRenderer.invoke('eternal:license-activate', key),
   getConnection: profile => ipcRenderer.invoke('eternal:connection', profile),
   // Registry-scoped backend resolution: { connectionId, profile } → descriptor.
   getConnectionFor: payload => ipcRenderer.invoke('eternal:connection:for', payload),

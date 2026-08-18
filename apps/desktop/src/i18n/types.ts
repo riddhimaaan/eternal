@@ -2049,6 +2049,21 @@ export interface Translations {
     }
   }
 
+  license: {
+    activateTitle: string
+    activateDesc: string
+    invalidTitle: string
+    expiredTitle: string
+    revokedTitle: string
+    keyLabel: string
+    keyPlaceholder: string
+    activate: string
+    activating: string
+    purchase: string
+    offlineNote: string
+    emptyKey: string
+    unexpected: string
+  }
   install: {
     stageStates: Record<string, string>
     oneTimeTitle: string

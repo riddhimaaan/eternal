@@ -2435,6 +2435,21 @@ export const en: Translations = {
     }
   },
 
+  license: {
+    activateTitle: 'Activate Eternal',
+    activateDesc: 'Paste the licence key you were sent when you bought Eternal.',
+    invalidTitle: 'That key did not work',
+    expiredTitle: 'Your licence has expired',
+    revokedTitle: 'This licence was withdrawn',
+    keyLabel: 'Licence key',
+    keyPlaceholder: 'ETERNAL-…',
+    activate: 'Activate',
+    activating: 'Checking…',
+    purchase: 'Buy a licence',
+    offlineNote: 'Checked on this computer. No internet connection needed.',
+    emptyKey: 'Paste your licence key first.',
+    unexpected: 'Something went wrong checking that key. Please try again.'
+  },
   install: {
     stageStates: {
       pending: 'Pending',
