@@ -76,6 +76,10 @@ RUN apt-get -o Acquire::Retries=3 update && \
 # Prefer the fixed SQLite over Debian's vulnerable libsqlite3.so.0. Keep the
 # public library name stable so both the system interpreter and the uv-created
 # venv resolve the replacement without changing Python import paths.
+# The FTS5 self-test's search term MUST be a real trigram of the string it
+# inserts. The rebrand rewrote the inserted word ('hermes' -> 'eternal') but
+# left the query 'erm' behind, which no longer occurs in it — so the test
+# asserted something impossible and every image build failed here.
 COPY --from=sqlite_build /opt/sqlite-fixed/lib/libsqlite3.so.3.53.4 /usr/local/lib/
 RUN ln -sf libsqlite3.so.3.53.4 /usr/local/lib/libsqlite3.so.0 && \
     ln -sf libsqlite3.so.3.53.4 /usr/local/lib/libsqlite3.so && \
@@ -87,7 +91,7 @@ sys.exit(f'linked SQLite {sqlite3.sqlite_version} still has the WAL-reset bug') 
 db = sqlite3.connect(':memory:'); \
 db.execute(\"CREATE VIRTUAL TABLE docs USING fts5(content, tokenize='trigram')\"); \
 db.execute(\"INSERT INTO docs VALUES ('eternal')\"); \
-sys.exit('SQLite FTS5 trigram self-test failed') if db.execute(\"SELECT count(*) FROM docs WHERE docs MATCH 'erm'\").fetchone()[0] != 1 else None; \
+sys.exit('SQLite FTS5 trigram self-test failed') if db.execute(\"SELECT count(*) FROM docs WHERE docs MATCH 'ern'\").fetchone()[0] != 1 else None; \
 db.close()"
 
 # ---------- s6-overlay install ----------
