@@ -314,7 +314,7 @@ That choice is worth understanding. The mark was supplied as a 553px image; an a
 - The mark is white, so `BrandMark`'s tile is **black in both light and dark themes**. On the previous white tile it would have been invisible.
 - Rerunning the generator produces byte-identical files, so it never churns the repository.
 
-**Verified:** the desktop app builds and ships the new glyph; the full desktop suite passes; the ICNS is structurally valid at all seven sizes; the ICO carries six. **Not verified:** how the icon looks in a real desktop launcher — that needs a full `dist:linux` run.
+**Verified:** the desktop app builds and ships the new glyph; the full desktop suite passes; the ICNS is structurally valid at all seven sizes; the ICO carries six. **Not verified:** how the icon looks in a real desktop launcher, which is a matter of taste rather than correctness. The app itself is verified to start and render — see `npm run smoke:packaged` in §9.
 
 The replacements are also far smaller than what they displaced: the installer's icons were 690 KB each and are now 4 KB, and `icon.png` went from 574 KB to 29 KB.
 
@@ -476,6 +476,23 @@ npx wrangler kv key put --binding=REVOKED "cust_0001" "refunded 2026-08-20"
 ```
 
 Takes effect the next time that install checks in — within a week. **Allow at least a minute before concluding it did not work** (KV negative caching). The stored note is for the seller's records and is never sent to the customer.
+
+### Check the packaged app actually opens
+
+```bash
+cd /home/nothingness/work/eternal/apps/desktop
+npm run smoke:packaged                       # needs a prior: npm run pack
+npm run smoke:packaged -- --screenshot /tmp/eternal.png
+```
+
+Starts the packaged app on a virtual display, connects to its own debug port,
+and fails if the window never mounts, renders no text, or contains an image
+that failed to load — the last one is how a missing brand asset would surface.
+Runs on Xvfb by default so it never steals focus; `--show` uses the real
+display. Requires `xvfb-run` unless `--show` is given.
+
+The unit suite never launches Electron, so this is the only check that catches
+an app which builds cleanly and then shows nothing.
 
 ### Run the app from source (what the desktop launcher does)
 
