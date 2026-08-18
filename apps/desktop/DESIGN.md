@@ -231,7 +231,10 @@ Notes:
   action. Do not introduce a third icon set or mix styles within one control
   group.
 - **`BrandMark`** (`src/components/brand-mark.tsx`) is the brand glyph — the
-  `nous-girl` mark on a white tile, softly rounded, identical in light/dark.
+  chevron mark on a black tile, softly rounded, identical in light/dark. The
+  mark is white, so the tile stays black in both themes. The artwork is
+  generated, not drawn: edit `scripts/generate-brand-mark.py` and re-run it
+  rather than hand-editing any icon.
   It replaced scattered Sparkles glyphs in updates / onboarding / about. Use it
   for hero/brand moments; don't reintroduce decorative star/sparkle icons.
 
