@@ -39,7 +39,7 @@ The engineering needed to *sell* Eternal is essentially complete and verified. N
 | Branch | `main` |
 | Fork point commit | `00c12dac613a713b173f44c19c789a9b9154eded` (2026-08-16) |
 | Commits inherited from upstream | 23,202 |
-| Commits authored for this fork | 49 |
+| Commits authored for this fork | `git rev-list --count $(git merge-base HEAD upstream/main)..HEAD` — was 51 on 2026-08-19 |
 | Diff vs. fork point | 5,536 files changed, +78,794 / −86,510 |
 | Python package | `eternal-agent` 0.20.2 |
 | Desktop app package | `eternal` 0.17.0 |
