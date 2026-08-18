@@ -23,6 +23,7 @@ import {
   writeFileSync
 } from 'node:fs'
 import { spawnSync } from 'node:child_process'
+import { exceedsCeiling, formatVersion, GLIBC_CEILING, maxGlibcRequirement } from './portable-glibc.mjs'
 import { isMain } from './utils.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -75,6 +76,38 @@ function copyGlobByExt(srcDir, destDir, extensions) {
     if (extensions.some((ext) => entry.name.endsWith(ext))) {
       mkdirSync(destDir, { recursive: true })
       cpSync(join(srcDir, entry.name), join(destDir, entry.name))
+    }
+  }
+}
+
+/**
+ * Fail the build when a staged native module needs a newer glibc than we
+ * support. Checks every .node actually staged, so it covers the prebuild path,
+ * the locally-compiled path, and anything added later.
+ */
+function assertPortableGlibc(destRoot) {
+  const roots = [join(destRoot, 'build'), join(destRoot, 'prebuilds')]
+
+  for (const root of roots) {
+    if (!existsSync(root)) continue
+
+    for (const name of readdirSync(root, { recursive: true })) {
+      const file = join(root, String(name))
+
+      if (!String(name).endsWith('.node') || !existsSync(file)) continue
+
+      const needed = maxGlibcRequirement(readFileSync(file))
+
+      if (exceedsCeiling(needed)) {
+        throw new Error(
+          `${file} requires glibc ${formatVersion(needed)}, above the supported ` +
+            `${formatVersion(GLIBC_CEILING)} ceiling.\n` +
+            '  It was compiled against this machine\'s glibc, which is newer than the\n' +
+            '  distributions users run, so the packaged app would exit before showing a\n' +
+            '  window on their machines.\n' +
+            '  Fix: node scripts/build-node-pty-portable.mjs'
+        )
+      }
     }
   }
 }
@@ -286,6 +319,17 @@ export function stageNodePtyInto(srcRoot, destRoot, { platform = process.platfor
   if (hostMatch) {
     const buildReleaseDir = join(srcRoot, 'build/Release')
     copyBuildRelease(buildReleaseDir, join(destRoot, 'build/Release'))
+  }
+
+  // pty.node is the only native module in the bundle, and it is compiled by
+  // `npm install` against the build machine's glibc. On a rolling distro that
+  // produces a binary no mainstream distribution can load, and because
+  // electron/main.ts imports node-pty at the top, the packaged app dies before
+  // drawing a window — silently, since a desktop launcher discards stderr.
+  // Refuse to package that rather than discover it from a user who sees the
+  // app "do nothing". scripts/build-node-pty-portable.mjs produces a fixed one.
+  if (platform === 'linux') {
+    assertPortableGlibc(destRoot)
   }
 
   // Check whether a native binary for this target was staged.
