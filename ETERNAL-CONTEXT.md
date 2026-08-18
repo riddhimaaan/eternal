@@ -497,7 +497,9 @@ a generated icon — the next run overwrites it. Needs `rsvg-convert` and ImageM
 
 8. **No payment provider is connected.** Deliberately deferred by the owner. See §11.
 
-9. **Roughly 7 MB of upstream artwork still ships to customers and nothing references it** — `apps/desktop/public/eternal.png`, `eternal-sprite.png` and `eternal-frames/` are Hermes pixel-art (a winged knight with a caduceus, ~3.1 MB); `public/ds-assets/filler-bg0.jpg` is another ~3.8 MB. `public/**` is in the packaged build, so every download carries them. Deleting them is safe — confirmed unreferenced — but it is a deletion and needs the owner's word.
+9. **~3.1 MB of unreferenced Hermes artwork ships to customers** — `apps/desktop/public/eternal.png`, `eternal-sprite.png` and `eternal-frames/` are pixel-art of a winged knight with a caduceus. `public/**` is in the packaged build, so every download carries them, and nothing in the app loads them. Deleting them is safe, but it is a deletion and needs the owner's word.
+
+   **`public/ds-assets/filler-bg0.jpg` is not in that list**, though an earlier draft of this document wrongly put it there. It is the app's backdrop image, loaded by `apps/desktop/src/components/Backdrop.tsx`, and deleting it would blank the background behind every conversation. The error came from grepping for the other filenames and assuming this one shared their fate. **Check each asset individually before calling it dead.**
 
 ### Product decisions, deliberately left open
 
