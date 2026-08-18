@@ -447,7 +447,7 @@ def detect_install_method(project_root: Optional[Path] = None) -> str:
     The supported installs self-identify via the code-scoped stamp:
       - the curl installer (scripts/install.sh, the README/website install
         command) git-clones the repo and stamps ``git`` next to the code;
-      - the published ``nousresearch/hermes-agent`` image bakes a ``docker``
+      - the published ``ghcr.io/riddhimaaan/eternal`` image bakes a ``docker``
         stamp into ``/opt/eternal`` at build time.
     An unsupported manual install dropped into a container (no stamp) falls
     through to the ``.git`` checks and behaves like any off-path install.
@@ -547,7 +547,7 @@ def recommended_update_command_for_method(method: str) -> str:
     if method in {"nix", "nixos"}:
         return _NIX_UPDATE_MSG
     if method == "docker":
-        return "docker pull nousresearch/hermes-agent:latest"
+        return "docker pull ghcr.io/riddhimaaan/eternal:latest"
     return "eternal update"
 
 
@@ -578,28 +578,28 @@ def recommended_update_command() -> str:
 _DOCKER_UPDATE_MESSAGE = """\
 ✗ ``eternal update`` doesn't apply inside the Docker container.
 
-Eternal Agent runs as a published image (nousresearch/hermes-agent), not a
-git checkout — the container has no working tree to pull into.  Update by
+Eternal runs as a published image (ghcr.io/riddhimaaan/eternal), not a git
+checkout — the container has no working tree to pull into.  Update by
 pulling a fresh image and restarting your container instead:
 
-  docker pull nousresearch/hermes-agent:latest
+  docker pull ghcr.io/riddhimaaan/eternal:latest
   # then restart whatever started the container, e.g.:
   docker compose up -d --force-recreate eternal-agent
   # or, for ad-hoc runs, exit the current container and `docker run` again
 
 Verify the new version after restart:
-  docker run --rm nousresearch/hermes-agent:latest --version
+  docker run --rm ghcr.io/riddhimaaan/eternal:latest --version
 
 Notes:
   • If you pinned a specific tag (e.g. ``:v0.14.0``) the ``:latest`` tag
     won't move your container — pull the newer tag you actually want, or
     switch to ``:latest`` / ``:main`` for rolling updates.  See available
-    tags at https://hub.docker.com/r/nousresearch/hermes-agent/tags
+    tags at https://github.com/riddhimaaan/eternal/pkgs/container/eternal
   • Your config and session history live under ``$ETERNAL_HOME`` (``/opt/data``
     in the container, typically bind-mounted from the host) and persist
     across image upgrades — re-pulling doesn't lose any state.
-  • Running a fork?  Build your own image with this repo's ``Dockerfile``
-    and replace the ``docker pull`` step with your build/push pipeline."""
+  • If the pull is refused, your access to the image may have lapsed — check
+    that you are logged in with ``docker login ghcr.io``."""
 
 
 def format_docker_update_message() -> str:

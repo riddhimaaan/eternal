@@ -6,12 +6,16 @@
 #   - Uses explicit port mappings instead
 #   - Uses Windows-style volume path for ~/.eternal
 #
+# The image is published privately. Sign in once before the first pull,
+# using a GitHub token that has been granted read access to the package:
+#   docker login ghcr.io -u <github-username>
+#
 # Usage:
 #   docker compose -f docker-compose.windows.yml up -d
 #
 services:
   gateway:
-    image: nousresearch/hermes-agent:latest
+    image: ghcr.io/riddhimaaan/eternal:latest
     container_name: eternal
     restart: unless-stopped
     volumes:
@@ -22,7 +26,7 @@ services:
     command: ["gateway", "run"]
 
   dashboard:
-    image: nousresearch/hermes-agent:latest
+    image: ghcr.io/riddhimaaan/eternal:latest
     container_name: eternal-dashboard
     restart: unless-stopped
     depends_on:

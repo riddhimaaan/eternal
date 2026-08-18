@@ -42,7 +42,7 @@ def test_cmd_update_in_docker_prints_guidance_and_exits(
     # Spot-check the key guidance — exhaustive wording is locked in by the
     # config-module test below to keep these CLI tests resilient to copy edits.
     assert "doesn't apply inside the Docker container" in out
-    assert "docker pull nousresearch/hermes-agent:latest" in out
+    assert "docker pull ghcr.io/riddhimaaan/eternal:latest" in out
 
     # No git invocations — the early-return must beat every git command.
     git_calls = [c for c in mock_run.call_args_list if c.args and c.args[0] and "git" in str(c.args[0][0])]
@@ -74,7 +74,7 @@ def test_format_docker_update_message_contents():
     msg = format_docker_update_message()
 
     # Primary command — the entire reason this message exists.
-    assert "docker pull nousresearch/hermes-agent:latest" in msg
+    assert "docker pull ghcr.io/riddhimaaan/eternal:latest" in msg
 
     # The four key concepts the message must cover:
     assert "restart" in msg.lower(), "must explain that a restart is required"
@@ -84,5 +84,8 @@ def test_format_docker_update_message_contents():
         "must address config persistence across upgrades"
     )
 
-    # Acknowledges that forks exist (build-your-own-image escape hatch).
-    assert "fork" in msg.lower() or "Dockerfile" in msg
+    # Tells the user what to do when the pull itself is refused. This replaced
+    # the upstream "build your own image" escape hatch, which assumed a public
+    # source repo: Eternal's is private, so a failed pull is an access problem,
+    # not an invitation to fork.
+    assert "docker login" in msg, "must say how to recover from a refused pull"

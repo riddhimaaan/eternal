@@ -30,7 +30,7 @@ class TestDoctorPlatformHints:
 
         hint = doctor._sqlite_upgrade_hint()
 
-        assert "docker pull nousresearch/hermes-agent:latest" in hint
+        assert "docker pull ghcr.io/riddhimaaan/eternal:latest" in hint
         assert "recreate all Eternal containers" in hint
         assert "eternal update" not in hint
 

@@ -1161,7 +1161,7 @@ class TestWebServerEndpoints:
         assert data["name"] == "eternal-update"
         assert data["pid"] is None
         assert data["error"] == "docker_update_unsupported"
-        assert "docker pull nousresearch/hermes-agent:latest" in data["message"]
+        assert "docker pull ghcr.io/riddhimaaan/eternal:latest" in data["message"]
         assert spawned is False
 
         status = self.client.get("/api/actions/eternal-update/status")
@@ -1170,7 +1170,7 @@ class TestWebServerEndpoints:
         assert status_data["running"] is False
         assert status_data["exit_code"] == 1
         assert status_data["pid"] is None
-        assert any("docker pull nousresearch/hermes-agent:latest" in line for line in status_data["lines"])
+        assert any("docker pull ghcr.io/riddhimaaan/eternal:latest" in line for line in status_data["lines"])
 
     def test_update_eternal_spawns_with_action_id(self, monkeypatch):
         import eternal_cli.web_server as web_server
