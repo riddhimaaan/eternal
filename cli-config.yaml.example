@@ -4,6 +4,15 @@
 # This file configures CLI behavior; only documented secret environment
 # variables in .env take precedence over their corresponding settings.
 
+# Schema version of THIS file. The Docker image seeds it as a new user's
+# config.yaml, and without this key the migrator reads the config as
+# pre-version-12 and greets every first launch with "This config predates
+# version 12 (~2 years old) and can no longer be auto-migrated" — alarming,
+# and untrue of a file created seconds earlier. Keep it equal to
+# DEFAULT_CONFIG["_config_version"] in eternal_cli/config.py; a test enforces
+# that, because a stale value here would skip migrations this file needs.
+_config_version: 37
+
 # =============================================================================
 # Database Configuration
 # =============================================================================
