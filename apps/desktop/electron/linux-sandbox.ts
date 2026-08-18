@@ -64,10 +64,7 @@ export function usernsRestricted(deps: Pick<LinuxSandboxDeps, 'readFileSync'>): 
  * Chromium can use it and no fallback is needed. A deb/rpm install lands here;
  * an AppImage never does.
  */
-export function sandboxHelperUsable(
-  helperPath: string,
-  deps: Pick<LinuxSandboxDeps, 'lstatSync'>
-): boolean {
+export function sandboxHelperUsable(helperPath: string, deps: Pick<LinuxSandboxDeps, 'lstatSync'>): boolean {
   try {
     const st = deps.lstatSync(helperPath)
 
@@ -84,10 +81,7 @@ export function sandboxHelperUsable(
  * host we misread, and the root check precedes everything else so we never
  * silently drop the sandbox for a root session.
  */
-export function decideLinuxSandbox(
-  helperPath: string,
-  deps: LinuxSandboxDeps
-): LinuxSandboxDecision {
+export function decideLinuxSandbox(helperPath: string, deps: LinuxSandboxDeps): LinuxSandboxDecision {
   if (deps.platform !== 'linux') {
     return { disableSandbox: false, reason: 'not-linux' }
   }

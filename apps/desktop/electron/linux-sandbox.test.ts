@@ -94,9 +94,10 @@ describe('decideLinuxSandbox', () => {
   it('keeps the sandbox when a usable SUID helper exists', () => {
     // deb/rpm install on a restricted host: the helper works, so the sandbox
     // must stay on rather than being dropped for everyone on that distro.
-    expect(
-      decideLinuxSandbox(HELPER, restrictedHost({ lstatSync: () => ({ mode: 0o104755, uid: 0 }) }))
-    ).toEqual({ disableSandbox: false, reason: 'helper-usable' })
+    expect(decideLinuxSandbox(HELPER, restrictedHost({ lstatSync: () => ({ mode: 0o104755, uid: 0 }) }))).toEqual({
+      disableSandbox: false,
+      reason: 'helper-usable'
+    })
   })
 
   it('never disables the sandbox for root, even on a restricted host', () => {
@@ -109,9 +110,10 @@ describe('decideLinuxSandbox', () => {
   })
 
   it('honours ELECTRON_DISABLE_SANDBOX=1 ahead of every probe', () => {
-    expect(
-      decideLinuxSandbox(HELPER, permissiveHost({ env: { ELECTRON_DISABLE_SANDBOX: '1' } }))
-    ).toEqual({ disableSandbox: true, reason: 'env-override' })
+    expect(decideLinuxSandbox(HELPER, permissiveHost({ env: { ELECTRON_DISABLE_SANDBOX: '1' } }))).toEqual({
+      disableSandbox: true,
+      reason: 'env-override'
+    })
   })
 
   it('is a no-op off Linux', () => {

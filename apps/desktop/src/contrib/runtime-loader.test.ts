@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type { EternalReadDirResult } from '@/global'
 import type * as EternalModule from '@/eternal'
+import type { EternalReadDirResult } from '@/global'
 
 import { $pluginRecords, setPluginEnabled } from './plugins-store'
 import { discoverRuntimePlugins, watchRuntimePlugins } from './runtime-loader'

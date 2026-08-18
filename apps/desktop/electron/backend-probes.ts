@@ -212,8 +212,8 @@ function verifyEternalCli(eternalCommand: string, opts?: { shell?: boolean }) {
 export {
   canImportEternalCli,
   DEFAULT_PROBE_TIMEOUT_MS,
-  execProbeSync,
   eternalRuntimeImportProbe,
+  execProbeSync,
   PROBE_TIMEOUT_MS,
   resolveProbeTimeoutMs,
   shouldTrustEternalOverride,

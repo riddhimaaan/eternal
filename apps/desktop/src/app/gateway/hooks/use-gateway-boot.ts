@@ -1,8 +1,8 @@
 import { isGatewayReauthRequired, resolveGatewayWsUrl } from '@eternal/shared'
 import { useEffect, useRef } from 'react'
 
-import type { EternalConnection } from '@/global'
 import { EternalGateway } from '@/eternal'
+import type { EternalConnection } from '@/global'
 import { translateNow } from '@/i18n'
 import { desktopDefaultCwd } from '@/lib/desktop-fs'
 import { reconnectBackoffDelayMs } from '@/lib/reconnect-backoff'

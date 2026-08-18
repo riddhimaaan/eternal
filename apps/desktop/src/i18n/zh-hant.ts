@@ -863,7 +863,8 @@ export const zhHant = defineLocale({
       disableTool: tool => `停用 ${tool}`,
       noOutput: '尚無輸出。',
       deepLinkTitle: '新增 MCP 伺服器？',
-      deepLinkDescription: '一個連結要求將此 MCP 伺服器加入 Eternal。請檢查下方的完整設定——它來自該連結，而非 Eternal。',
+      deepLinkDescription:
+        '一個連結要求將此 MCP 伺服器加入 Eternal。請檢查下方的完整設定——它來自該連結，而非 Eternal。',
       deepLinkStdioWarning: '此伺服器會使用下方所示指令在你的電腦上執行本機程序。僅在信任其來源時繼續。',
       deepLinkConfirm: '新增伺服器',
       deepLinkNameInvalid: '名稱須為 1-64 個字母、數字、點、連字號或底線。',
@@ -2044,8 +2045,7 @@ export const zhHant = defineLocale({
     availableTitleBackend: '後端有可用更新',
     availableBodyBackend: '已連接的 Eternal 後端有新版本可安裝。',
     availableBodyNoChangelog: '已有新版本可用。此安裝方式無法顯示更新日誌。',
-    releaseAvailableBody: (latest, current) =>
-      `Eternal ${latest} 已可下載。你目前使用的版本是 ${current}。`,
+    releaseAvailableBody: (latest, current) => `Eternal ${latest} 已可下載。你目前使用的版本是 ${current}。`,
     downloadUpdate: '下載更新',
     updateNow: '立即更新',
     maybeLater: '稍後再說',

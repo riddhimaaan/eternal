@@ -12,8 +12,8 @@ import {
   DialogHeader,
   DialogTitle
 } from '@/components/ui/dialog'
-import type { EternalGitWorktree } from '@/global'
 import type { SessionInfo } from '@/eternal'
+import type { EternalGitWorktree } from '@/global'
 import { useI18n } from '@/i18n'
 import { displayPath } from '@/lib/display-path'
 import { $dismissedWorktreeIds, dismissWorktree, setWorkspaceNodeOpen } from '@/store/layout'

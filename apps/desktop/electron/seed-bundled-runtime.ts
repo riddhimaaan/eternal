@@ -23,11 +23,7 @@
 
 import path from 'node:path'
 
-export type SeedOutcome =
-  | 'already-usable'
-  | 'no-bundle'
-  | 'seeded'
-  | 'failed'
+export type SeedOutcome = 'already-usable' | 'no-bundle' | 'seeded' | 'failed'
 
 export interface SeedResult {
   durationMs?: number
@@ -66,9 +62,7 @@ export function bundledPythonPath(bundleDir: string, platform: NodeJS.Platform =
 
 /** The interpreter inside a venv, matching findPythonForRoot() in main.ts. */
 export function venvPythonPath(venvRoot: string, platform: NodeJS.Platform = process.platform): string {
-  return platform === 'win32'
-    ? path.join(venvRoot, 'Scripts', 'python.exe')
-    : path.join(venvRoot, 'bin', 'python')
+  return platform === 'win32' ? path.join(venvRoot, 'Scripts', 'python.exe') : path.join(venvRoot, 'bin', 'python')
 }
 
 /**
@@ -104,10 +98,7 @@ export function isActiveRootSeeded(
 ): boolean {
   const { existsSync, platform = process.platform } = deps
 
-  return (
-    existsSync(path.join(activeRoot, 'eternal_cli', 'main.py')) &&
-    existsSync(venvPythonPath(venvRoot, platform))
-  )
+  return existsSync(path.join(activeRoot, 'eternal_cli', 'main.py')) && existsSync(venvPythonPath(venvRoot, platform))
 }
 
 function describeFailure(step: string, result: RunResult): string {
@@ -122,7 +113,15 @@ function describeFailure(step: string, result: RunResult): string {
  */
 export function seedBundledRuntime(options: SeedOptions, deps: SeedDeps): SeedResult {
   const { activeRoot, bundleDir, venvRoot } = options
-  const { copyDir, existsSync, log = () => {}, mkdirSync, now = () => Date.now(), platform = process.platform, run } = deps
+  const {
+    copyDir,
+    existsSync,
+    log = () => {},
+    mkdirSync,
+    now = () => Date.now(),
+    platform = process.platform,
+    run
+  } = deps
 
   if (isActiveRootSeeded(activeRoot, venvRoot, { existsSync, platform })) {
     return { outcome: 'already-usable' }

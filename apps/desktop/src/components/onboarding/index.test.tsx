@@ -72,10 +72,7 @@ describe('onboarding Picker', () => {
   })
 
   it('shows Fireworks first in the list, ahead of other OAuth providers', () => {
-    setProviders([
-      provider('openai-codex', 'OpenAI Codex / ChatGPT'),
-      provider('minimax-oauth', 'MiniMax')
-    ])
+    setProviders([provider('openai-codex', 'OpenAI Codex / ChatGPT'), provider('minimax-oauth', 'MiniMax')])
     render(<Picker ctx={ctx} />)
 
     const labels = screen

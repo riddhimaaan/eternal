@@ -102,7 +102,10 @@ test('resolveRemovableAppPath uses APPIMAGE on Linux when set', () => {
 })
 
 test('resolveRemovableAppPath finds the unpacked dir on Linux', () => {
-  assert.equal(resolveRemovableAppPath('/opt/eternal/linux-unpacked/eternal', 'linux', {}), '/opt/eternal/linux-unpacked')
+  assert.equal(
+    resolveRemovableAppPath('/opt/eternal/linux-unpacked/eternal', 'linux', {}),
+    '/opt/eternal/linux-unpacked'
+  )
   // A system-package install (/usr/bin) → null, left to apt/dnf.
   assert.equal(resolveRemovableAppPath('/usr/bin/eternal', 'linux', {}), null)
 })

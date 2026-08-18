@@ -25,7 +25,7 @@ import { openSession, type OpenSessionIntent } from '@/app/open-session'
 import type { ClientSessionState } from '@/app/types'
 import { $narrowViewport } from '@/components/pane-shell/tree/store'
 import { onGatewayEvent } from '@/contrib/events'
-import { deleteProfile, getLogs, getStatus, type EternalGateway } from '@/eternal'
+import { deleteProfile, type EternalGateway, getLogs, getStatus } from '@/eternal'
 import { $gateway, openGatewayForAgent, openGatewayForProfile } from '@/store/gateway'
 import { notify, notifyError } from '@/store/notifications'
 import {

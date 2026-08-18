@@ -7,8 +7,8 @@ import { $connection } from '@/store/session'
 import {
   attachmentPreviewDataUrl,
   type DroppedFile,
-  extractDroppedFiles,
   ETERNAL_PATHS_MIME,
+  extractDroppedFiles,
   partitionDroppedFiles,
   useComposerActions
 } from './use-composer-actions'

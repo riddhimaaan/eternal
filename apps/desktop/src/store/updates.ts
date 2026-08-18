@@ -5,6 +5,7 @@
 
 import { atom } from 'nanostores'
 
+import { checkEternalUpdate, getActionStatus, updateEternal } from '@/eternal'
 import type {
   DesktopUpdateApplyOptions,
   DesktopUpdateApplyResult,
@@ -14,7 +15,6 @@ import type {
   DesktopUpdateStatus,
   DesktopVersionInfo
 } from '@/global'
-import { checkEternalUpdate, getActionStatus, updateEternal } from '@/eternal'
 import { translateNow } from '@/i18n'
 import { persistString, storedString } from '@/lib/storage'
 import { dismissNotification, notify } from '@/store/notifications'

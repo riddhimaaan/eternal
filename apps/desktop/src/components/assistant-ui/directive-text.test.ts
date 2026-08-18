@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatRefValue, eternalDirectiveFormatter } from './directive-text'
+import { eternalDirectiveFormatter, formatRefValue } from './directive-text'
 
 describe('formatRefValue', () => {
   it('leaves simple paths untouched', () => {

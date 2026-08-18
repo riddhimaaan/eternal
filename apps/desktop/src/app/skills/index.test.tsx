@@ -270,9 +270,7 @@ describe('SkillsView toolset management', () => {
     const { notify } = await import('@/store/notifications')
     const { EmbeddedHubPicker } = await import('./embedded-hub-picker')
 
-    const { container } = render(
-      <EmbeddedHubPicker installedNames={new Set(['web-research'])} profile={null} />
-    )
+    const { container } = render(<EmbeddedHubPicker installedNames={new Set(['web-research'])} profile={null} />)
 
     // The embed is disabled: no cross-origin frame, and no listener for the
     // picks it used to post. See HUB_EMBED_ENABLED for why.

@@ -1,7 +1,7 @@
 import { atom } from 'nanostores'
 
-import type { EternalBranchPullRequest } from '@/global'
 import { scanSessionPullRequests, type SessionInfo } from '@/eternal'
+import type { EternalBranchPullRequest } from '@/global'
 import { desktopGit } from '@/lib/desktop-git'
 import { Codecs, persistentAtom } from '@/lib/persisted'
 

@@ -2388,8 +2388,7 @@ export const en: Translations = {
     availableTitleBackend: 'Backend update available',
     availableBodyBackend: 'A newer version of the connected Eternal backend is ready to install.',
     availableBodyNoChangelog: 'A newer version is ready. Release notes aren’t available for this install type.',
-    releaseAvailableBody: (latest, current) =>
-      `Eternal ${latest} is ready to download. You’re running ${current}.`,
+    releaseAvailableBody: (latest, current) => `Eternal ${latest} is ready to download. You’re running ${current}.`,
     downloadUpdate: 'Download update',
     updateNow: 'Update now',
     maybeLater: 'Maybe later',
@@ -2537,7 +2536,8 @@ export const en: Translations = {
       xai: { short: 'Grok models', description: 'Direct access to xAI Grok models.' },
       local: {
         short: 'self-hosted',
-        description: 'Point Eternal at a local or self-hosted OpenAI-compatible endpoint (vLLM, llama.cpp, Ollama, etc).'
+        description:
+          'Point Eternal at a local or self-hosted OpenAI-compatible endpoint (vLLM, llama.cpp, Ollama, etc).'
       }
     },
     backToSignIn: 'Back to sign in',

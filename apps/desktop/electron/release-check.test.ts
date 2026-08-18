@@ -91,7 +91,9 @@ describe('parseReleaseManifest', () => {
   })
 
   it('keeps only usable note lines', () => {
-    const parsed = parseReleaseManifest(manifest({ notes: ['  Fixed a crash  ', '', '   ', 7, null, 'Faster startup'] }))
+    const parsed = parseReleaseManifest(
+      manifest({ notes: ['  Fixed a crash  ', '', '   ', 7, null, 'Faster startup'] })
+    )
 
     expect(parsed?.notes).toEqual(['Fixed a crash', 'Faster startup'])
   })
@@ -151,9 +153,7 @@ describe('decideReleaseUpdate', () => {
 
 describe('endpoints', () => {
   it('reads the manifest from the public releases repo, not the private source repo', () => {
-    expect(RELEASE_MANIFEST_URL).toBe(
-      'https://raw.githubusercontent.com/riddhimaaan/eternal-releases/main/latest.json'
-    )
+    expect(RELEASE_MANIFEST_URL).toBe('https://raw.githubusercontent.com/riddhimaaan/eternal-releases/main/latest.json')
     expect(RELEASE_MANIFEST_URL).not.toContain('/eternal/')
   })
 })

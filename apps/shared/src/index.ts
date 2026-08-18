@@ -68,11 +68,11 @@ export {
 } from './skin'
 export {
   buildEternalWebSocketUrl,
+  type EternalWebSocketUrlOptions,
   type GatewayAuthMode,
   GatewayReauthRequiredError,
   type GatewayWsConnection,
   type GatewayWsUrlResult,
-  type EternalWebSocketUrlOptions,
   isGatewayReauthRequired,
   resolveGatewayWsUrl,
   type ResolveGatewayWsUrlDeps,

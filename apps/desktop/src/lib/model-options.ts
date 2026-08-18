@@ -1,4 +1,4 @@
-import { getGlobalModelOptions, type EternalGateway, type ModelOptionsResponse } from '@/eternal'
+import { type EternalGateway, getGlobalModelOptions, type ModelOptionsResponse } from '@/eternal'
 import type { ModelOptionProvider } from '@/types/eternal'
 
 /**

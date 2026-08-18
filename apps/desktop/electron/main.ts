@@ -228,12 +228,7 @@ import {
 } from './profile-session-routing'
 import { createQuickEntryShortcut, quickEntryWindowBounds, sanitizeQuickEntrySettings } from './quick-entry'
 import { type ActiveWork, mergeActiveWork, normalizeActiveWork, quitPromptFor } from './quit-guard'
-import {
-  decideReleaseUpdate,
-  MANIFEST_MAX_BYTES,
-  parseReleaseManifest,
-  RELEASE_MANIFEST_URL
-} from './release-check'
+import { decideReleaseUpdate, MANIFEST_MAX_BYTES, parseReleaseManifest, RELEASE_MANIFEST_URL } from './release-check'
 import * as remoteLifecycle from './remote-lifecycle'
 import {
   RemoteLivenessTracker,
@@ -447,16 +442,13 @@ if (PASSWORD_STORE.store) {
 // `eternal desktop` already made this call in Python, but that path prompts for
 // sudo and only runs from the CLI. This makes a normal double-click work.
 {
-  const linuxSandbox = decideLinuxSandbox(
-    path.join(path.dirname(process.execPath), 'chrome-sandbox'),
-    {
-      env: process.env,
-      getuid: typeof process.getuid === 'function' ? () => process.getuid!() : undefined,
-      lstatSync: (p: string) => fs.lstatSync(p),
-      platform: process.platform,
-      readFileSync: (p: string, enc: 'utf-8') => fs.readFileSync(p, enc)
-    }
-  )
+  const linuxSandbox = decideLinuxSandbox(path.join(path.dirname(process.execPath), 'chrome-sandbox'), {
+    env: process.env,
+    getuid: typeof process.getuid === 'function' ? () => process.getuid!() : undefined,
+    lstatSync: (p: string) => fs.lstatSync(p),
+    platform: process.platform,
+    readFileSync: (p: string, enc: 'utf-8') => fs.readFileSync(p, enc)
+  })
 
   if (linuxSandbox.disableSandbox) {
     app.commandLine.appendSwitch('no-sandbox')
@@ -464,8 +456,8 @@ if (PASSWORD_STORE.store) {
       linuxSandbox.reason === 'env-override'
         ? '[eternal] Chromium sandbox disabled by ELECTRON_DISABLE_SANDBOX=1.'
         : '[eternal] Chromium sandbox disabled: this host restricts unprivileged user ' +
-          'namespaces and no root-owned SUID chrome-sandbox helper is available. ' +
-          'Install the .deb/.rpm instead of the AppImage to keep the sandbox enabled.'
+            'namespaces and no root-owned SUID chrome-sandbox helper is available. ' +
+            'Install the .deb/.rpm instead of the AppImage to keep the sandbox enabled.'
     )
   }
 }
@@ -3857,7 +3849,9 @@ async function handOffWindowsBootstrapRecovery(reason) {
   // --repair (full venv recreate) and drove reinstall loops. The venv interpreter
   // and the bootstrap-complete marker are present earlier and are better signals.
   const haveRealInstall =
-    fileExists(venvPython) || fileExists(venvEternal) || fileExists(path.join(updateRoot, '.eternal-bootstrap-complete'))
+    fileExists(venvPython) ||
+    fileExists(venvEternal) ||
+    fileExists(path.join(updateRoot, '.eternal-bootstrap-complete'))
 
   const updaterArgs = chooseUpdaterArgs(haveRealInstall, branch)
 
@@ -4516,7 +4510,8 @@ function createActiveBackend(backendArgs) {
 function resolveEternalBackend(backendArgs) {
   // 1. Explicit override -- ETERNAL_DESKTOP_ETERNAL_ROOT points at a developer
   //    checkout. Honour it as-is (no bootstrap; the user is driving).
-  const overrideRoot = process.env.ETERNAL_DESKTOP_ETERNAL_ROOT && path.resolve(process.env.ETERNAL_DESKTOP_ETERNAL_ROOT)
+  const overrideRoot =
+    process.env.ETERNAL_DESKTOP_ETERNAL_ROOT && path.resolve(process.env.ETERNAL_DESKTOP_ETERNAL_ROOT)
 
   if (overrideRoot && isEternalSourceRoot(overrideRoot)) {
     const backend = createPythonBackend(overrideRoot, `Eternal source at ${overrideRoot}`, backendArgs)

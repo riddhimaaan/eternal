@@ -1,5 +1,5 @@
-import type { EternalGitWorktree } from '@/global'
 import type { ProjectInfo, SessionInfo } from '@/eternal'
+import type { EternalGitWorktree } from '@/global'
 import { normalize } from '@/lib/text'
 
 import { rankSessions } from '../order'

@@ -93,7 +93,16 @@ test('fresh bootstrap args include the packaged commit pin', () => {
       activeRoot: '/tmp/eternal-agent',
       eternalHome: '/tmp/eternal'
     }),
-    ['--dir', '/tmp/eternal-agent', '--eternal-home', '/tmp/eternal', '--branch', 'main', '--commit', installStamp.commit]
+    [
+      '--dir',
+      '/tmp/eternal-agent',
+      '--eternal-home',
+      '/tmp/eternal',
+      '--branch',
+      'main',
+      '--commit',
+      installStamp.commit
+    ]
   )
 })
 

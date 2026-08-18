@@ -1,6 +1,6 @@
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 
-import { getEternalConfigRecord, type EternalConfigRecord, saveEternalConfig } from '@/eternal'
+import { type EternalConfigRecord, getEternalConfigRecord, saveEternalConfig } from '@/eternal'
 
 import { TRANSLATIONS } from './catalog'
 import { DEFAULT_LOCALE, localeConfigValue, normalizeLocale } from './languages'

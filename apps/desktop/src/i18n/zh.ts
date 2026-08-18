@@ -2573,8 +2573,7 @@ export const zh: Translations = {
     availableTitleBackend: '后端有可用更新',
     availableBodyBackend: '已连接的 Eternal 后端有新版本可安装。',
     availableBodyNoChangelog: '已有新版本可用。此安装方式无法显示更新日志。',
-    releaseAvailableBody: (latest, current) =>
-      `Eternal ${latest} 已可下载。你当前使用的版本是 ${current}。`,
+    releaseAvailableBody: (latest, current) => `Eternal ${latest} 已可下载。你当前使用的版本是 ${current}。`,
     downloadUpdate: '下载更新',
     updateNow: '立即更新',
     maybeLater: '稍后再说',
