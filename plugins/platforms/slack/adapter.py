@@ -20,7 +20,24 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Callable, ClassVar, Dict, Optional, Any, Tuple, List
 
-import aiohttp
+# aiohttp belongs INSIDE the guard with the rest of Slack's dependencies. It
+# sat above it, so on any install without the optional [slack] extra the whole
+# module raised ModuleNotFoundError at import instead of reporting itself
+# unavailable — the packaged app logged "Failed to load plugin 'slack-platform'"
+# on every single launch. The specs are registered as ``platform.slack`` in
+# tools/lazy_deps.py and install on demand; every sibling platform plugin
+# (discord, matrix, feishu, dingtalk, wecom) already guards its imports this way.
+# Safe because every aiohttp reference in this module is inside a function body,
+# so nothing touches it at import time.
+# Guarded separately from the Slack SDKs below, not together with them.
+# aiohttp is a far more common package and is frequently present when
+# slack_bolt is not — the dev environment is exactly that shape, and the
+# ephemeral-ack tests drive the aiohttp paths without the SDKs installed.
+# Binding the two together made aiohttp None whenever slack_bolt was missing.
+try:
+    import aiohttp
+except ImportError:  # aiohttp ships in the optional [slack] extra
+    aiohttp = None
 
 try:
     from slack_bolt.async_app import AsyncApp

@@ -8,8 +8,8 @@ name: Skills Index Freshness Check
 # Triggered every 4 hours so we catch a stuck cron within one tick.
 
 on:
-  schedule:
-    - cron: '0 */4 * * *'
+  # Timer removed: gated to NousResearch/hermes-agent, so it woke up every four
+  # hours here to skip itself — six runs a day of pure noise in the runs list.
   workflow_dispatch:
 
 permissions:
