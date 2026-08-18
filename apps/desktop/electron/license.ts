@@ -38,6 +38,8 @@ export interface LicensePayload {
 }
 
 export type LicenseState =
+  /** No public key is configured, so nothing is gated. */
+  | 'not-enforced'
   /** No key has been entered. */
   | 'unlicensed'
   /** Malformed, or the signature does not match. Treat as forged. */
@@ -166,6 +168,14 @@ export interface LicenseInputs {
  * paths that exist for honest customers.
  */
 export function decideLicense(input: LicenseInputs): LicenseDecision {
+  // Before anything else: an unconfigured gate is an open gate. Shipping the
+  // gate's code must never lock anyone out, least of all during development
+  // when no keypair exists yet — a refusal then is indistinguishable from the
+  // product being broken.
+  if (!input.publicKeyPem || !input.publicKeyPem.trim()) {
+    return { state: 'not-enforced', usable: true }
+  }
+
   const key = (input.key || '').trim()
 
   if (!key) {

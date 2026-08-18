@@ -82,6 +82,19 @@ describe('verifyLicenseKey', () => {
 describe('decideLicense', () => {
   const base = { publicKeyPem: PUBLIC_PEM, now: NOW }
 
+  it('does not gate anything until a public key is configured', () => {
+    // Shipping the gate's code must not lock anyone out. Until a keypair
+    // exists there is nothing any key could be checked against, and refusing
+    // then would be indistinguishable from the product being broken.
+    for (const publicKeyPem of ['', '   ', undefined as unknown as string]) {
+      expect(decideLicense({ publicKeyPem, now: NOW })).toEqual({ state: 'not-enforced', usable: true })
+    }
+  })
+
+  it('gates as soon as a public key is configured', () => {
+    expect(decideLicense({ publicKeyPem: PUBLIC_PEM, now: NOW }).usable).toBe(false)
+  })
+
   it('asks for a key when there is none', () => {
     expect(decideLicense({ ...base }).state).toBe('unlicensed')
     expect(decideLicense({ ...base, key: '   ' }).usable).toBe(false)
