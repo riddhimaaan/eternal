@@ -14,10 +14,15 @@ name: CI
 # Do not add ``secrets: inherit`` or GitHub App credentials here. Trusted
 # main-only automation uses protected environments in its own workflows.
 
+# Deliberately NOT run on pushes to main. On push the detector fails open and
+# every lane runs — 50 jobs, ~107 billable minutes per push, which on a private
+# repo consumed ~90% of the monthly Actions allowance for one person's work. The
+# same suite runs locally in well under a minute, so paying for it on every push
+# bought nothing. Pull requests still get the full run, and workflow_dispatch
+# gives an on-demand one from the Actions tab.
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read

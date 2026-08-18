@@ -34,17 +34,12 @@ name: auto-fix lint issues & formatting
 #      the PR is auto-closed and the branch deleted — the next run re-applies
 #      on the current state.
 
+# Manual-only. This opens an auto-merging PR, and now that CI runs on pull
+# requests rather than pushes, an automatic cosmetic PR would trigger the full
+# ~107-minute suite on its own. Formatting fixes are not worth that, and
+# `npm run fix` locally does the same job. Run it from the Actions tab when
+# wanted.
 on:
-  push:
-    branches: [main]
-    paths:
-      - '**/*.js'
-      - '**/*.cjs'
-      - '**/*.mjs'
-      - '**/*.ts'
-      - '**/*.tsx'
-      - 'package.json'
-      - 'package-lock.json'
   workflow_dispatch:
 
 permissions:
