@@ -31,7 +31,6 @@ import {
 import nodePty from 'node-pty'
 
 import { classifyActiveRuntime } from './active-runtime-state'
-import { decideLinuxSandbox } from './linux-sandbox'
 import { stopBackendChild as stopBackendChildImpl, stopBackendTreesForUpdate } from './backend-child'
 import { dashboardFallbackArgs, sourceDeclaresServe } from './backend-command'
 import { createBackendConnectionState } from './backend-connection-state'
@@ -191,6 +190,7 @@ import { createHudSnapShortcut } from './hud-snap-shortcut'
 import { buildHudWindowUrl } from './hud-url'
 import { imageContextMenuItems } from './image-context-menu'
 import { createLinkTitleWindow, guardLinkTitleSession, readLinkTitleWindowTitle } from './link-title-window'
+import { decideLinuxSandbox } from './linux-sandbox'
 import { ensureMainWindow } from './main-window-lifecycle'
 import { createMediaProtocolHandler, MEDIA_PROTOCOL } from './media-protocol'
 import {
@@ -228,6 +228,12 @@ import {
 } from './profile-session-routing'
 import { createQuickEntryShortcut, quickEntryWindowBounds, sanitizeQuickEntrySettings } from './quick-entry'
 import { type ActiveWork, mergeActiveWork, normalizeActiveWork, quitPromptFor } from './quit-guard'
+import {
+  decideReleaseUpdate,
+  MANIFEST_MAX_BYTES,
+  parseReleaseManifest,
+  RELEASE_MANIFEST_URL
+} from './release-check'
 import * as remoteLifecycle from './remote-lifecycle'
 import {
   RemoteLivenessTracker,
@@ -2643,7 +2649,148 @@ async function resolveHealedBranch(updateRoot, branch) {
   return 'main'
 }
 
+/**
+ * Fetch the public release manifest for a packaged install.
+ *
+ * Bounded on every axis — time, size and redirects — because this runs
+ * unattended shortly after launch: a hung or oversized response must never be
+ * something the user has to notice. Every failure returns null, and the caller
+ * turns that into an honest "check failed", never a fabricated "up to date".
+ */
+async function fetchReleaseManifest(url = RELEASE_MANIFEST_URL, redirectsLeft = 3) {
+  try {
+    return await new Promise<string | null>((resolve, reject) => {
+      const req = https.get(
+        url,
+        {
+          headers: {
+            Accept: 'application/json',
+            // GitHub rejects requests without a UA.
+            'User-Agent': 'eternal-desktop-update-check'
+          },
+          timeout: 10_000
+        },
+        res => {
+          const status = res.statusCode || 500
+
+          if (status >= 300 && status < 400 && res.headers.location) {
+            res.resume()
+
+            const next = new URL(res.headers.location, url)
+
+            // Only ever follow a redirect that stays on https.
+            if (redirectsLeft <= 0 || next.protocol !== 'https:') {
+              reject(new Error(`release manifest redirect refused (${status})`))
+
+              return
+            }
+
+            resolve(fetchReleaseManifest(next.toString(), redirectsLeft - 1))
+
+            return
+          }
+
+          if (status >= 400) {
+            res.resume()
+            reject(new Error(`release manifest ${status}`))
+
+            return
+          }
+
+          const chunks = []
+          let size = 0
+
+          res.on('error', reject)
+          res.on('data', chunk => {
+            size += chunk.length
+
+            if (size > MANIFEST_MAX_BYTES) {
+              req.destroy(new Error('release manifest too large'))
+
+              return
+            }
+
+            chunks.push(chunk)
+          })
+          res.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')))
+        }
+      )
+
+      req.on('timeout', () => req.destroy(new Error('release manifest timeout')))
+      req.on('error', reject)
+    })
+  } catch (error) {
+    rememberLog(`[updates] release manifest check failed: ${error?.message || error}`)
+
+    return null
+  }
+}
+
+/**
+ * Update check for packaged installs.
+ *
+ * A customer runs a build, not a checkout: there is no git history to compare
+ * and the source repo is private, so the git path below could only ever tell
+ * them "not a git checkout". Compare the running version against the public
+ * manifest instead. Notify-only — the app never replaces itself; it reports a
+ * newer version and offers the link.
+ */
+async function checkPackagedRelease() {
+  const currentVersion = app.getVersion()
+  const raw = await fetchReleaseManifest()
+  const manifest = raw === null ? null : parseReleaseManifest(raw)
+
+  if (!manifest) {
+    return {
+      supported: true,
+      notifyOnly: true,
+      currentVersion,
+      error: 'check-failed',
+      message: raw === null ? 'Could not reach the update server.' : 'The update information could not be read.',
+      fetchedAt: Date.now()
+    }
+  }
+
+  const decision = decideReleaseUpdate({ currentVersion, manifest })
+
+  if (!decision.updateAvailable) {
+    return {
+      supported: true,
+      notifyOnly: true,
+      updateAvailable: false,
+      behind: 0,
+      commits: [],
+      currentVersion,
+      fetchedAt: Date.now()
+    }
+  }
+
+  return {
+    supported: true,
+    notifyOnly: true,
+    updateAvailable: true,
+    // A release is not measured in commits; null is this field's established
+    // "available, count unknown" value and every surface already renders it
+    // without a number.
+    behind: null,
+    commits: [],
+    currentVersion,
+    latestVersion: decision.latestVersion,
+    downloadUrl: decision.downloadUrl,
+    releaseNotes: decision.notes,
+    // The renderer's update toast keys off targetSha. A release has no commit
+    // sha, so carry the version in that slot — the same shape the backend
+    // check already produces with `backend:<version>`.
+    targetSha: `release:${decision.latestVersion}`,
+    fetchedAt: Date.now()
+  }
+}
+
 async function checkUpdates() {
+  if (IS_PACKAGED) {
+    return await checkPackagedRelease()
+  }
+
   const updateRoot = resolveUpdateRoot()
   let { branch } = readDesktopUpdateConfig()
   const gitDir = path.join(updateRoot, '.git')

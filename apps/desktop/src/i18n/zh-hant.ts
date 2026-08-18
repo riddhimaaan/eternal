@@ -806,7 +806,7 @@ export const zhHant = defineLocale({
         'SSH 驗證失敗。請將金鑰載入 ssh-agent（ssh-add），或在 ~/.ssh/config 中設定 IdentityFile——Eternal 以非互動方式執行 ssh。',
       sshErrHostKey: '自上次連線以來主機金鑰已變更。請確認這是預期的，然後執行 ssh-keygen -R <host> 並重新連線。',
       sshErrNotInstalled:
-        '遠端主機上未安裝 Eternal。請在遠端安裝（curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | sh）或設定 Eternal 路徑。',
+        '遠端主機上未安裝 Eternal。請從 https://github.com/riddhimaaan/eternal-releases/releases 安裝，或設定 Eternal 路徑。',
       sshErrPlatform: '不支援的遠端平台。Eternal Desktop 的 SSH 模式支援 Linux、macOS 和 Windows 遠端主機。',
       sshErrTimeout: 'SSH 連線逾時。主機可能無法存取或處於睡眠狀態。',
       sshErrUpdateRequired: '使用 Desktop SSH 連線前，請更新遠端主機上的 Eternal。',
@@ -2044,6 +2044,9 @@ export const zhHant = defineLocale({
     availableTitleBackend: '後端有可用更新',
     availableBodyBackend: '已連接的 Eternal 後端有新版本可安裝。',
     availableBodyNoChangelog: '已有新版本可用。此安裝方式無法顯示更新日誌。',
+    releaseAvailableBody: (latest, current) =>
+      `Eternal ${latest} 已可下載。你目前使用的版本是 ${current}。`,
+    downloadUpdate: '下載更新',
     updateNow: '立即更新',
     maybeLater: '稍後再說',
     moreChanges: count => `另有 ${count} 項變更。`,

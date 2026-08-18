@@ -2006,6 +2006,9 @@ export interface Translations {
     availableTitleBackend: string
     availableBodyBackend: string
     availableBodyNoChangelog: string
+    /** Packaged builds: notify-only update prompt. */
+    releaseAvailableBody: (latest: string, current: string) => string
+    downloadUpdate: string
     updateNow: string
     maybeLater: string
     moreChanges: (count: number) => string

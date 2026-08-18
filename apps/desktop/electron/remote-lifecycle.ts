@@ -200,7 +200,7 @@ async function locateEternal(ssh, remoteEternalPath) {
 
   const err: any = new Error(
     'Eternal is not installed on the remote host (could not find a `eternal` executable). ' +
-      'Install it on the remote with:  curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | sh  ' +
+      'Install Eternal on that host from https://github.com/riddhimaaan/eternal-releases/releases ' +
       '— or set the Eternal path explicitly in the SSH connection settings.'
   )
 

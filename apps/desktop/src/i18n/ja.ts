@@ -831,7 +831,7 @@ export const ja = defineLocale({
       sshErrHostKey:
         '前回の接続以降、ホスト鍵が変更されています。想定どおりか確認し、ssh-keygen -R <host> を実行してから再接続してください。',
       sshErrNotInstalled:
-        'リモートホストに Eternal がインストールされていません。リモートでインストールする（curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | sh）か、Eternal パスを設定してください。',
+        'リモートホストに Eternal がインストールされていません。https://github.com/riddhimaaan/eternal-releases/releases からインストールするか、Eternal のパスを設定してください。',
       sshErrPlatform:
         'サポートされていないリモートプラットフォームです。Eternal Desktop の SSH モードは Linux、macOS、Windows のリモートホストに対応しています。',
       sshErrTimeout: 'SSH 接続がタイムアウトしました。ホストが到達不能、またはスリープ中の可能性があります。',
@@ -2109,6 +2109,9 @@ export const ja = defineLocale({
     availableBodyBackend: '接続中の Eternal バックエンドの新しいバージョンをインストールできます。',
     availableBodyNoChangelog:
       '新しいバージョンを利用できます。このインストール形式ではリリースノートは表示できません。',
+    releaseAvailableBody: (latest, current) =>
+      `Eternal ${latest} をダウンロードできます。現在お使いのバージョンは ${current} です。`,
+    downloadUpdate: 'アップデートをダウンロード',
     updateNow: '今すぐ更新',
     maybeLater: '後で',
     moreChanges: count => `さらに ${count} 件の変更が含まれています。`,

@@ -231,6 +231,57 @@ function IdleView({
     )
   }
 
+  // Packaged installs are notify-only: a customer runs a build, not a checkout,
+  // so there is nothing to update in place. Name the new version and hand over
+  // a link — nothing is downloaded or replaced here. See electron/release-check.ts.
+  if (status.notifyOnly) {
+    const notes = status.releaseNotes ?? []
+
+    return (
+      <div className="grid gap-5 px-6 pb-6 pt-7 pr-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <BrandMark className="size-16" />
+
+          <DialogTitle className="text-center text-xl">{u.availableTitle}</DialogTitle>
+          <DialogDescription className="text-center text-sm">
+            {u.releaseAvailableBody(status.latestVersion ?? '', status.currentVersion ?? '')}
+          </DialogDescription>
+        </div>
+
+        {notes.length > 0 && (
+          <ul className="grid gap-1.5 text-xs text-foreground">
+            {notes.map(note => (
+              <li className="flex items-start gap-2" key={note}>
+                <span aria-hidden className="mt-1.5 inline-block size-1 shrink-0 rounded-full bg-primary" />
+                <span className="leading-snug">{note}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <div className="grid gap-2">
+          <Button
+            className="font-semibold"
+            onClick={() => {
+              if (status.downloadUrl) {
+                void window.eternalDesktop?.openExternal?.(status.downloadUrl)
+              }
+
+              onLater()
+            }}
+            size="lg"
+          >
+            {u.downloadUpdate}
+          </Button>
+
+          <Button className="font-medium" onClick={onLater} type="button" variant="text">
+            {u.maybeLater}
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
   const groups = buildCommitChangelog(commits)
   const shownItems = totalItems(groups)
   const remaining = Math.max(0, behind - shownItems)

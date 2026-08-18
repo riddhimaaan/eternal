@@ -494,6 +494,16 @@ export interface DesktopUpdateStatus {
   currentSha?: string
   /** Backend only: the version string the backend reports for itself. */
   currentVersion?: string
+  /** Packaged builds only: this install cannot update itself, so the update
+   *  surface reports a newer release and offers a download link instead of
+   *  an apply button. See electron/release-check.ts. */
+  notifyOnly?: boolean
+  /** Packaged builds only: newest published version. */
+  latestVersion?: string
+  /** Packaged builds only: where the user goes to get it (always https). */
+  downloadUrl?: string
+  /** Packaged builds only: short changelog lines from the release manifest. */
+  releaseNotes?: string[]
   targetSha?: string
   commits?: DesktopUpdateCommit[]
   dirty?: boolean

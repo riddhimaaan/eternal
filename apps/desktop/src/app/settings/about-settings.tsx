@@ -21,7 +21,9 @@ import {
 import { ListRow, SectionHeading, SettingsContent } from './primitives'
 import { UninstallSection } from './uninstall-section'
 
-const RELEASE_NOTES_URL = 'https://github.com/riddhimaaan/eternal/releases'
+// The source repo is private, so its releases page 404s for everyone but the
+// owner. Release notes live in the public releases repo instead.
+const RELEASE_NOTES_URL = 'https://github.com/riddhimaaan/eternal-releases/releases'
 
 function relativeTime(ms: number | undefined, a: Translations['settings']['about']) {
   if (!ms) {

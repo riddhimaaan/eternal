@@ -829,7 +829,7 @@ export const en: Translations = {
       sshErrHostKey:
         'The host key has CHANGED since you last connected. Verify this is expected, then run ssh-keygen -R <host> and reconnect.',
       sshErrNotInstalled:
-        'Eternal is not installed on the remote host. Install it there (curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | sh) or set the Eternal path.',
+        'Eternal is not installed on the remote host. Install it there from https://github.com/riddhimaaan/eternal-releases/releases or set the Eternal path.',
       sshErrPlatform:
         'Unsupported remote platform. Eternal Desktop SSH mode supports Linux, macOS, and Windows remote hosts.',
       sshErrTimeout: 'SSH connection timed out. The host may be unreachable or asleep.',
@@ -2388,6 +2388,9 @@ export const en: Translations = {
     availableTitleBackend: 'Backend update available',
     availableBodyBackend: 'A newer version of the connected Eternal backend is ready to install.',
     availableBodyNoChangelog: 'A newer version is ready. Release notes aren’t available for this install type.',
+    releaseAvailableBody: (latest, current) =>
+      `Eternal ${latest} is ready to download. You’re running ${current}.`,
+    downloadUpdate: 'Download update',
     updateNow: 'Update now',
     maybeLater: 'Maybe later',
     moreChanges: count => `+ ${count} more change${count === 1 ? '' : 's'} included.`,
