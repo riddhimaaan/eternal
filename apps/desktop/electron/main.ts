@@ -732,7 +732,8 @@ const ETERNAL_HOME = resolveEternalHome()
  * only identifier that ships inside every copy of the app; it is not a secret,
  * but it is also not baked in until there is somewhere real to send to.
  */
-const CRASH_REPORT_DSN = process.env.ETERNAL_CRASH_DSN || ''
+const CRASH_REPORT_DSN =
+  process.env.ETERNAL_CRASH_DSN || 'https://411f328babea4190b2dc538beabf0013@app.glitchtip.com/27017'
 
 /** The user's answer, or undefined when they have not been asked yet. */
 function readCrashConsent() {
