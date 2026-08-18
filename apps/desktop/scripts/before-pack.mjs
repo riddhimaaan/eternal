@@ -141,7 +141,17 @@ export default async function beforePack(context) {
             'lipo-merge x64/arm64 .node files manually if you need a true universal build.'
         )
       } else {
-        await stageNodePty({ platform, arch: archName })
+        // The glibc ceiling protects what we hand to other people. A `--dir`
+        // pack is the local unpacked app — `eternal desktop` rebuilds one on
+        // every launch, and its own `npm install` recompiles node-pty against
+        // the host glibc first. Enforcing there made the app impossible to start
+        // on any distro newer than the ceiling, which is all of them: the
+        // launcher failed and no window ever appeared. Every real target still
+        // enforces, and the default is to enforce, so a missing flag fails
+        // closed — shipping a silently broken app is worse than a loud build.
+        const shipping = process.env.ETERNAL_DIR_ONLY_BUILD !== '1'
+        console.log(`[before-pack] glibc ceiling ${shipping ? 'enforced' : 'advisory (--dir build)'}`)
+        await stageNodePty({ platform, arch: archName, enforcePortable: shipping })
         console.log(`[before-pack] re-staged node-pty for target ${platform}-${archName}`)
       }
       // The macOS helper is universal, while Windows bindings are arch-specific.

@@ -46,10 +46,19 @@ if (dist && fs.existsSync(distBinary(dist))) {
       "via @electron/get (electronVersion + ELECTRON_MIRROR)."
   )
 }
-args.push(...process.argv.slice(2))
+const forwarded = process.argv.slice(2)
+args.push(...forwarded)
+
+// `--dir` produces the local unpacked app and nothing that gets handed to
+// anyone — `eternal desktop` rebuilds one on every launch. before-pack reads
+// this to decide whether the glibc ceiling is a hard failure or a warning.
+// Set here rather than sniffed from electron-builder's internals, because this
+// is the one place that definitively knows what was asked for.
+const dirOnly = forwarded.includes("--dir")
 
 const result = spawnSync(process.execPath, [electronBuilderCli(), ...args], {
   stdio: "inherit",
+  env: dirOnly ? { ...process.env, ETERNAL_DIR_ONLY_BUILD: "1" } : process.env,
 })
 if (result.error) {
   console.error(`[run-electron-builder] spawn failed: ${result.error.message}`)

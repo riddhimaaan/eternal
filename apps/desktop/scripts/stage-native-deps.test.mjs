@@ -360,6 +360,66 @@ test('validation rejects a staged binary with the wrong platform magic', () => {
   }
 })
 
+// ─── glibc portability gate ─────────────────────────────────────────
+//
+// The ceiling exists so a packaged Linux app runs on distributions older than
+// the build machine. It must NOT apply to a local build: `npm install`
+// recompiles node-pty against the host glibc every time, so enforcing it
+// everywhere made `eternal desktop` unbuildable on any modern distro — the
+// launcher failed silently and the app simply never appeared.
+
+/** A fake linux .node whose symbol table asks for a glibc newer than the ceiling. */
+function makeTooNewNode(filePath) {
+  makeFakeNode(filePath, 'linux')
+  fs.appendFileSync(filePath, Buffer.from('\0GLIBC_2.42\0', 'latin1'))
+}
+
+test('packaging refuses a node-pty compiled against too new a glibc', () => {
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
+  try {
+    const srcRoot = join(tmp, 'node-pty')
+    const destRoot = join(tmp, 'dest')
+    makeFakeNodePty(srcRoot, { prebuildPlatform: 'linux', prebuildArch: 'x64' })
+    makeTooNewNode(join(srcRoot, 'prebuilds', 'linux-x64', 'pty.node'))
+
+    assert.throws(
+      () =>
+        stageNodePtyInto(srcRoot, destRoot, {
+          platform: 'linux',
+          arch: 'x64',
+          enforcePortable: true,
+        }),
+      /above the supported .* ceiling/
+    )
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
+test('a local build stages the same binary and only warns', () => {
+  const tmp = fs.mkdtempSync(join(os.tmpdir(), 'eternal-stage-'))
+  const warnings = []
+  const realWarn = console.warn
+  console.warn = (...args) => warnings.push(args.join(' '))
+  try {
+    const srcRoot = join(tmp, 'node-pty')
+    const destRoot = join(tmp, 'dest')
+    makeFakeNodePty(srcRoot, { prebuildPlatform: 'linux', prebuildArch: 'x64' })
+    makeTooNewNode(join(srcRoot, 'prebuilds', 'linux-x64', 'pty.node'))
+
+    stageNodePtyInto(srcRoot, destRoot, { platform: 'linux', arch: 'x64' })
+
+    assert.ok(
+      existsSync(join(destRoot, 'prebuilds', 'linux-x64', 'pty.node')),
+      'the binary should still be staged so the developer can run the app'
+    )
+    assert.match(warnings.join('\n'), /not portable/)
+  } finally {
+    console.warn = realWarn
+    fs.rmSync(tmp, { recursive: true, force: true })
+  }
+})
+
 // ─── stageGetWindowsInto tests ──────────────────────────────────────
 
 /** Create a minimal fake get-windows source tree in a temp dir. */

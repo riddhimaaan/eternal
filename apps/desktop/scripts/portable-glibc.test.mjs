@@ -1,7 +1,4 @@
 import assert from 'node:assert/strict'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 
 import { test } from 'vitest'
 
@@ -12,8 +9,6 @@ import {
   GLIBC_CEILING,
   maxGlibcRequirement
 } from './portable-glibc.mjs'
-
-const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..')
 
 test('picks the highest version, not the last or first seen', () => {
   assert.deepEqual(maxGlibcRequirement('GLIBC_2.14 GLIBC_2.42 GLIBC_2.2.5 GLIBC_2.28'), [2, 42])
@@ -48,20 +43,13 @@ test('formats for humans', () => {
   assert.equal(formatVersion(null), 'none')
 })
 
-test('the pty.node about to be packaged would run on the oldest supported distro', () => {
-  // The regression this whole module exists for. Skipped when node-pty has not
-  // been built yet, so a fresh checkout does not fail on a missing artifact.
-  const binary = path.join(REPO_ROOT, 'node_modules', 'node-pty', 'build', 'Release', 'pty.node')
-
-  if (!fs.existsSync(binary)) {
-    return
-  }
-
-  const needed = maxGlibcRequirement(fs.readFileSync(binary))
-  assert.equal(
-    exceedsCeiling(needed),
-    false,
-    `pty.node needs glibc ${formatVersion(needed)}, above the ${formatVersion(GLIBC_CEILING)} ceiling. ` +
-      'Rebuild it with scripts/build-node-pty-portable.mjs.'
-  )
-})
+// There was a test here asserting that the pty.node sitting in node_modules
+// right now is portable. It was removed because it tested the state of the
+// machine rather than the behaviour of the code: `npm install` recompiles
+// node-pty against the host glibc, so the assertion failed after an ordinary
+// developer action and said nothing about whether a release would be correct.
+//
+// The real enforcement is in before-pack.mjs, which refuses to package a
+// non-portable binary for any distributable target, and is covered by
+// scripts/stage-native-deps.test.mjs — enforced when shipping, advisory for a
+// local `--dir` build.

@@ -85,7 +85,7 @@ function copyGlobByExt(srcDir, destDir, extensions) {
  * support. Checks every .node actually staged, so it covers the prebuild path,
  * the locally-compiled path, and anything added later.
  */
-function assertPortableGlibc(destRoot) {
+function assertPortableGlibc(destRoot, { enforce } = {}) {
   const roots = [join(destRoot, 'build'), join(destRoot, 'prebuilds')]
 
   for (const root of roots) {
@@ -98,16 +98,23 @@ function assertPortableGlibc(destRoot) {
 
       const needed = maxGlibcRequirement(readFileSync(file))
 
-      if (exceedsCeiling(needed)) {
-        throw new Error(
-          `${file} requires glibc ${formatVersion(needed)}, above the supported ` +
-            `${formatVersion(GLIBC_CEILING)} ceiling.\n` +
-            '  It was compiled against this machine\'s glibc, which is newer than the\n' +
-            '  distributions users run, so the packaged app would exit before showing a\n' +
-            '  window on their machines.\n' +
-            '  Fix: node scripts/build-node-pty-portable.mjs'
-        )
-      }
+      if (!exceedsCeiling(needed)) continue
+
+      const detail =
+        `${file} requires glibc ${formatVersion(needed)}, above the supported ` +
+        `${formatVersion(GLIBC_CEILING)} ceiling.\n` +
+        '  It was compiled against this machine\'s glibc, which is newer than the\n' +
+        '  distributions users run, so the packaged app would exit before showing a\n' +
+        '  window on their machines.\n' +
+        '  Fix: node scripts/build-node-pty-portable.mjs'
+
+      // Only packaging has to care. A local build never leaves this machine,
+      // and `npm install` recompiles node-pty against the host glibc every
+      // time — so enforcing here would make `eternal desktop` impossible to
+      // run on any distro newer than the ceiling, which is all of them.
+      if (enforce) throw new Error(detail)
+
+      console.warn(`[stage-native-deps] not portable (fine for a local build):\n  ${detail}`)
     }
   }
 }
@@ -270,7 +277,11 @@ function validateStagedBinaries(destRoot, targetPlatform) {
  *      modules; build on the target platform or provide a prebuild).
  * 4. Validate every staged `.node` file's binary platform matches the target.
  */
-export function stageNodePtyInto(srcRoot, destRoot, { platform = process.platform, arch = process.arch } = {}) {
+export function stageNodePtyInto(
+  srcRoot,
+  destRoot,
+  { platform = process.platform, arch = process.arch, enforcePortable = false } = {}
+) {
   const hostMatch = platform === process.platform && arch === process.arch
 
   rmSync(destRoot, { recursive: true, force: true })
@@ -328,8 +339,11 @@ export function stageNodePtyInto(srcRoot, destRoot, { platform = process.platfor
   // drawing a window — silently, since a desktop launcher discards stderr.
   // Refuse to package that rather than discover it from a user who sees the
   // app "do nothing". scripts/build-node-pty-portable.mjs produces a fixed one.
+  //
+  // Enforced only when packaging (before-pack passes enforcePortable). A plain
+  // `npm run build` warns instead: that output runs here and nowhere else.
   if (platform === 'linux') {
-    assertPortableGlibc(destRoot)
+    assertPortableGlibc(destRoot, { enforce: enforcePortable })
   }
 
   // Check whether a native binary for this target was staged.
@@ -387,10 +401,14 @@ export function stageNodePtyInto(srcRoot, destRoot, { platform = process.platfor
   return destRoot
 }
 
-export function stageNodePty({ platform = process.platform, arch = process.arch } = {}) {
+export function stageNodePty({
+  platform = process.platform,
+  arch = process.arch,
+  enforcePortable = false,
+} = {}) {
   const srcRoot = resolveNodePtyRoot()
   const destRoot = resolve(projectRoot, 'dist/node_modules/node-pty')
-  return stageNodePtyInto(srcRoot, destRoot, { platform, arch })
+  return stageNodePtyInto(srcRoot, destRoot, { platform, arch, enforcePortable })
 }
 
 // ─── get-windows (read_window_below tool) ────────────────────────────
