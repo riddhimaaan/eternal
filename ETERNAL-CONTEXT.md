@@ -39,7 +39,7 @@ The engineering needed to *sell* Eternal is essentially complete and verified. N
 | Branch | `main` |
 | Fork point commit | `00c12dac613a713b173f44c19c789a9b9154eded` (2026-08-16) |
 | Commits inherited from upstream | 23,202 |
-| Commits authored for this fork | 46 |
+| Commits authored for this fork | 49 |
 | Diff vs. fork point | 5,536 files changed, +78,794 / −86,510 |
 | Python package | `eternal-agent` 0.20.2 |
 | Desktop app package | `eternal` 0.17.0 |
@@ -314,13 +314,33 @@ That choice is worth understanding. The mark was supplied as a 553px image; an a
 - The mark is white, so `BrandMark`'s tile is **black in both light and dark themes**. On the previous white tile it would have been invisible.
 - Rerunning the generator produces byte-identical files, so it never churns the repository.
 
-**Verified:** the desktop app builds and ships the new glyph; 4,396 tests across 474 files pass; the ICNS is structurally valid at all seven sizes; the ICO carries six. **Not verified:** how the icon looks in a real desktop launcher — that needs a full `dist:linux` run.
+**Verified:** the desktop app builds and ships the new glyph; the full desktop suite passes; the ICNS is structurally valid at all seven sizes; the ICO carries six. **Not verified:** how the icon looks in a real desktop launcher — that needs a full `dist:linux` run.
 
 The replacements are also far smaller than what they displaced: the installer's icons were 690 KB each and are now 4 KB, and `icon.png` went from 574 KB to 29 KB.
 
 **A defect fixed on the way.** The previous `icon.icns` was a **PNG with the wrong extension** — ImageMagick will accept `icon.icns` as an output name and quietly write a PNG into it, and upstream had shipped it that way. The generator now writes a real ICNS container directly.
 
 **One judgement call to be aware of:** the chevron is the owner's. The *wordmark* on the README banner — typeface, weight, letter-spacing — was chosen here and is a proposal, not a decision.
+
+### 6.12 The portability gate that stopped the app from opening
+
+**Problem.** After the brand work, the desktop launcher stopped opening anything at all. Clicking Eternal produced no window and no error, because a desktop launcher discards stderr.
+
+The cause was a regression from §6.6, the glibc work. That change added a ceiling check to `stage-native-deps.mjs` so a packaged build could never ship a `node-pty` compiled against a too-new glibc. But the check ran on **every** build path, including the local one — and `npm install` recompiles `node-pty` against the host glibc every single time. Since `eternal desktop` runs `npm install` and then builds, it produced a binary its own gate then refused. On any distribution newer than glibc 2.31 — which is all of them — the launcher could never succeed.
+
+Two facts made this hard to see. The launcher rebuilds from source rather than running the AppImage, so a healthy AppImage proves nothing about it. And it silently reported only `✗ Desktop GUI build failed`, with the real reason 380 lines up.
+
+**Fix.** The ceiling now gates what leaves the machine, not what runs on it:
+
+- `stageNodePty({ enforcePortable })` throws only when packaging; otherwise it warns loudly and stages the binary anyway.
+- `run-electron-builder.mjs` sets `ETERNAL_DIR_ONLY_BUILD` when it sees `--dir`, the local unpacked pack that `eternal desktop` uses. `before-pack.mjs` reads it.
+- **The default is to enforce.** A missing flag fails closed, because shipping a silently broken app is worse than a loud local build.
+
+Do not infer the build kind from electron-builder's `context.targets` — an attempt to do that read as "unknown" for `--dir` and enforced anyway. The wrapper that receives the flag is the only thing that definitively knows.
+
+**Verified in both directions**, which is the point: a `--dir` pack now completes with the ceiling advisory, and an AppImage target with the same non-portable binary still refuses to build. Then `eternal desktop` was run end to end and the app process appeared. The regression test fails against the old code and passes against the new — checked by reverting the source and re-running.
+
+---
 
 ---
 
@@ -413,9 +433,18 @@ Newest first. `git log --oneline` in the repository gives the same list.
 
 ```bash
 cd /home/nothingness/work/eternal/apps/desktop
-npm run build:pty-portable   # only when the native terminal component changed
+npm run build:pty-portable   # REQUIRED before every packaging run — see below
 npm run dist:linux           # produces AppImage, .deb, .rpm
 ```
+
+**`build:pty-portable` is not optional and not occasional.** Any `npm install`
+recompiles `node-pty` against this machine's glibc, and a packaging build runs
+one. So the portable binary is destroyed routinely, including by the previous
+`dist:linux`. Run it immediately before packaging, every time. Needs podman or
+docker: it compiles inside Debian 11 to get glibc 2.31.
+
+Requires `rpmbuild` for the `.rpm` target (`sudo pacman -S rpm-tools`); without
+it the AppImage and `.deb` still build and only the rpm step fails.
 
 `dist:linux` runs `prebuilder`, which stages and verifies the bundled Python (SQLite guard) and then electron-builder. The glibc ceiling check runs during packaging and **will fail the build** if anything requires newer than glibc 2.31.
 
@@ -447,6 +476,14 @@ npx wrangler kv key put --binding=REVOKED "cust_0001" "refunded 2026-08-20"
 ```
 
 Takes effect the next time that install checks in — within a week. **Allow at least a minute before concluding it did not work** (KV negative caching). The stored note is for the seller's records and is never sent to the customer.
+
+### Run the app from source (what the desktop launcher does)
+
+`~/.local/share/applications/eternal.desktop` runs `venv/bin/eternal desktop`,
+which **rebuilds the app from source and then launches it** — it does not run
+the AppImage. So a broken build means clicking the launcher does nothing at all:
+no window, no error, because a desktop launcher discards stderr. When someone
+reports "the app won't open", run that command in a terminal and read it.
 
 ### Change the logo
 
