@@ -145,10 +145,20 @@ describe('decideLicense', () => {
     expect(decision.message).toBeTruthy()
   })
 
-  it('treats a never-confirmed genuine key as usable, for an offline first launch', () => {
+  it('treats a just-entered key as unconfirmed and says nothing alarming', () => {
+    // The regression: measuring silence from zero made a key pasted seconds
+    // ago read as decades stale, so the first thing a paying customer saw
+    // after entering their key was a warning about it.
     const decision = decideLicense({ ...base, key: VALID })
 
-    expect(decision.usable).toBe(true)
+    expect(decision).toEqual({ state: 'active-unconfirmed', usable: true })
+    expect(decision.message).toBeUndefined()
+  })
+
+  it('only reports staleness once it has something to be stale since', () => {
+    const decision = decideLicense({ ...base, key: VALID, lastConfirmedAt: NOW - (OFFLINE_GRACE_DAYS + 1) * DAY })
+
+    expect(decision.state).toBe('stale')
   })
 
   it('never reports a state that is both unusable and silent', () => {

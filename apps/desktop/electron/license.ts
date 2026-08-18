@@ -191,11 +191,16 @@ export function decideLicense(input: LicenseInputs): LicenseDecision {
     return { state: 'revoked', usable: false, message: 'This licence key has been withdrawn. Please get in touch.' }
   }
 
-  const lastConfirmed = input.lastConfirmedAt || 0
-  const silentFor = input.now - lastConfirmed
+  // Never confirmed is its own case, checked before any arithmetic. Measuring
+  // silence from zero makes a key pasted seconds ago look decades stale, and
+  // the first thing a paying customer would have seen after entering it is a
+  // warning that it could not be confirmed "for a while".
+  if (!input.lastConfirmedAt) {
+    return { state: 'active-unconfirmed', usable: true }
+  }
 
-  // Never confirmed yet is treated as merely unconfirmed, not as failure: a
-  // customer's first launch may well be offline, and the key is genuine.
+  const silentFor = input.now - input.lastConfirmedAt
+
   if (silentFor <= CONFIRM_EVERY_DAYS * DAY_MS) {
     return { state: 'active', usable: true }
   }

@@ -1,0 +1,15 @@
+name = "eternal-license"
+main = "worker.js"
+compatibility_date = "2026-08-01"
+
+# Free tier covers 100,000 requests a day. Each Eternal install calls this
+# once a week, so this stays free well past any realistic number of customers.
+
+# Created with: npx wrangler kv namespace create REVOKED
+# Paste the printed id below.
+[[kv_namespaces]]
+binding = "REVOKED"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# LICENSE_PUBLIC_KEY is set as a secret, not here:
+#   npx wrangler secret put LICENSE_PUBLIC_KEY
