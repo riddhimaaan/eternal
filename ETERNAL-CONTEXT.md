@@ -24,7 +24,9 @@ Eternal is a desktop AI agent for Linux. It runs on the user's own computer, con
 
 ## 2. The one-line status
 
-The engineering needed to *sell* Eternal is essentially complete and verified. Nous Research's artwork is gone: the app icon, the in-app badge and the README banner now carry Eternal's own mark. **The remaining blocker is that three finished features have no screen a customer can reach** — licence-key entry, crash-report consent, and the first-run walkthrough. The README's *text* is also still upstream's.
+**Eternal can now be sold.** A customer can be issued a key, enter it, and use the product; a refund can be withdrawn. That path is closed end to end and was driven against the packaged app, not just unit-tested.
+
+What remains is polish and commerce rather than capability: two features still have no screen a customer can reach (crash-report consent and the first-run walkthrough), no payment provider is connected, and the landing page is a placeholder with no price on it.
 
 ---
 
@@ -342,6 +344,24 @@ Do not infer the build kind from electron-builder's `context.targets` — an att
 
 ---
 
+### 6.13 The licence screen — the keyhole
+
+**Problem.** The licence system of §6.10 could issue keys, verify them offline and withdraw them, and had been deployed and checked against the live service. Nothing ever asked a customer for one, and nothing performed the weekly check the design assumed. A lock with no keyhole: until this landed, Eternal could not be sold to anybody.
+
+**Solution.** `src/components/license-overlay.tsx`, mounted last in `wiring.tsx` so an unlicensed copy is not reachable behind another overlay. It covers all four unusable states — no key, one that does not verify, an expired one, a withdrawn one — with a single input, because in every one of them the fix is to enter a key.
+
+Design points worth keeping:
+
+- **Verification stays in the main process.** A renderer that could decide this would mean a devtools console could unlock the product. `src/store/license.ts` only asks.
+- **A verified key is written immediately; the service is asked afterwards.** The moment after paying is the worst possible time to be told to check your connection.
+- **Every remote failure leaves the stored state untouched** — unreachable, non-200, malformed, or the service disagreeing with a key that just verified locally. Our outage must never read as their bad key.
+- **The renderer fails open.** If it cannot reach the main process it has learned nothing about whether someone paid, and refusing to start on that basis would punish honest customers for a bug of ours.
+- The purchase link stays hidden until `ETERNAL_LICENSE_PURCHASE_URL` is set, rather than shipping a dead one.
+
+**Verified end to end against the packaged app**, not only in unit tests: gate blocking, a key typed into the field, gate gone. That used a throwaway keypair and a temporary profile, so the real signing key was never read. 18 unit tests cover the store, including that our own misconfigured service cannot revoke everybody at once.
+
+**Two things to know.** The Chinese strings were written here and are unreviewed — `zh.ts` must be complete or the build fails, so it could not simply be skipped. And there is **no way past the screen except a valid key**: no trial, no skip. Correct for a paid product, but it means that screen is the entire first impression for anyone who downloads Eternal without buying it.
+
 ---
 
 ## 7. Infrastructure inventory
@@ -534,16 +554,17 @@ a generated icon — the next run overwrites it. Needs `rsvg-convert` and ImageM
 
 3. **GitHub issue templates** (`.github/ISSUE_TEMPLATE/*`) still direct people upstream.
 
-4. **Three finished features have no user interface and are therefore inert:**
-   - the **licence key entry screen** — the gate logic is complete and tested; nothing asks the customer for a key
+4. **Two finished features still have no user interface and are therefore inert:**
    - the **crash-reporting consent prompt** — scrubbing and delivery are proven; nothing asks permission, so it never fires
    - the **first-run walkthrough** — needs the owner's API key to test end to end
+
+   ~~The licence key entry screen.~~ **Done** — see §6.13.
 
 **Scale note:** roughly 1,200 files still contain the string "Nous". Most are locale files, upstream documentation, and tests, and most do not matter. `LICENSE` and `NOTICE` **must** keep it — that is the MIT attribution requirement. Prioritise by what a customer sees: the README next, then the issue templates.
 
 ### Non-UI work still outstanding
 
-5. **The app never calls the licence service.** The logic in `license.ts` correctly accepts a revocation answer, and the service is deployed and verified — but nothing in the app actually performs the weekly fetch. This is straightforward and does not depend on the UI work.
+5. ~~The app never calls the licence service.~~ **Done** — see §6.13. It checks at startup and daily thereafter, silently.
 
 6. **The signing key is not backed up.** `~/.eternal-license-signing-key.pem` exists in exactly one place. If that disk fails, no new customer can ever be issued a key without shipping an app update. Copy it somewhere private and offline.
 
