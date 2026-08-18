@@ -24,7 +24,7 @@ Eternal is a desktop AI agent for Linux. It runs on the user's own computer, con
 
 ## 2. The one-line status
 
-The engineering needed to *sell* Eternal is essentially complete and verified. **The single remaining blocker is visual/brand work** — the app still displays Nous Research's artwork, and three finished features (licence entry, crash-report consent, first-run walkthrough) have no screens for a user to interact with.
+The engineering needed to *sell* Eternal is essentially complete and verified. Nous Research's artwork is gone: the app icon, the in-app badge and the README banner now carry Eternal's own mark. **The remaining blocker is that three finished features have no screen a customer can reach** — licence-key entry, crash-report consent, and the first-run walkthrough. The README's *text* is also still upstream's.
 
 ---
 
@@ -39,7 +39,7 @@ The engineering needed to *sell* Eternal is essentially complete and verified. *
 | Branch | `main` |
 | Fork point commit | `00c12dac613a713b173f44c19c789a9b9154eded` (2026-08-16) |
 | Commits inherited from upstream | 23,202 |
-| Commits authored for this fork | 43 |
+| Commits authored for this fork | 46 |
 | Diff vs. fork point | 5,536 files changed, +78,794 / −86,510 |
 | Python package | `eternal-agent` 0.20.2 |
 | Desktop app package | `eternal` 0.17.0 |
@@ -52,6 +52,7 @@ The engineering needed to *sell* Eternal is essentially complete and verified. *
 | Bundled plugin source files | 196, across 22 chat platforms |
 | Skill categories | 15 |
 | Container image | `ghcr.io/riddhimaaan/eternal` — **private**, 2.73 GB, amd64 + arm64 |
+| Brand mark | A chevron drawn as a dissolving dot matrix. Generated, not stored: `scripts/generate-brand-mark.py` |
 
 ### Legal position
 
@@ -103,7 +104,8 @@ Eternal is not one program. It is five layers, and understanding which layer a p
 | `apps/desktop/electron/release-check.ts` | Notify-only update checking (23 tests). |
 | `apps/desktop/scripts/stage-agent-runtime.mjs` | Downloads and verifies the bundled Python. |
 | `apps/desktop/scripts/portable-glibc.mjs` | Enforces the glibc compatibility ceiling. |
-| `apps/desktop/src/components/brand-mark.tsx` | **Still renders Nous Research's logo.** See §10. |
+| `apps/desktop/src/components/brand-mark.tsx` | The in-app brand badge: the mark on a black tile. Mirrored in `apps/bootstrap-installer/`. |
+| `scripts/generate-brand-mark.py` | Generates every icon, the in-app glyph and the README banner from one definition. |
 | `services/license/worker.js` | The Cloudflare Worker that answers "is this key still good?" |
 | `Dockerfile` | Builds the container image. |
 | `.github/workflows/docker.yml` | Builds and publishes the container image. |
@@ -296,6 +298,30 @@ Verification happens **on the customer's own machine and works offline.** The ap
 
 **Also note:** Cloudflare KV caches the *absence* of a key for up to a minute. For a short while after revoking, the service can still answer `valid`. This is normal and documented. During testing the same key returned `valid` immediately after revocation and `revoked` fifteen seconds later.
 
+### 6.11 The brand mark — the app's own face at last
+
+**Problem.** Three separate surfaces still carried Nous Research's artwork, and only one of them was the obvious one:
+
+- `apps/desktop/assets/icon.{png,ico,icns}` — **the application icon**, i.e. what appears in the launcher, the taskbar and the AppImage. This was Nous's mark, not a decoration inside the app.
+- `assets/banner.png` — the README banner, which read **"HERMES-AGENT"** in large letters.
+- The in-app badge, in *two* apps: the desktop app and the bootstrap installer, each with its own copy of the asset and its own component.
+
+**Solution.** The mark — a chevron drawn as a dot matrix that dissolves toward its tips — is **generated rather than stored as artwork**. `scripts/generate-brand-mark.py` holds the geometry, the dot grid and the dissolve as about a dozen constants and rewrites every derived file in one command.
+
+That choice is worth understanding. The mark was supplied as a 553px image; an application icon needs 1024px, and enlarging a small raster would have looked soft. Generating it means every size is exact, and changing the design later is a number and a re-run rather than a dozen files re-cut by hand.
+
+- Below roughly 64px the dot matrix stops reading, so small icons fall back to a filled chevron automatically (`variant()`).
+- The mark is white, so `BrandMark`'s tile is **black in both light and dark themes**. On the previous white tile it would have been invisible.
+- Rerunning the generator produces byte-identical files, so it never churns the repository.
+
+**Verified:** the desktop app builds and ships the new glyph; 4,396 tests across 474 files pass; the ICNS is structurally valid at all seven sizes; the ICO carries six. **Not verified:** how the icon looks in a real desktop launcher — that needs a full `dist:linux` run.
+
+The replacements are also far smaller than what they displaced: the installer's icons were 690 KB each and are now 4 KB, and `icon.png` went from 574 KB to 29 KB.
+
+**A defect fixed on the way.** The previous `icon.icns` was a **PNG with the wrong extension** — ImageMagick will accept `icon.icns` as an output name and quietly write a PNG into it, and upstream had shipped it that way. The generator now writes a real ICNS container directly.
+
+**One judgement call to be aware of:** the chevron is the owner's. The *wordmark* on the README banner — typeface, weight, letter-spacing — was chosen here and is a proposal, not a decision.
+
 ---
 
 ## 7. Infrastructure inventory
@@ -325,12 +351,16 @@ Everything the product depends on that lives outside the repository.
 
 ---
 
-## 8. The 43 fork commits
+## 8. The fork commits
+
+Newest first. `git log --oneline` in the repository gives the same list.
 
 Newest first. `git log --oneline` in the repository gives the same list.
 
 | Commit | Date | What it fixed |
 | --- | --- | --- |
+| `8a23e795c9` | 08-19 | Stop wearing another company's face (the brand mark, §6.11) |
+| `c68f8ecac4` | 08-19 | Write down what this project is, so the next assistant need not guess |
 | `2a8be62272` | 08-19 | Deploy the licence service and switch the gate on |
 | `3950ccae28` | 08-19 | Add the config file the setup instructions referred to, and default the gate off |
 | `d7d5c91298` | 08-19 | Add the licence service, and the tools to issue and withdraw keys |
@@ -418,6 +448,17 @@ npx wrangler kv key put --binding=REVOKED "cust_0001" "refunded 2026-08-20"
 
 Takes effect the next time that install checks in — within a week. **Allow at least a minute before concluding it did not work** (KV negative caching). The stored note is for the seller's records and is never sent to the customer.
 
+### Change the logo
+
+Edit the constants at the top of `scripts/generate-brand-mark.py`, then:
+
+```bash
+python3 scripts/generate-brand-mark.py
+```
+
+That rewrites every icon, the in-app glyph and the README banner. Never hand-edit
+a generated icon — the next run overwrites it. Needs `rsvg-convert` and ImageMagick.
+
 ### Publish a new version
 
 1. Build and test locally.
@@ -429,13 +470,13 @@ Takes effect the next time that install checks in — within a week. **Allow at 
 
 ## 10. Open items — read this before deciding what to do next
 
-### BLOCKING — the brand and UI work
+### BLOCKING — the UI work
 
 **This is the only thing standing between the current state and a sellable product.**
 
-1. **The logo is still Nous Research's artwork.** `apps/desktop/src/components/brand-mark.tsx` renders `apps/desktop/public/nous-girl.jpg`. Shipping a commercial product displaying another organisation's mark is both a legal exposure and an obvious credibility problem. **Highest priority.**
+1. ~~The logo is still Nous Research's artwork.~~ **Done** — see §6.11. The app icon, the in-app badge in both apps, and the README banner now carry Eternal's own mark.
 
-2. **`README.md` is still upstream's.** It carries a "Built by Nous Research" badge, links to `hermes-agent.nousresearch.com`, links to the Nous Discord, and describes Eternal as "built by Nous Research". The same applies to `README.es.md`, `README.zh-CN.md`, `README.ur-pk.md`, `SECURITY.md`, and `CONTRIBUTING.md`.
+2. **`README.md`'s text is still upstream's.** The banner image is now Eternal's, but the prose is not: it carries a "Built by Nous Research" badge, links to `hermes-agent.nousresearch.com`, links to the Nous Discord, and describes Eternal as "built by Nous Research". The same applies to `README.es.md`, `README.zh-CN.md`, `README.ur-pk.md`, `SECURITY.md`, and `CONTRIBUTING.md`.
 
 3. **GitHub issue templates** (`.github/ISSUE_TEMPLATE/*`) still direct people upstream.
 
@@ -444,7 +485,7 @@ Takes effect the next time that install checks in — within a week. **Allow at 
    - the **crash-reporting consent prompt** — scrubbing and delivery are proven; nothing asks permission, so it never fires
    - the **first-run walkthrough** — needs the owner's API key to test end to end
 
-**Scale note:** 1,199 files still contain the string "Nous". Most are locale files, upstream documentation, and tests, and most do not matter. `LICENSE` and `NOTICE` **must** keep it — that is the MIT attribution requirement. Prioritise by what a customer sees: logo first, README second, issue templates third.
+**Scale note:** roughly 1,200 files still contain the string "Nous". Most are locale files, upstream documentation, and tests, and most do not matter. `LICENSE` and `NOTICE` **must** keep it — that is the MIT attribution requirement. Prioritise by what a customer sees: the README next, then the issue templates.
 
 ### Non-UI work still outstanding
 
@@ -456,11 +497,13 @@ Takes effect the next time that install checks in — within a week. **Allow at 
 
 8. **No payment provider is connected.** Deliberately deferred by the owner. See §11.
 
+9. **Roughly 7 MB of upstream artwork still ships to customers and nothing references it** — `apps/desktop/public/eternal.png`, `eternal-sprite.png` and `eternal-frames/` are Hermes pixel-art (a winged knight with a caduceus, ~3.1 MB); `public/ds-assets/filler-bg0.jpg` is another ~3.8 MB. `public/**` is in the packaged build, so every download carries them. Deleting them is safe — confirmed unreferenced — but it is a deletion and needs the owner's word.
+
 ### Product decisions, deliberately left open
 
-9. **~40 bundled plugins import packages the bundle does not ship** — discord, telegram, matrix, teams, playwright, several memory providers. They degrade silently. Three defensible answers: bundle the dependencies (bigger download), remove the plugins (smaller promise), or surface a clear "this platform needs X installed" message. **This is a product decision about what Eternal claims to support, not a bug with an obviously correct fix. Do not resolve it unilaterally.**
+10. **~40 bundled plugins import packages the bundle does not ship** — discord, telegram, matrix, teams, playwright, several memory providers. They degrade silently. Three defensible answers: bundle the dependencies (bigger download), remove the plugins (smaller promise), or surface a clear "this platform needs X installed" message. **This is a product decision about what Eternal claims to support, not a bug with an obviously correct fix. Do not resolve it unilaterally.**
 
-10. **An OpenRouter API key was pasted in plaintext** during a working session and should be treated as compromised. **It should be rotated.**
+11. **An OpenRouter API key was pasted in plaintext** during a working session and should be treated as compromised. **It should be rotated.**
 
 ---
 
@@ -509,6 +552,12 @@ The FTS5 trigram bug was fixed in the Dockerfile, then found again in the test f
 - **Never set spending limits or make financial changes.** Describe what to set; the owner sets it.
 - **Never capture full-screen screenshots.** The owner's screen is private.
 
+### The mark is generated, not drawn
+
+Every icon, the in-app glyph and the README banner come out of
+`scripts/generate-brand-mark.py`. Edit the constants and re-run it. A hand-edited
+icon survives exactly until the next run.
+
 ### Commit message style
 
 Messages say **what problem was solved**, in plain language, not what files moved. Compare "Stop greeting every container user with a false 'config is 2 years old'" against "fix: update cli-config.yaml.example". The first tells a reader why the commit exists. Match this style.
@@ -555,4 +604,4 @@ Do this, in order:
 2. **Run `git log --oneline | head -50`** in `/home/nothingness/work/eternal`. The commit messages are written to be read.
 3. **Do not start the UI work without confirming the direction with the owner** — it is design work with taste involved, not mechanical.
 4. **The cheapest genuinely valuable non-UI task** is item §10.5: wire the app's weekly call to the licence service. The service is live, the logic is written and tested, and nothing currently connects them.
-5. **Remind the owner about the logo.** They have asked to be reminded, and it is the item that most directly blocks selling.
+5. **The logo is done** (§6.11). What still blocks selling is the three screens in §10.4 and the README's text.
