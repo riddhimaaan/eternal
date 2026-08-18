@@ -38,6 +38,7 @@ import fsp from 'node:fs/promises'
 import https from 'node:https'
 import path from 'node:path'
 
+import { RELEASE_PAGE_URL } from './release-check'
 import { hiddenWindowsChildOptions } from './windows-child-options'
 
 const IS_WINDOWS = process.platform === 'win32'
@@ -314,11 +315,67 @@ function downloadInstallScript(ref, destPath) {
   })
 }
 
+/**
+ * Whether this run may fetch the install script from GitHub.
+ *
+ * The source repo is private, so raw.githubusercontent.com answers 404 to
+ * anyone without a token — which is every customer running a packaged build.
+ * Asking anyway spends a network round-trip to turn a repairable state into a
+ * bare "HTTP 404" the user can do nothing with. Source runs keep the download:
+ * that is a developer, and they have access.
+ */
+function canDownloadInstallScript({ isPackaged }) {
+  return !isPackaged
+}
+
+/**
+ * The one thing a customer with a broken packaged install can actually do.
+ *
+ * Reinstalling replaces the application bundle only. ETERNAL_HOME — where
+ * chats, settings and credentials live — is a separate user directory and is
+ * untouched, so the message can promise that safely.
+ */
+function packagedRepairMessage() {
+  return (
+    'Eternal could not repair its bundled runtime. Reinstall Eternal from ' +
+    `${RELEASE_PAGE_URL} — your existing chats and settings are not affected.`
+  )
+}
+
+/**
+ * Use the installer that ships inside an already-installed agent checkout,
+ * copied into the bootstrap cache when the filesystem allows it. Returns null
+ * when there is no such checkout, leaving the decision to the caller.
+ */
+function resolveInstalledAgentFallback({ cached, emit, eternalHome, resolvedCommit, reason = '' }) {
+  const installed = installedAgentInstallScript(eternalHome)
+
+  if (!installed) {
+    return null
+  }
+
+  emit({
+    type: 'log',
+    line: `[bootstrap] ${reason}falling back to installed agent ${installScriptName()} at ${installed}`
+  })
+
+  try {
+    fs.mkdirSync(path.dirname(cached), { recursive: true })
+    fs.copyFileSync(installed, cached)
+
+    return { path: cached, source: 'installed-agent', commit: resolvedCommit, kind: installScriptKind() }
+  } catch {
+    // Cache copy failed (read-only FS, etc.) -- use the source path directly.
+    return { path: installed, source: 'installed-agent', commit: resolvedCommit, kind: installScriptKind() }
+  }
+}
+
 async function resolveInstallScript({
   installStamp,
   sourceRepoRoot,
   eternalHome,
   emit,
+  isPackaged = false,
   _download = downloadInstallScript
 }) {
   // 1. Dev shortcut: prefer a local checkout's installer so we can iterate
@@ -329,7 +386,7 @@ async function resolveInstallScript({
   if (localScript) {
     emit({ type: 'log', line: `[bootstrap] using local ${installScriptName()} at ${localScript}` })
 
-    return { path: localScript, source: 'local', kind: installScriptKind() }
+    return { path: localScript, source: 'local', commit: null, kind: installScriptKind() }
   }
 
   // 2. Packaged path: download from GitHub at the install stamp's ref.
@@ -339,8 +396,10 @@ async function resolveInstallScript({
 
   if (!installRef) {
     throw new Error(
-      `Cannot resolve ${installScriptName()}: no SOURCE_REPO_ROOT and no install stamp. ` +
-        'This packaged build was produced without a valid build-time stamp.'
+      isPackaged
+        ? packagedRepairMessage()
+        : `Cannot resolve ${installScriptName()}: no SOURCE_REPO_ROOT and no install stamp. ` +
+            'This packaged build was produced without a valid build-time stamp.'
     )
   }
 
@@ -357,6 +416,25 @@ async function resolveInstallScript({
     return { path: cached, source: 'cache', commit: resolvedCommit, kind: installScriptKind() }
   } catch {
     // not cached; download
+  }
+
+  // 3. A packaged build never downloads. The source repo is private, so the
+  //    fetch can only 404 — and a customer cannot fix that. Go straight to the
+  //    installer inside an existing agent checkout, and when there is none, say
+  //    plainly that the app needs reinstalling.
+  if (!canDownloadInstallScript({ isPackaged })) {
+    emit({
+      type: 'log',
+      line: `[bootstrap] not fetching ${installScriptName()} from GitHub: packaged build, source repo is private`
+    })
+
+    const local = resolveInstalledAgentFallback({ cached, emit, eternalHome, resolvedCommit })
+
+    if (local) {
+      return local
+    }
+
+    throw new Error(packagedRepairMessage())
   }
 
   emit({
@@ -377,25 +455,16 @@ async function resolveInstallScript({
     // write-build-stamp.mjs fromLocalGit). Fall back to the installer that
     // ships inside the already-installed agent checkout so dev/self-builds can
     // still bootstrap instead of dying with a fatal 404.
-    const installed = installedAgentInstallScript(eternalHome)
+    const installed = resolveInstalledAgentFallback({
+      cached,
+      emit,
+      eternalHome,
+      resolvedCommit,
+      reason: `GitHub fetch failed (${err.message}); `
+    })
 
     if (installed) {
-      emit({
-        type: 'log',
-        line:
-          `[bootstrap] GitHub fetch failed (${err.message}); ` +
-          `falling back to installed agent ${installScriptName()} at ${installed}`
-      })
-
-      try {
-        fs.mkdirSync(path.dirname(cached), { recursive: true })
-        fs.copyFileSync(installed, cached)
-
-        return { path: cached, source: 'installed-agent', commit: resolvedCommit, kind: installScriptKind() }
-      } catch {
-        // Cache copy failed (read-only FS, etc.) -- use the source path directly.
-        return { path: installed, source: 'installed-agent', commit: resolvedCommit, kind: installScriptKind() }
-      }
+      return installed
     }
 
     throw err
@@ -865,6 +934,10 @@ async function runBootstrap(opts) {
     logRoot,
     onEvent,
     abortSignal,
+    // A packaged build cannot fetch the installer from the private source
+    // repo; resolveInstallScript uses this to skip a download that can only
+    // 404 and to explain the failure in terms the user can act on.
+    isPackaged = false,
     writeMarker // callback to write the bootstrap-complete marker; main.ts provides
   } = opts
 
@@ -927,7 +1000,7 @@ async function runBootstrap(opts) {
     }
 
     // 1. Resolve the platform installer.
-    const scriptInfo = await resolveInstallScript({ installStamp, sourceRepoRoot, eternalHome, emit })
+    const scriptInfo = await resolveInstallScript({ installStamp, sourceRepoRoot, eternalHome, emit, isPackaged })
     const installerKind = scriptInfo.kind || 'powershell'
 
     // 2. Fetch manifest
@@ -1023,10 +1096,12 @@ export {
   buildPinArgs,
   buildPosixPinArgs,
   cachedScriptPath,
+  canDownloadInstallScript,
   hasExistingGitCheckout,
   installedAgentInstallScript,
   installRefForStamp,
   isPinnedCommit,
+  packagedRepairMessage,
   // Exposed for testability
   parseStageResult,
   resolveCheckoutHead,

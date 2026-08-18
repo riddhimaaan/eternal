@@ -4755,6 +4755,7 @@ async function ensureRuntime(backend) {
     const bootstrapResult = await runBootstrap({
       installStamp: backend.installStamp,
       activeRoot: backend.activeRoot,
+      isPackaged: IS_PACKAGED,
       sourceRepoRoot: SOURCE_REPO_ROOT,
       eternalHome: ETERNAL_HOME,
       logRoot: path.join(ETERNAL_HOME, 'logs'),

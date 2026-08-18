@@ -9,10 +9,12 @@ import {
   buildPinArgs,
   buildPosixPinArgs,
   cachedScriptPath,
+  canDownloadInstallScript,
   hasExistingGitCheckout,
   installedAgentInstallScript,
   installRefForStamp,
   isPinnedCommit,
+  packagedRepairMessage,
   resolveInstallScript,
   resolveMarkerPinnedCommit,
   runBootstrap
@@ -267,6 +269,152 @@ test('resolveInstallScript rethrows when the 404 fallback is unavailable', async
         }
       }),
       /HTTP 404|Failed to download/
+    )
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
+
+// --- packaged builds never fetch from the private source repo -------------
+//
+// riddhimaaan/eternal is private, so raw.githubusercontent.com 404s for every
+// customer. A packaged build that asks anyway spends a round-trip to produce
+// an error the user cannot act on.
+
+test('canDownloadInstallScript allows a source run and refuses a packaged build', () => {
+  assert.equal(canDownloadInstallScript({ isPackaged: false }), true)
+  assert.equal(canDownloadInstallScript({ isPackaged: undefined }), true)
+  assert.equal(canDownloadInstallScript({ isPackaged: true }), false)
+})
+
+test('packagedRepairMessage names the public releases page and reassures about data', () => {
+  const message = packagedRepairMessage()
+
+  assert.match(message, /eternal-releases/)
+  assert.doesNotMatch(message, /raw\.githubusercontent/)
+  // The private source repo must never be named in something a customer reads.
+  assert.doesNotMatch(message, /github\.com\/riddhimaaan\/eternal(?![-\w])/)
+  assert.match(message, /not affected/)
+})
+
+test('resolveInstallScript does not touch the network in a packaged build', async () => {
+  const home = mkTmpHome()
+
+  try {
+    let downloadCalls = 0
+    const logs = []
+
+    await assert.rejects(
+      resolveInstallScript({
+        installStamp: { commit: 'a'.repeat(40) },
+        sourceRepoRoot: null,
+        eternalHome: home,
+        emit: ev => logs.push(ev),
+        isPackaged: true,
+        _download: async () => {
+          downloadCalls += 1
+          throw new Error('Failed to download install.sh: HTTP 404')
+        }
+      }),
+      /Reinstall Eternal from .*eternal-releases/
+    )
+
+    assert.equal(downloadCalls, 0, 'a packaged build must not attempt the download')
+    assert.ok(
+      logs.some(ev => /not fetching .* packaged build, source repo is private/.test(ev.line || '')),
+      'explains in the log why the download was skipped'
+    )
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('resolveInstallScript still repairs a packaged build from an installed agent checkout', async () => {
+  const home = mkTmpHome()
+
+  try {
+    // A damaged venv with the agent checkout still present: recoverable
+    // locally, so the reinstall message would be wrong here.
+    const scriptsDir = path.join(home, 'eternal-agent', 'scripts')
+    fs.mkdirSync(scriptsDir, { recursive: true })
+    fs.writeFileSync(path.join(scriptsDir, SCRIPT_NAME), '#!/bin/sh\necho installed\n')
+
+    let downloadCalls = 0
+
+    const result = await resolveInstallScript({
+      installStamp: { commit: 'a'.repeat(40) },
+      sourceRepoRoot: null,
+      eternalHome: home,
+      emit: () => {},
+      isPackaged: true,
+      _download: async () => {
+        downloadCalls += 1
+        throw new Error('should not be reached')
+      }
+    })
+
+    assert.equal(result.source, 'installed-agent')
+    assert.equal(downloadCalls, 0)
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('resolveInstallScript prefers the cache over the reinstall message in a packaged build', async () => {
+  const home = mkTmpHome()
+
+  try {
+    const commit = 'a'.repeat(40)
+    const cached = cachedScriptPath(home, commit)
+    fs.mkdirSync(path.dirname(cached), { recursive: true })
+    fs.writeFileSync(cached, '#!/bin/sh\necho cached\n')
+
+    const result = await resolveInstallScript({
+      installStamp: { commit },
+      sourceRepoRoot: null,
+      eternalHome: home,
+      emit: () => {},
+      isPackaged: true
+    })
+
+    assert.equal(result.source, 'cache')
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('a packaged build with no install stamp asks for a reinstall, not a build-stamp lecture', async () => {
+  const home = mkTmpHome()
+
+  try {
+    await assert.rejects(
+      resolveInstallScript({
+        installStamp: null,
+        sourceRepoRoot: null,
+        eternalHome: home,
+        emit: () => {},
+        isPackaged: true
+      }),
+      /Reinstall Eternal from .*eternal-releases/
+    )
+  } finally {
+    fs.rmSync(home, { recursive: true, force: true })
+  }
+})
+
+test('a source run with no install stamp still gets the developer-facing explanation', async () => {
+  const home = mkTmpHome()
+
+  try {
+    await assert.rejects(
+      resolveInstallScript({
+        installStamp: null,
+        sourceRepoRoot: null,
+        eternalHome: home,
+        emit: () => {},
+        isPackaged: false
+      }),
+      /valid build-time stamp/
     )
   } finally {
     fs.rmSync(home, { recursive: true, force: true })
