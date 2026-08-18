@@ -39,8 +39,16 @@ const REPO_ROOT = path.resolve(APP_ROOT, '../..')
 // python-build-standalone supplies relocatable CPython builds. Bump both
 // together; the asset name is derived from them, so a bad pair fails loudly at
 // download rather than producing a half-staged bundle.
-const PBS_RELEASE = process.env.ETERNAL_PBS_RELEASE || '20250818'
-const PY_VERSION = process.env.ETERNAL_PY_VERSION || '3.11.13'
+//
+// The pair is ALSO constrained by the SQLite the artifact links: assertSafeSqlite
+// below refuses anything carrying the WAL-reset corruption bug. 3.11.13+20250818
+// linked SQLite 3.49.1 and shipped every install with WAL disabled; 3.11.14 is no
+// better (every published artifact for it links 3.50.4). 3.11.15 is the first
+// patch whose builds link a fixed SQLite (3.53.1). Verify with a real download,
+// never by reading version numbers — PBS re-releases the same CPython patch
+// version with different builds.
+const PBS_RELEASE = process.env.ETERNAL_PBS_RELEASE || '20260728'
+const PY_VERSION = process.env.ETERNAL_PY_VERSION || '3.11.15'
 
 // Platforms whose bundle has actually been built and launched. The staging and
 // seeding code is written for the others, but none of it has been run, and the
@@ -475,6 +483,63 @@ function trimPython(pythonDir, opts) {
   log(`  trimmed ${(freed / 1e6).toFixed(0)} MB from the interpreter`)
 }
 
+/**
+ * Refuse to bundle an interpreter whose linked SQLite has the WAL-reset bug.
+ *
+ * Eternal detects this at runtime and protects itself by falling back to
+ * journal_mode=DELETE, so a bad interpreter does not corrupt anyone's data — it
+ * quietly makes every install slower, forever, and then advises the user to run
+ * `eternal update`, which cannot repair a packaged app. Build time is the only
+ * place the fix is cheap, so refuse here rather than warn there.
+ *
+ * The rule is deliberately NOT reimplemented in JS: this calls
+ * eternal_cli.sqlite_runtime (stdlib-only by design, so it imports on a bare
+ * staged interpreter), which keeps the bundle and the runtime from ever
+ * disagreeing about what counts as vulnerable. And it probes the artifact that
+ * was actually downloaded — PBS re-publishes the same CPython patch version with
+ * different builds, so PY_VERSION alone proves nothing.
+ */
+function assertSafeSqlite(interpreter) {
+  const script = [
+    'import json, sqlite3',
+    'from eternal_cli.sqlite_runtime import is_sqlite_wal_reset_vulnerable',
+    'print(json.dumps({',
+    '    "version": sqlite3.sqlite_version,',
+    '    "vulnerable": bool(is_sqlite_wal_reset_vulnerable(sqlite3.sqlite_version_info)),',
+    '}))'
+  ].join('\n')
+
+  const probe = spawnSync(interpreter, ['-c', script], {
+    encoding: 'utf8',
+    env: { ...process.env, PYTHONPATH: REPO_ROOT }
+  })
+
+  if (probe.status !== 0) {
+    fail(`could not read the staged interpreter's SQLite version:\n${probe.stderr || probe.stdout}`)
+  }
+
+  let result
+
+  try {
+    result = JSON.parse(String(probe.stdout).trim().split('\n').pop())
+  } catch {
+    fail(`unexpected SQLite probe output from the staged interpreter:\n${probe.stdout}`)
+  }
+
+  if (result.vulnerable) {
+    fail(
+      `the staged CPython links SQLite ${result.version}, which carries the WAL-reset ` +
+        'corruption bug (https://sqlite.org/wal.html#walresetbug).\n' +
+        '  Every install built from this bundle would run with WAL disabled.\n' +
+        '  Choose a python-build-standalone pair whose SQLite is 3.51.3+ (or the\n' +
+        '  3.50.7 / 3.44.6 backports) and bump ETERNAL_PY_VERSION / ETERNAL_PBS_RELEASE:\n' +
+        '  https://github.com/astral-sh/python-build-standalone/releases'
+    )
+  }
+
+  log(`  SQLite ${result.version} — clear of the WAL-reset bug`)
+}
+
 /** Where the staged interpreter lives. Mirrors bundledPythonPath() in electron/seed-bundled-runtime.ts. */
 function bundledInterpreterPath(outDir, platform) {
   return platform === 'win32'
@@ -594,6 +659,28 @@ function isAlreadyStaged(opts) {
   )
 }
 
+/**
+ * Check the interpreter that will actually be packaged, whatever produced it.
+ *
+ * Deliberately not folded into stagePython: routine builds hit the
+ * already-staged path and never download an interpreter at all, so a check that
+ * lived beside the download would quietly never run — worse than no check,
+ * because the build would still look verified. This runs on every invocation and
+ * inspects what is on disk.
+ *
+ * A missing interpreter is not this function's business; the staging paths and
+ * the seeder each report that in their own terms.
+ */
+function verifyStagedInterpreter(opts) {
+  const interpreter = bundledInterpreterPath(opts.out, opts.platform)
+
+  if (!fs.existsSync(interpreter)) {
+    return
+  }
+
+  assertSafeSqlite(interpreter)
+}
+
 async function main() {
   const opts = parseArgs(process.argv.slice(2))
 
@@ -622,12 +709,14 @@ async function main() {
     // than trying to guess whether it changed.
     if (opts.skipSource) {
       log(`already staged for ${opts.platform}-${opts.arch} (Python ${PY_VERSION}); --skip-source given, leaving source as-is`)
+      verifyStagedInterpreter(opts)
 
       return
     }
 
     log(`already staged for ${opts.platform}-${opts.arch} (Python ${PY_VERSION}) — refreshing source, reusing interpreter + wheels`)
     stageSource(opts.out, readPackagingMetadata())
+    verifyStagedInterpreter(opts)
 
     return
   }
@@ -654,6 +743,8 @@ async function main() {
   if (!opts.skipWheels) {
     stageWheels(opts.out, meta, opts, stagedPython)
   }
+
+  verifyStagedInterpreter(opts)
 
   // The manifest describes what is on disk, so only rewrite it when this run
   // actually staged something. Skipping every stage and still stamping the
