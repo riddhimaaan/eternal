@@ -8,8 +8,7 @@ name: Skills Index Freshness Check
 # Triggered every 4 hours so we catch a stuck cron within one tick.
 
 on:
-  # Timer removed: gated to NousResearch/hermes-agent, so it woke up every four
-  # hours here to skip itself — six runs a day of pure noise in the runs list.
+  # Run manually while the Eternal documentation deployment is being established.
   workflow_dispatch:
 
 permissions:
@@ -18,7 +17,7 @@ permissions:
 
 jobs:
   check-freshness:
-    if: github.repository == 'NousResearch/hermes-agent'
+    if: github.repository == 'riddhimaaan/eternal'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: trusted-automation
@@ -35,7 +34,7 @@ jobs:
         id: probe
         run: |
           set -e
-          URL="https://hermes-agent.nousresearch.com/docs/api/skills-index.json"
+          URL="https://riddhimaaan.github.io/eternal/docs/api/skills-index.json"
           echo "Probing $URL"
           # -L follows redirects; -f fails on HTTP errors; -s suppresses progress
           if ! curl -fsSL --retry 3 --retry-delay 10 -o /tmp/skills-index.json "$URL"; then

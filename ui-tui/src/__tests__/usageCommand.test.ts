@@ -5,8 +5,6 @@ import type { SessionUsageResponse } from '../gatewayTypes.js'
 
 const usageCommand = sessionCommands.find(cmd => cmd.name === 'usage')!
 
-const USAGE_CTA = 'Run /subscription to change plan · /topup to add to your balance'
-
 const guarded =
   <T>(fn: (r: T) => void) =>
   (r: null | T) => {
@@ -46,79 +44,64 @@ const baseUsage = (overrides: Partial<SessionUsageResponse> = {}): SessionUsageR
 
 const printed = (sys: ReturnType<typeof vi.fn>) => sys.mock.calls.map(c => c[0]).join('\n')
 
-const balancePanel = (panel: ReturnType<typeof vi.fn>) => {
-  const sections = panel.mock.calls.find(c => c[0] === 'Balance')?.[1] as { text?: string }[] | undefined
-
-  return (sections ?? []).map(s => s.text ?? '').join('\n')
-}
-
 describe('/usage slash command', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('always shows the CTA; "no API calls yet" only when there is no balance', async () => {
-    const empty = buildCtx({ 'session.usage': baseUsage({ calls: 0, credits_lines: [] }) })
+  it('reports when the session has made no API calls', async () => {
+    const empty = buildCtx({ 'session.usage': baseUsage({ calls: 0 }) })
     await empty.run('')
     expect(printed(empty.sys)).toContain('no API calls yet')
-    expect(printed(empty.sys)).toContain(USAGE_CTA)
-
-    const withBalance = buildCtx({ 'session.usage': baseUsage({ calls: 0, credits_lines: ['$50.00 remaining'] }) })
-    await withBalance.run('')
-    expect(printed(withBalance.sys)).not.toContain('no API calls yet')
-    expect(printed(withBalance.sys)).toContain(USAGE_CTA)
+    expect(empty.panel).not.toHaveBeenCalled()
   })
 
-  it('renders the dollar two-bar model (no "credits" wording) when available', async () => {
+  it('renders provider-neutral token and API-call usage', async () => {
     const { panel, run } = buildCtx({
       'session.usage': baseUsage({
-        usage: {
-          available: true,
-          status: 'healthy',
-          plan_name: 'Plus',
-          renews_display: 'Jul 1, 2026',
-          total_spendable_display: '$26.00',
-          has_topup: true,
-          plan_bar: {
-            kind: 'plan',
-            remaining_display: '$14.00',
-            total_display: '$20.00',
-            spent_display: '$6.00',
-            pct_used: 30,
-            fill_fraction: 0.7
-          },
-          topup_bar: {
-            kind: 'topup',
-            remaining_display: '$12.00',
-            total_display: '$12.00',
-            spent_display: '$0.00',
-            pct_used: null,
-            fill_fraction: 1
-          }
-        }
+        calls: 2,
+        input: 1200,
+        model: 'openai/gpt-5',
+        output: 300,
+        total: 1500
       })
     })
 
     await run('')
 
-    const body = balancePanel(panel)
-    expect(body).toContain('Plus')
-    expect(body).toContain('$14.00 left of $20.00')
-    expect(body).toContain('30% used')
-    expect(body).toContain('top-up')
-    expect(body).toContain('$12.00')
-    expect(body.toLowerCase()).not.toContain('credits')
+    expect(panel).toHaveBeenCalledWith(
+      'Usage',
+      expect.arrayContaining([
+        expect.objectContaining({
+          rows: expect.arrayContaining([
+            ['Model', 'openai/gpt-5'],
+            ['Input tokens', '1,200'],
+            ['Output tokens', '300'],
+            ['Total tokens', '1,500'],
+            ['API calls', '2']
+          ])
+        })
+      ])
+    )
   })
 
-  it('shows the free-models upsell for a free account', async () => {
+  it('includes context and compression details when available', async () => {
     const { panel, run } = buildCtx({
-      'session.usage': baseUsage({ usage: { available: true, status: 'free', plan_name: null } })
+      'session.usage': baseUsage({
+        calls: 1,
+        compressions: 2,
+        context_max: 100_000,
+        context_percent: 25,
+        context_used: 25_000
+      })
     })
 
     await run('')
 
-    const body = balancePanel(panel)
-    expect(body).toContain('free models only')
-    expect(body).toContain('/subscription')
+    const sections = panel.mock.calls[0]?.[1] as { text?: string }[]
+    expect(sections.map(section => section.text).filter(Boolean)).toEqual([
+      'Context: 25,000 / 100,000 (25%)',
+      'Compressions: 2'
+    ])
   })
 })

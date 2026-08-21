@@ -14,22 +14,21 @@ platform-gated features are supported), see **[Platform Support](./platform-supp
 :::
 
 ## Quick Install
-### With the Eternal Desktop installer on macOS or Windows (recommended)
-To easily install the command-line and desktop applications, [download the Eternal Desktop installer](https://hermes-agent.nousresearch.com/) from our website and run it.
 
-### Without Eternal Desktop:
-For a command-line only install without Eternal Desktop, run:
+Eternal is currently distributed as source. Install the command-line runtime
+with the script for your platform. After setup, run `eternal desktop` to build
+and launch the desktop interface from the same checkout.
 
 #### Linux / macOS / WSL2 / Android (Termux)
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | bash
 ```
 
 #### Windows (native)
 
 Run in powershell:
 ```powershell
-iex (irm https://hermes-agent.nousresearch.com/install.ps1) 
+iex (irm https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.ps1)
 ```
 
 If you want to install & run Eternal Desktop after a command-line only install, simply run
@@ -72,14 +71,16 @@ eternal config get     # Inspect individual config values
 eternal setup          # Or run the full setup wizard to configure everything at once
 ```
 
-:::tip Fastest path: Nous Portal
-One subscription covers 300+ models plus the [Tool Gateway](/user-guide/features/tool-gateway) (web search, image generation, TTS, cloud browser). Skip the per-tool key juggling:
+:::tip Fastest path
+Run the setup wizard and choose a provider you control. OpenRouter is a useful
+first option if you want several model families behind one API key.
 
 ```bash
-eternal setup --portal
+eternal setup
 ```
 
-That logs you in, sets Nous as your provider, and turns on the Tool Gateway in one command.
+After the model works, run `eternal tools` to configure web search, image,
+speech, and browser providers individually.
 :::
 
 ---
@@ -124,12 +125,12 @@ Running Eternal as a dedicated unprivileged user (e.g. a `eternal` systemd servi
 
 2. **As the unprivileged service user**, run the regular installer. It will detect the missing sudo, skip `--with-deps`, and install Chromium into the user's local Playwright cache:
    ```bash
-   curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+   curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | bash
    ```
 
    If you want to skip the Playwright step entirely — for example because you're running headless and don't need browser automation — pass `--skip-browser`:
    ```bash
-   curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser
+   curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | bash -s -- --skip-browser
    ```
 
    The installer also pre-installs [`cua-driver`](../user-guide/features/computer-use.md) so the Computer Use toolset works the moment you enable it; pass `--skip-computer-use` to opt out (it will then install on demand when you enable the tool).

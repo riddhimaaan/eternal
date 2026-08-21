@@ -64,8 +64,7 @@ export interface ApiKeyOption {
   short?: string
 }
 
-// Curated order mirrors CANONICAL_PROVIDERS: Fireworks sits #2 overall (after
-// Nous Portal OAuth), ahead of OpenRouter and the rest of the key catalog.
+// Curated providers appear before the full key catalog returned by the backend.
 const API_KEY_OPTIONS: ApiKeyOption[] = [
   {
     id: 'fireworks',
@@ -475,10 +474,8 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
   const select = (p: OAuthProvider) => void startProviderOAuth(p, ctx)
   const featured = ordered.find(p => p.id === FEATURED_ID) ?? null
   const rest = featured ? ordered.filter(p => p.id !== FEATURED_ID) : ordered
-  // Collapse the secondary providers behind a disclosure whenever Nous Portal
-  // is present to anchor the choice — otherwise show the full list. The
-  // Fireworks/OpenRouter key rows always live behind the disclosure, so the
-  // toggle is warranted even when there are no other OAuth providers.
+  // A future featured provider may collapse secondary options behind this
+  // disclosure. With no featured provider, every option remains visible.
   const collapsible = Boolean(featured)
   const showRest = !collapsible || showAll
 
@@ -488,8 +485,7 @@ export function Picker({ ctx }: { ctx: OnboardingContext }) {
         {featured ? <FeaturedProviderRow onSelect={select} provider={featured} /> : null}
         {showRest ? (
           <>
-            {/* Fireworks leads the expanded list, matching CANONICAL_PROVIDERS
-                (Nous → Fireworks), but stays hidden until the user opens it. */}
+            {/* Fireworks leads the API-key options. */}
             <FireworksProviderRow onClick={() => openKeyForm('FIREWORKS_API_KEY')} />
             {rest.map(p => (
               <ProviderRow key={p.id} onSelect={select} provider={p} />

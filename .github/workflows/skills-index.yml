@@ -1,8 +1,7 @@
 name: Build Skills Index
 
 on:
-  # Timer removed: every job here is gated to NousResearch/hermes-agent, so on
-  # this fork the schedule only ever produced skipped runs.
+  # Manual and source-change builds for Eternal's own skills index.
   workflow_dispatch: # Manual trigger
   push:
     branches: [main]
@@ -16,8 +15,7 @@ permissions:
 
 jobs:
   build-index:
-    # Only run on the upstream repository, not on forks
-    if: github.repository == 'NousResearch/hermes-agent'
+    if: github.repository == 'riddhimaaan/eternal'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: trusted-automation

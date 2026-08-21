@@ -116,7 +116,7 @@ sudo mkdir -p /etc/eternal
 # Pin some config values for every user on this machine
 sudo tee /etc/eternal/config.yaml >/dev/null <<'YAML'
 model:
-  provider: nous
+  provider: openrouter
 security:
   redact_secrets: true
 YAML

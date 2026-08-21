@@ -9,8 +9,8 @@ Outputs:
                                     comments separating files.
 
 Both publish at:
-  https://hermes-agent.nousresearch.com/docs/llms.txt
-  https://hermes-agent.nousresearch.com/docs/llms-full.txt
+  https://riddhimaaan.github.io/eternal/docs/llms.txt
+  https://riddhimaaan.github.io/eternal/docs/llms-full.txt
 
 The `/docs/` prefix is not a mistake — Docusaurus serves `website/static/`
 at the `docs/` base path. Clients and IDE plugins that probe the classic
@@ -31,7 +31,7 @@ WEBSITE = SCRIPT_DIR.parent
 DOCS = WEBSITE / "docs"
 STATIC = WEBSITE / "static"
 
-SITE_BASE = "https://hermes-agent.nousresearch.com/docs"
+SITE_BASE = "https://riddhimaaan.github.io/eternal/docs"
 
 # Curated sections for llms.txt — mirrors the product story, not the filesystem.
 # Each entry: (docs-relative path without .md, display title, optional short desc).
@@ -200,22 +200,20 @@ def emit_llms_index() -> str:
     lines.append("# Eternal Agent")
     lines.append("")
     lines.append(
-        "> The self-improving AI agent built by Nous Research. A terminal-native "
+        "> Eternal is an open-source, terminal-native "
         "autonomous coding and task agent with persistent memory, agent-created skills, "
         "and a messaging gateway that lives on 21+ messaging platforms — 19 native to "
         "the gateway plus IRC and Microsoft Teams via plugins (Telegram, Discord, Slack, "
         "SMS, Matrix, ...). Runs on local, Docker, SSH, Daytona, Modal, or Singularity "
-        "backends. Works with Nous Portal, OpenRouter, OpenAI, Anthropic, Google, or any "
+        "backends. Works with OpenRouter, OpenAI, Anthropic, Google, or any "
         "OpenAI-compatible endpoint."
     )
     lines.append("")
     lines.append(
-        "Install: `curl -fsSL https://raw.githubusercontent.com/NousResearch/"
-        "eternal-agent/main/scripts/install.sh | bash`  "
-        "(Linux, macOS, WSL2, Termux)"
+        "Install from source: `git clone https://github.com/riddhimaaan/eternal.git`"
     )
     lines.append("")
-    lines.append("Repo: https://github.com/NousResearch/hermes-agent")
+    lines.append("Repo: https://github.com/riddhimaaan/eternal")
     lines.append("")
 
     for section, items in SECTIONS:
@@ -248,8 +246,8 @@ def emit_llms_full() -> str:
             "Started, Using Eternal, Features, Messaging, Integrations, Guides, "
             "Developer Guide, Reference, then everything else.\n"
         ),
-        "Canonical site: https://hermes-agent.nousresearch.com/docs\n",
-        "Short index: https://hermes-agent.nousresearch.com/docs/llms.txt\n",
+        "Canonical site: https://riddhimaaan.github.io/eternal/docs\n",
+        "Short index: https://riddhimaaan.github.io/eternal/docs/llms.txt\n",
         "\n---\n\n",
     ]
 

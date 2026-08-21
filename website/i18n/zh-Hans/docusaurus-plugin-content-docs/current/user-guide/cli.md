@@ -25,7 +25,7 @@ eternal chat -q "Hello"
 eternal chat --model "anthropic/claude-sonnet-4"
 
 # 使用指定提供商
-eternal chat --provider nous        # 使用 Nous Portal
+eternal chat --provider openrouter        # 使用你的 OpenRouter API key
 eternal chat --provider openrouter  # 强制使用 OpenRouter
 
 # 使用指定工具集

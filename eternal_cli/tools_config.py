@@ -3289,52 +3289,21 @@ def _visible_providers(
     force_fresh: bool = False,
     features: Optional[NousSubscriptionFeatures] = None,
 ) -> list[dict]:
-    """Return provider entries visible for the current auth/config state.
+    """Return providers that belong in Eternal's public configuration UI.
 
-    Nous-managed Tool Gateway rows (``managed_nous_feature``) are always
-    shown — even to logged-out / unentitled users — so the picker advertises
-    that the capability exists.  Selecting one drives an inline Nous Portal
-    login + entitlement check (see ``_configure_provider``); the row only
-    *activates* the gateway once paid access is confirmed.
+    Legacy Nous-managed rows remain in the catalogue for compatibility with
+    older configuration files, but Eternal no longer advertises or activates
+    them through its terminal, desktop, or web provider pickers.
     """
-    if features is None:
-        features = get_nous_subscription_features(config, force_fresh=force_fresh)
-    acct = features.account_info
-    # Pool-only users (entitled to managed tools via the free tool pool but with
-    # no paid access) get image gen but NOT video gen — the pool doesn't fund
-    # `fal-video`. Rather than advertise a managed video row that would be denied
-    # on select, hide it for them. Logged-out users still see it (advertising)
-    # and paid users are entitled to it.
-    pool_only = bool(
-        acct
-        and acct.logged_in
-        and acct.paid_service_access is not True
-        and acct.tool_gateway_entitled
-    )
-    visible = []
-    for provider in cat.get("providers", []):
-        # Nous-managed Tool Gateway rows stay visible regardless of auth —
-        # selecting one drives an inline Portal login. A `requires_nous_auth`
-        # row that is NOT a managed gateway feature (pure pre-auth UX) is
-        # still hidden until the user is logged in.
-        if (
-            provider.get("requires_nous_auth")
-            and not provider.get("managed_nous_feature")
-            and not features.nous_auth_present
-        ):
-            continue
-        # Hide the managed video-gen row from pool-only users — their free tool
-        # pool doesn't cover video, so showing it would only lead to a denial.
-        if (
-            pool_only
-            and provider.get("managed_nous_feature") == "video_gen"
-            and not (acct and acct.tool_gateway_entitled_for("fal-video"))
-        ):
-            continue
-        visible.append(provider)
+    visible = [
+        provider
+        for provider in cat.get("providers", [])
+        if not provider.get("requires_nous_auth")
+        and not provider.get("managed_nous_feature")
+    ]
 
     # Inject plugin-registered image_gen backends (OpenAI today, more
-    # later) so the picker lists them alongside FAL / Nous Subscription.
+    # later) so the picker lists them alongside built-in providers.
     if cat.get("name") == "Image Generation":
         visible.extend(_plugin_image_gen_providers())
 
@@ -3346,16 +3315,13 @@ def _visible_providers(
     # Inject plugin-registered web search backends. After PR #25182, this
     # is the SOLE source of provider rows for the Web Search & Extract
     # category — the per-provider hardcoded entries were deleted. The two
-    # remaining hardcoded rows ("Nous Subscription", "Firecrawl
-    # Self-Hosted") are non-provider UX setup-flow rows for firecrawl.
+    # remaining hardcoded rows are non-provider UX setup flows for firecrawl.
     if cat.get("name") == "Web Search & Extract":
         visible.extend(_plugin_web_search_providers())
 
     # Inject plugin-registered cloud browser backends. After PR #25214,
     # Browserbase / Browser Use / Firecrawl are the plugin-supplied rows;
-    # the hardcoded "Nous Subscription" / "Local Browser" / "Camofox" rows
-    # stay because they're non-provider UX setup flows (subscription auth,
-    # local fallback, and the REST-API anti-detection backend respectively).
+    # local and anti-detection setup rows remain built in.
     if cat.get("name") == "Browser Automation":
         visible.extend(_plugin_browser_providers())
 
@@ -5217,7 +5183,7 @@ def tools_command(args=None, first_install: bool = False, config: dict = None):
     print(color("⚕ Eternal Tool Configuration", Colors.CYAN, Colors.BOLD))
     print(color("  Enable or disable tools per platform.", Colors.DIM))
     print(color("  Tools that need API keys will be configured when enabled.", Colors.DIM))
-    print(color("  Guide: https://hermes-agent.nousresearch.com/docs/user-guide/features/tools", Colors.DIM))
+    print(color("  Guide: https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/features/tools.md", Colors.DIM))
     print()
 
     # ── First-time install: linear flow, no platform menu ──

@@ -9,7 +9,9 @@ sidebar_position: 0
 Eternal Agent connects to external systems for AI inference, tool servers, IDE workflows, programmatic access, and more. These integrations extend what Eternal can do and where it can run.
 
 :::tip Start here
-If you only have time to set up one integration, set up [Nous Portal](/integrations/nous-portal) — a single OAuth login covers 300+ models plus the four Tool Gateway tools (web search, image generation, TTS, and browser automation).
+Start with [one AI provider](/integrations/providers) and verify a normal chat.
+Then add web, image, speech, browser, or MCP integrations only when you need
+them. Each integration uses credentials from the service you choose.
 :::
 
 ## AI Providers & Routing

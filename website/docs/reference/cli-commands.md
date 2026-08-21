@@ -43,14 +43,14 @@ eternal [global-options] <command> [subcommand/options]
 | `eternal moa` | Configure named Mixture of Agents presets selectable from the model picker. |
 | `eternal fallback` | Manage fallback providers tried when the primary model errors. |
 | `eternal gateway` | Run or manage the messaging gateway service. |
-| `eternal proxy` | Local OpenAI-compatible proxy that attaches OAuth provider credentials. See [Subscription Proxy](../user-guide/features/subscription-proxy.md). |
+| `eternal proxy` | Local OpenAI-compatible proxy that attaches supported provider credentials. |
 | `eternal egress` | Outbound credential-injection firewall for remote terminal sandboxes (iron-proxy). Disabled by default. See [Egress proxy](../user-guide/egress/iron-proxy.md). |
 | `eternal lsp` | Manage Language Server Protocol integration (semantic diagnostics for write_file/patch). |
 | `eternal setup` | Interactive setup wizard for all or part of the configuration. |
 | `eternal whatsapp` | Configure and pair the WhatsApp bridge. |
 | `eternal whatsapp-cloud` | Configure the official Meta WhatsApp Business Cloud API adapter (Business account + public webhook required). Distinct from `eternal whatsapp` (Baileys personal-account bridge). |
 | `eternal slack` | Slack helpers (currently: generate the app manifest with every command as a native slash). |
-| `eternal auth` | Manage credentials — add, list, remove, reset, status, logout. Handles OAuth flows for Codex/Nous/Anthropic. |
+| `eternal auth` | Manage credentials — add, list, remove, reset, status, logout. Handles supported OAuth and API-key credential pools. |
 | `eternal login` / `logout` | **Deprecated** — use `eternal auth` instead. |
 | `eternal send` | Send a one-shot message to a configured messaging platform (Telegram, Discord, Slack, Signal, SMS, …). Useful from shell scripts, cron jobs, CI hooks, and monitoring daemons — no agent loop, no LLM. |
 | `eternal secrets` | Manage external secret sources (currently Bitwarden Secrets Manager) for pulling API keys at process startup instead of from `~/.eternal/.env`. |
@@ -83,7 +83,7 @@ eternal [global-options] <command> [subcommand/options]
 | `eternal acp` | Run Eternal as an ACP server for editor integration. |
 | `eternal mcp` | Manage MCP server configurations and run Eternal as an MCP server. |
 | `eternal plugins` | Manage Eternal Agent plugins (install, enable, disable, remove). |
-| `eternal portal` | Nous Portal status, subscription link, and Tool Gateway routing. See [Tool Gateway](../user-guide/features/tool-gateway.md). |
+| `eternal model` | Interactively choose an inference provider and default model. |
 | `eternal tools` | Configure enabled tools per platform. |
 | `eternal computer-use` | Install or check the Computer Use (cua-driver) backend (macOS/Windows/Linux). |
 | `eternal pets` | Browse, install, and select [petdex](../user-guide/features/pets.md) animated pets shown across the CLI, TUI, and desktop app. Subcommands: `list`, `install`, `select`, `show`, `off`, `scale`, `remove`, `doctor`. |
@@ -113,7 +113,7 @@ Common options:
 | `-q`, `--query "..."` | One-shot, non-interactive prompt. |
 | `-m`, `--model <model>` | Override the model for this run. |
 | `-t`, `--toolsets <csv>` | Enable a comma-separated set of toolsets. |
-| `--provider <provider>` | Force a provider: `auto`, `openrouter`, `nous`, `openai-codex`, `copilot-acp`, `copilot`, `anthropic`, `gemini`, `huggingface`, `novita` (aliases `novita-ai`, `novitaai`), `openai-api`, `zai`, `kimi-coding`, `kimi-coding-cn`, `minimax`, `minimax-cn`, `minimax-oauth`, `kilocode`, `xiaomi`, `arcee`, `gmi`, `upstage` (alias `solar`), `alibaba`, `alibaba-coding-plan` (alias `alibaba_coding`), `deepseek`, `nvidia`, `ollama-cloud`, `xai` (alias `grok`), `xai-oauth` (alias `grok-oauth`), `qwen-oauth`, `bedrock`, `opencode-zen`, `opencode-go`, `ai-gateway`, `azure-foundry`, `lmstudio`, `stepfun`, `tencent-tokenhub` (alias `tencent`, `tokenhub`). |
+| `--provider <provider>` | Force a configured provider such as `auto`, `openrouter`, `openai-codex`, `copilot-acp`, `copilot`, `anthropic`, `gemini`, `huggingface`, `openai-api`, `zai`, `minimax`, `deepseek`, `nvidia`, `xai`, `qwen-oauth`, `bedrock`, `azure-foundry`, `lmstudio`, or a custom provider. |
 | `-s`, `--skills <name>` | Preload one or more skills for the session (can be repeated or comma-separated). |
 | `-v`, `--verbose` | Verbose output. |
 | `-Q`, `--quiet` | Programmatic mode: suppress banner/spinner/tool previews. |
@@ -189,7 +189,7 @@ eternal model
 
 Use this when you want to:
 - **add a new provider** (OpenRouter, Anthropic, Copilot, DeepSeek, custom, etc.)
-- log into OAuth-backed providers (Anthropic, Copilot, Codex, Nous Portal)
+- log into supported OAuth-backed providers such as Anthropic, Copilot, Codex, MiniMax, Qwen, and xAI
 - enter or update API keys
 - pick from provider-specific model lists
 - configure a custom/self-hosted endpoint
@@ -303,10 +303,11 @@ the full guide, supported languages, and configuration knobs.
 ## `eternal setup`
 
 ```bash
-eternal setup [model|tts|terminal|gateway|tools|agent] [--non-interactive] [--reset] [--quick] [--reconfigure] [--portal]
+eternal setup [model|tts|terminal|gateway|tools|telemetry|agent] [--non-interactive] [--reset] [--quick] [--reconfigure]
 ```
 
-**Easiest path:** `eternal setup --portal` — OAuth into Nous Portal and opt into the [Tool Gateway](../user-guide/features/tool-gateway.md) in one shot.
+**Easiest path:** run `eternal setup`, choose a model provider, then configure
+only the optional tools you intend to use.
 
 **First run:** launches the first-time wizard.
 
@@ -330,23 +331,15 @@ Options:
 | `--non-interactive` | Use defaults / environment values without prompts. |
 | `--reset` | Reset configuration to defaults before setup. |
 | `--reconfigure` | Backwards-compat alias — bare `eternal setup` on an existing install now does this by default. |
-| `--portal` | One-shot Nous Portal setup: log in via OAuth, set Nous as the inference provider, and opt into the [Tool Gateway](../user-guide/features/tool-gateway.md). Skips the rest of the wizard. |
 
-## `eternal portal`
+## `eternal model`
 
 ```bash
-eternal portal [status|open|tools]
+eternal model [--refresh]
 ```
 
-Inspect Nous Portal auth, Tool Gateway routing, and reach the subscription page. Subcommand-less invocation runs `status`.
-
-| Subcommand | Description |
-|------------|-------------|
-| `status` (default) | Portal auth state + per-tool Tool Gateway routing summary. Also shown when no subcommand is given. |
-| `open` | Open `portal.nousresearch.com/manage-subscription` in your default browser. |
-| `tools` | List every Tool Gateway partner (Firecrawl, FAL, OpenAI TTS, Browser Use, Modal) and which are routed via Nous. |
-
-For configuration of the gateway itself, see [Tool Gateway](../user-guide/features/tool-gateway.md). For the one-shot setup path, see `eternal setup --portal` above.
+Open the interactive provider and model picker. Use `--refresh` to clear its
+cached provider model lists and fetch them again.
 
 ## `eternal whatsapp`
 
@@ -480,20 +473,6 @@ Common flags for migration subcommands:
 
 > Not to be confused with `eternal claw migrate` (one-shot import of OpenClaw configuration into Eternal) — `eternal migrate` is the top-level config-rewrite command.
 
-
-## `eternal proxy`
-
-```bash
-eternal proxy <subcommand>
-```
-
-Run a local OpenAI-compatible HTTP server that forwards requests to an OAuth-authenticated upstream provider (e.g. Nous Portal, xAI). External apps can point at the proxy with any bearer token; the proxy attaches your real OAuth credentials on the way out. See [Subscription Proxy](../user-guide/features/subscription-proxy.md) for the full guide.
-
-| Subcommand | Description |
-|------------|-------------|
-| `start` | Run the proxy in the foreground. Flags: `--provider <nous\|xai>` (default `nous`), `--host <addr>` (default `127.0.0.1`; use `0.0.0.0` to expose on LAN), `--port <int>` (default `8645`). |
-| `status` | Show which proxy upstreams are ready (credentials present, OAuth valid). |
-| `providers` | List available proxy upstream providers. |
 
 
 ## `eternal security`
@@ -825,7 +804,6 @@ api_keys:
   openrouter           set
   openai               not set
   anthropic            set
-  nous                 not set
   firecrawl            set
   ...
 
@@ -868,13 +846,13 @@ Upload a debug report (system info + recent logs) to a paste service and get a s
 |--------|-------------|
 | `--lines <N>` | Number of log lines to include per log file (default: 200). |
 | `--expire <days>` | Paste expiry in days (default: 7). |
-| `--nous` | Upload to Nous-internal diagnostics storage instead of a public paste service. Use this when Nous support asks for a private diagnostic bundle. |
 | `--local` | Print the report locally instead of uploading. |
 | `--no-redact` | Disable upload-time secret redaction. By default, uploads are redacted. |
 
 The report includes system info (OS, Python version, Eternal version), recent agent, gateway, GUI/dashboard, and desktop logs (512 KB limit per file), and redacted API key status. By default, uploads are redacted so secrets are not included.
 
-Default uploads use public paste services tried in order: paste.rs, dpaste.com. `--nous` uploads the same debug bundle to private Nous diagnostics storage instead; the returned viewer link is for the Nous team and auto-deletes after 14 days.
+Default uploads use public paste services tried in order: paste.rs and
+dpaste.com. Use `--local` when you do not want diagnostic data uploaded.
 
 ### Examples
 
@@ -882,7 +860,6 @@ Default uploads use public paste services tried in order: paste.rs, dpaste.com. 
 eternal debug share              # Upload debug report, print URL
 eternal debug share --lines 500  # Include more log lines
 eternal debug share --expire 30  # Keep paste for 30 days
-eternal debug share --nous       # Upload a private diagnostics bundle for Nous support
 eternal debug share --local      # Print report to terminal (no upload)
 ```
 
@@ -1347,8 +1324,8 @@ Manage MCP (Model Context Protocol) server configurations and run Eternal as an 
 
 | Subcommand | Description |
 |------------|-------------|
-| *(none)* or `picker` | Interactive catalog picker — browse Nous-approved MCPs and install/enable/disable. |
-| `catalog` | List Nous-approved MCPs (plain text, scriptable). |
+| *(none)* or `picker` | Interactive catalog picker — browse curated MCPs and install/enable/disable. |
+| `catalog` | List curated MCPs (plain text, scriptable). |
 | `install <name>` | Install a catalog entry (e.g. `eternal mcp install n8n`). |
 | `serve [-v\|--verbose]` | Run Eternal as an MCP server — expose conversations to other agents. |
 | `add <name> [--url URL] [--command CMD] [--auth oauth\|header] [--args ...]` | Add a custom MCP server with automatic tool discovery. `--args` passes the remaining argv to the stdio command, so put it last. |
@@ -1375,7 +1352,7 @@ Unified plugin management — general plugins, memory providers, and context eng
 |------------|-------------|
 | *(none)* | Composite interactive UI — general plugin toggles + provider plugin configuration. |
 | `install <identifier> [--force] [--ref COMMIT_SHA]` | Install a plugin from a Git URL, `owner/repo`, or a bare index name. Bare names (no slash) are resolved through the community plugin index to `owner/repo` plus the index-pinned commit; ambiguous names list candidates and exit. `--ref` accepts only a full 40-character commit SHA, installs that exact immutable revision, and overrides any index pin. |
-| `search [term] [--json] [--capability CAP] [--refresh]` | Search the community plugin index (fuzzy match on name/description/tags; omit `term` to browse). Fetched from `plugins.index_url` (default: the NousResearch plugin index), cached under `~/.eternal/cache/` for 24h, falling back to the stale cache and then the bundled seed when offline. Indexed ≠ audited — inclusion is a metadata review only. |
+| `search [term] [--json] [--capability CAP] [--refresh]` | Search plugin metadata (fuzzy match on name/description/tags; omit `term` to browse). Uses `plugins.index_url` when you configure one, caches it under `~/.eternal/cache/` for 24h, and falls back to the bundled seed when offline. Indexed ≠ audited — inclusion is a metadata review only. |
 | `update <name>` | Pull latest changes for an unpinned installed plugin. Pinned plugins must be reinstalled with `--force --ref <new-commit>` to move. |
 | `remove <name>` (aliases: `rm`, `uninstall`) | Remove an installed plugin. |
 | `enable <name>` | Enable a disabled plugin. |
@@ -1609,27 +1586,6 @@ Launch the web dashboard — a browser-based UI for managing configuration, API 
 | `--stop` | — | Stop running `eternal dashboard` processes and exit. |
 | `--status` | — | List running `eternal dashboard` processes and exit. |
 
-### `eternal dashboard register`
-
-Register this install as a self-hosted dashboard with your Nous Portal account. Creates an OAuth client, writes `ETERNAL_DASHBOARD_OAUTH_CLIENT_ID` into `~/.eternal/.env`, and prints how to engage the login gate. Requires being logged in (`eternal setup`).
-
-| Option | Description |
-|--------|-------------|
-| `--name` | Human-readable label for the dashboard (default: auto-generated). |
-| `--redirect-uri` | Public HTTPS OAuth redirect URI (e.g. `https://eternal.example.com/auth/callback`). Omit for localhost-only use. |
-| `--portal-url` | Override the Nous Portal base URL for registration (default: the portal you logged into). Also settable via `ETERNAL_DASHBOARD_PORTAL_URL`. |
-
-```bash
-# Default — opens browser to http://127.0.0.1:9119
-eternal dashboard
-
-# Custom port, no browser
-eternal dashboard --port 8080 --no-open
-
-# From a profile alias — routes to the machine dashboard with the
-# profile preselected in the sidebar switcher (attach if running)
-worker dashboard
-```
 
 ## `eternal profile`
 

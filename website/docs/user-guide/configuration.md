@@ -9,7 +9,9 @@ description: "Configure Eternal Agent — config.yaml, providers, models, API ke
 All settings are stored in the `~/.eternal/` directory for easy access.
 
 :::tip Easiest path to a working `config.yaml`
-Run `eternal setup --portal` — one OAuth gets you a model provider and all four Tool Gateway tools without hand-editing YAML. Portal subscribers also get 10% off token-billed providers. See [Nous Portal](/integrations/nous-portal).
+Run `eternal setup` to choose a model provider, then configure optional tools
+with credentials from the services you select. The wizard writes the normal
+settings to `config.yaml` and secrets to `.env`.
 :::
 
 ## Directory Structure
@@ -18,7 +20,7 @@ Run `eternal setup --portal` — one OAuth gets you a model provider and all fou
 ~/.eternal/
 ├── config.yaml     # Settings (model, terminal, TTS, compression, etc.)
 ├── .env            # API keys and secrets
-├── auth.json       # OAuth provider credentials (Nous Portal, etc.)
+├── auth.json       # Supported OAuth provider credentials
 ├── SOUL.md         # Primary agent identity (slot #1 in system prompt)
 ├── memories/       # Persistent memory (MEMORY.md, USER.md)
 ├── skills/         # Agent-created skills (managed via skill_manage tool)
@@ -113,7 +115,7 @@ You can set `providers.<id>.request_timeout_seconds` for a provider-wide request
 
 You can also set `providers.<id>.stale_timeout_seconds` for the non-streaming stale-call detector, plus `providers.<id>.models.<model>.stale_timeout_seconds` for a model-specific override. This wins over the legacy `ETERNAL_API_CALL_STALE_TIMEOUT` env var.
 
-Leaving these unset keeps the legacy defaults (`ETERNAL_API_TIMEOUT=1800`s, `ETERNAL_API_CALL_STALE_TIMEOUT=90`s, native Anthropic 900s). The non-streaming stale detector is auto-disabled for local endpoints when left implicit and can scale upward for very large contexts. Not currently wired for AWS Bedrock (both `bedrock_converse` and AnthropicBedrock SDK paths use boto3 with its own timeout configuration). See the commented example in [`cli-config.yaml.example`](https://github.com/NousResearch/hermes-agent/blob/main/cli-config.yaml.example).
+Leaving these unset keeps the legacy defaults (`ETERNAL_API_TIMEOUT=1800`s, `ETERNAL_API_CALL_STALE_TIMEOUT=90`s, native Anthropic 900s). The non-streaming stale detector is auto-disabled for local endpoints when left implicit and can scale upward for very large contexts. Not currently wired for AWS Bedrock (both `bedrock_converse` and AnthropicBedrock SDK paths use boto3 with its own timeout configuration). See the commented example in [`cli-config.yaml.example`](https://github.com/riddhimaaan/eternal/blob/main/cli-config.yaml.example).
 
 ## Update Behavior
 
@@ -134,7 +136,10 @@ Before that stash step, Eternal also restores tracked `package-lock.json` diffs 
 
 ## Terminal Backend Configuration
 
-Eternal supports seven terminal backends. Each determines where the agent's shell commands actually execute — your local machine, a Docker container, a remote server via SSH, a Modal cloud sandbox (direct or via the Nous-managed gateway), a Daytona workspace, a Vercel Sandbox, or a Singularity/Apptainer container.
+Eternal supports seven terminal backends. Each determines where shell commands
+execute: your local machine, a Docker container, a remote server over SSH, a
+Modal cloud sandbox using your Modal account, a Daytona workspace, a Vercel
+Sandbox, or a Singularity/Apptainer container.
 
 ```yaml
 terminal:
@@ -826,7 +831,7 @@ compression:
 auxiliary:
   compression:
     model: ""                                       # Empty = use main chat model. Override with e.g. "google/gemini-3-flash-preview" for cheaper/faster compression.
-    provider: "auto"                                # Provider: "auto", "openrouter", "nous", "codex", "main", etc.
+    provider: "auto"                                # Provider: "auto", "openrouter", "codex", "main", etc.
     base_url: null                                  # Custom OpenAI-compatible endpoint (overrides provider)
 ```
 
@@ -878,10 +883,10 @@ Uses your main provider and main model. Override per-task (e.g. `auxiliary.compr
 ```yaml
 auxiliary:
   compression:
-    provider: nous
+    provider: openrouter
     model: gemini-3-flash
 ```
-Works with any provider: `nous`, `openrouter`, `codex`, `anthropic`, `main`, etc.
+Works with configured providers such as `openrouter`, `codex`, `anthropic`, or `main`.
 
 **Custom endpoint** (self-hosted, Ollama, zai, DeepSeek, etc.):
 ```yaml
@@ -897,7 +902,7 @@ Points at a custom OpenAI-compatible endpoint. Uses `OPENAI_API_KEY` for auth.
 | `auxiliary.compression.provider` | `auxiliary.compression.base_url` | Result |
 |---------------------|---------------------|--------|
 | `auto` (default) | not set | Auto-detect best available provider |
-| `nous` / `openrouter` / etc. | not set | Force that provider, use its auth |
+| `openrouter` / `anthropic` / etc. | not set | Force that provider and use its credentials |
 | any | set | Use the custom endpoint directly (provider ignored) |
 
 :::warning Summary model context length requirement
@@ -1102,7 +1107,9 @@ Options: `fill_first` (default), `round_robin`, `least_used`, `random`. See [Cre
 
 Eternal turns on cross-session prompt caching automatically when the active provider supports it — no user config needed.
 
-For Claude on **native Anthropic**, **OpenRouter**, and **Nous Portal**, Eternal attaches `cache_control` breakpoints with the 1-hour TTL (`ttl: "1h"`) on the system prompt and skill blocks. The first send within a fresh hour pays full input rates; subsequent sends across any session within the same hour pull from the cache at the discounted cached-read rate. This means the system prompt, loaded skill content, and the early portion of any long-context include get reused across `eternal` sessions and across forked subagents for the first hour.
+For Claude on **native Anthropic** and **OpenRouter**, Eternal can attach
+`cache_control` breakpoints with a one-hour TTL to the system prompt and skill
+blocks. Check the active provider's current cache behavior and pricing.
 
 The Qwen Cloud (Alibaba DashScope) upstream caps cache TTL at 5 minutes, so Eternal uses the 5-minute breakpoint TTL there instead. Other Claude-via-third-party paths (AWS Bedrock, Azure Foundry) fall back to the provider's own caching defaults. xAI Grok uses a separate session-pinned conversation-id mechanism — see [xAI prompt caching](/integrations/providers#xai-grok--responses-api--prompt-caching).
 
@@ -1115,14 +1122,17 @@ prompt_caching:
   cache_ttl: "5m"   # "5m" or "1h" (Anthropic-supported tiers); other values are ignored
 ```
 
-`cache_ttl` selects the breakpoint TTL Eternal attaches for Claude via the native Anthropic API, OpenRouter, and Nous Portal. Only the two Anthropic-supported tiers (`"5m"`, `"1h"`) are honored — any other value is ignored. Providers with their own caps (e.g. Qwen Cloud, which maxes at 5 minutes) still clamp to what the upstream allows.
+`cache_ttl` selects the breakpoint TTL for Claude through native Anthropic or
+OpenRouter. Only the supported `"5m"` and `"1h"` values are honored; providers
+with lower caps clamp the value.
 
 ## Auxiliary Models
 
 Eternal uses "auxiliary" models for side tasks like image analysis, web page summarization, browser screenshot analysis, session-title generation, and context compression. By default (`auxiliary.*.provider: "auto"`), Eternal routes every auxiliary task to your **main chat model** — the same provider/model you picked in `eternal model`. You don't need to configure anything to get started, but be aware that on expensive reasoning models (Opus, MiniMax M2.7, etc.) auxiliary tasks add meaningful cost. If you want cheap-and-fast side tasks regardless of your main model, set `auxiliary.<task>.provider` and `auxiliary.<task>.model` explicitly (for example, Gemini Flash on OpenRouter for vision and web extraction).
 
 :::note Why "auto" uses your main model
-Earlier builds split aggregator users (OpenRouter, Nous Portal) onto a cheap provider-side default. That was surprising — users who paid for an aggregator subscription would see a different model handling their auxiliary traffic. `auto` now uses the main model for everyone, and per-task overrides in `config.yaml` still win (see [Full auxiliary config reference](#full-auxiliary-config-reference) below).
+`auto` uses the main model by default. Per-task overrides in `config.yaml` still
+win; see [Full auxiliary config reference](#full-auxiliary-config-reference).
 :::
 
 ### Configuring auxiliary models interactively
@@ -1204,7 +1214,9 @@ auxiliary:
 
 When `base_url` is set, Eternal ignores the provider and calls that endpoint directly (using `api_key` or `OPENAI_API_KEY` for auth). When only `provider` is set, Eternal uses that provider's built-in auth and base URL.
 
-Available providers for auxiliary tasks: `auto`, `main`, plus any provider in the [provider registry](/reference/environment-variables) — `openrouter`, `nous`, `openai-codex`, `copilot`, `copilot-acp`, `anthropic`, `gemini`, `qwen-oauth`, `zai`, `kimi-coding`, `kimi-coding-cn`, `minimax`, `minimax-cn`, `minimax-oauth`, `deepseek`, `nvidia`, `xai`, `xai-oauth`, `ollama-cloud`, `alibaba`, `bedrock`, `huggingface`, `arcee`, `xiaomi`, `kilocode`, `opencode-zen`, `opencode-go`, `ai-gateway`, `azure-foundry` — or any named custom provider from your `providers:` dict (e.g. `provider: "beans"`).
+Available providers for auxiliary tasks include `auto`, `main`, any configured
+provider from the registry, or a named custom provider from your `providers:`
+mapping.
 
 :::tip MiniMax OAuth
 `minimax-oauth` logs in via browser OAuth (no API key needed). Run `eternal model` and select **MiniMax (OAuth)** to authenticate. Auxiliary tasks use `MiniMax-M2.7-highspeed` automatically. See the [MiniMax OAuth guide](../guides/minimax-oauth.md).
@@ -1224,7 +1236,7 @@ The `"main"` provider option means "use whatever provider my main agent uses" �
 auxiliary:
   # Image analysis (vision_analyze tool + browser screenshots)
   vision:
-    provider: "auto"           # "auto", "openrouter", "nous", "codex", "main", etc.
+    provider: "auto"           # "auto", "openrouter", "codex", "main", etc.
     model: ""                  # e.g. "openai/gpt-4o", "google/gemini-2.5-flash"
     base_url: ""               # Custom OpenAI-compatible endpoint (overrides provider)
     api_key: ""                # API key for base_url (falls back to OPENAI_API_KEY)
@@ -1264,7 +1276,7 @@ auxiliary:
   compression:
     timeout: 120               # seconds — compression summarizes long conversations, needs more time
     # fallback_chain:           # Optional — providers to try on rate-limit / connectivity failure
-    #   - provider: nous
+    #   - provider: openrouter
     #     model: deepseek/deepseek-chat
     #   - provider: openrouter
     #     model: google/gemini-2.5-flash
@@ -1340,7 +1352,7 @@ auxiliary:
     provider: openrouter
     model: openai/gpt-4o-mini
     fallback_chain:
-      - provider: nous
+      - provider: openrouter
         model: deepseek/deepseek-chat
       - provider: openrouter
         model: google/gemini-2.5-flash
@@ -1352,7 +1364,7 @@ Each entry supports the same three knobs as any auxiliary task config:
 
 | Key | Description |
 |-----|-------------|
-| `provider` | Provider name (`nous`, `openrouter`, `anthropic`, `gemini`, `main`, etc.) |
+| `provider` | Provider name (`openrouter`, `anthropic`, `gemini`, `main`, etc.) |
 | `model` | Model name for that provider |
 | `base_url` | (Optional) Custom OpenAI-compatible endpoint |
 
@@ -1421,9 +1433,8 @@ These options apply to **auxiliary task configs** (`auxiliary:`, `compression:`)
 
 | Provider | Description | Requirements |
 |----------|-------------|-------------|
-| `"auto"` | Best available (default). Vision tries OpenRouter → Nous → Codex. | — |
+| `"auto"` | Best available configured provider (default). | — |
 | `"openrouter"` | Force OpenRouter — routes to any model (Gemini, GPT-4o, Claude, etc.) | `OPENROUTER_API_KEY` |
-| `"nous"` | Force Nous Portal | `eternal auth` |
 | `"codex"` | Force Codex OAuth (ChatGPT account). Supports vision (gpt-5.3-codex). | `eternal model` → ChatGPT or Codex Subscription |
 | `"minimax-oauth"` | Force MiniMax OAuth (browser login, no API key). Uses MiniMax-M2.7-highspeed for auxiliary tasks. | `eternal model` → MiniMax (OAuth) |
 | `"xai-oauth"` | Force xAI Grok OAuth (browser login for SuperGrok or X Premium+ subscribers, no API key). Same OAuth token covers chat, TTS, image, video, and transcription. | `eternal model` → xAI Grok OAuth (SuperGrok / Premium+) |
@@ -1750,7 +1761,6 @@ display:
     enabled: false
     fields: ["model", "context_pct", "cwd"]
   file_mutation_verifier: true    # Append an advisory footer when write_file/patch calls failed this turn
-  credits_notices: true   # Nous credits status-bar notices (usage bands, grant-spent, depleted). false = silence them; /usage still works
   cli_rebuild_scrollback_on_redraw: false  # Classic CLI: also wipe terminal scrollback (CSI 3J) on /redraw / Ctrl+L / width-change resize recovery. Enable when a terminal/tmux stack stamps stale prompt chrome into scrollback on maximize/restore.
   language: en            # UI language for static messages (approval prompts, some gateway replies). en | zh | zh-hant | ja | de | es | fr | tr | uk | af | ko | it | ga | pt | ru | hu
 ```
@@ -1937,7 +1947,7 @@ stt:
   cloud_trim_silence: true     # trim long pauses with ffmpeg before uploading to a cloud provider (default: true)
   cloud_trim_threshold_db: -40 # audio quieter than this counts as silence
   cloud_trim_keep_ms: 300      # how much of each pause survives the trim (keeps natural pacing)
-  # prompt: "Eternal, Teknium, Nous Research, kanban"   # Static vocabulary hint (see below)
+  # prompt: "Eternal, project names, kanban"   # Static vocabulary hint (see below)
   local:
     model: "base"              # tiny, base, small, medium, large-v3
     language: ""               # per-provider override of stt.language
@@ -1985,7 +1995,7 @@ STT_OPENAI_BASE_URL=https://api.openai.com/v1
 ```yaml
 stt:
   provider: "local"
-  prompt: "Eternal, Teknium, Nous Research, kanban, Ollama"
+  prompt: "Eternal, project names, kanban, Ollama"
 ```
 
 **Composition.** The config value is the base. Plugins that register the [`pre_transcription`](/user-guide/features/hooks#pre_transcription) hook mutate on top of it, last-writer-wins per field. Multiple plugins' hints compose deterministically: plugin discovery loads plugins in sorted order by plugin id, and each plugin's callbacks run in its own registration order, so the same set of plugins always produces the same final prompt. A hook returning an empty string for `prompt` clears the config prompt for that request. Hooks may also override `language` and `model`; `file_path` is read-only and any attempt to change it is logged and dropped. With no hook registered and no `stt.prompt` set, the outgoing request is identical to previous releases.
@@ -2411,7 +2421,9 @@ delegation:
 
 **Wire protocol (`api_mode`):** Eternal auto-detects the wire protocol from `delegation.base_url` (e.g. paths ending in `/anthropic` → `anthropic_messages`; Codex / native Anthropic / Kimi-coding hostnames keep their existing detection). For endpoints the heuristic can't classify — for example Azure AI Foundry, MiniMax, Zhipu GLM, or LiteLLM proxies fronting an Anthropic-shaped backend — set `delegation.api_mode` explicitly to one of `chat_completions`, `codex_responses`, or `anthropic_messages`. Leave it empty (the default) to keep auto-detection.
 
-The delegation provider uses the same credential resolution as CLI/gateway startup. All configured providers are supported: `openrouter`, `nous`, `copilot`, `zai`, `kimi-coding`, `minimax`, `minimax-cn`. When a provider is set, the system automatically resolves the correct base URL, API key, and API mode — no manual credential wiring needed.
+The delegation provider uses the same credential resolution as CLI and gateway
+startup. When a provider is set, Eternal resolves its base URL, credential, and
+API mode automatically.
 
 **Precedence:** `delegation.base_url` in config → `delegation.provider` in config → parent provider (inherited). `delegation.model` in config → parent model (inherited). Setting just `model` without `provider` changes only the model name while keeping the parent's credentials (useful for switching models within the same provider like OpenRouter).
 

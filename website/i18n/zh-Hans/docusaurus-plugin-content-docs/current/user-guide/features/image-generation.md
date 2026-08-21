@@ -26,8 +26,8 @@ Eternal Agent 通过 FAL.ai 根据文字提示生成图像。默认内置 8 个�
 
 ## 配置
 
-:::tip Nous 订阅用户
-若你持有付费 [Nous Portal](https://portal.nousresearch.com) 订阅，可通过 **[Tool Gateway](tool-gateway.md)** 使用文生图，**无需** `FAL_KEY`。模型选择在「直连 FAL」与「订阅网关」两条路径下保持一致。
+:::tip 选择后端
+运行 `eternal tools` 选择图像后端。FAL、OpenAI、OpenRouter、Krea 等托管服务使用你自己的凭据。
 
 若托管网关对某一模型返回 `HTTP 4xx`，通常表示该模型尚未在 Portal 侧代理——智能体会给出处理建议（例如配置 `FAL_KEY` 直连，或换用其他模型）。
 :::
@@ -45,7 +45,7 @@ Eternal Agent 通过 FAL.ai 根据文字提示生成图像。默认内置 8 个�
 eternal tools
 ```
 
-进入 **🎨 Image Generation**，选择后端（Nous Subscription 或 FAL.ai），随后在表格中用方向键选择模型，回车确认：
+进入 **🎨 Image Generation**，选择后端（自有提供商凭据 或 FAL.ai），随后在表格中用方向键选择模型，回车确认：
 
 ```
   Model                          Speed    Strengths                    Price
@@ -60,12 +60,12 @@ eternal tools
 ```yaml
 image_gen:
   model: fal-ai/flux-2/klein/9b
-  use_gateway: false            # 使用 Nous Subscription 时为 true
+  use_gateway: false            # 使用 自有提供商凭据 时为 true
 ```
 
 ### GPT-Image 画质档位
 
-`fal-ai/gpt-image-1.5` 的请求画质固定为 `medium`（约 1024×1024 下 $0.034/张）。面向用户**不开放** `low` / `high` 档位，以便 Nous Portal 侧计费在全体用户间更可预期（档位价差约 22×）。若需要更便宜的 GPT-Image 路线，请换其他模型；若追求更高画质，可考虑 Klein 9B 或同类 Imagen 系模型。
+`fal-ai/gpt-image-1.5` 的请求画质固定为 `medium`（约 1024×1024 下 $0.034/张）。面向用户**不开放** `low` / `high` 档位，以便 OpenRouter 侧计费在全体用户间更可预期（档位价差约 22×）。若需要更便宜的 GPT-Image 路线，请换其他模型；若追求更高画质，可考虑 Klein 9B 或同类 Imagen 系模型。
 
 ## 使用方式
 
@@ -142,7 +142,7 @@ export IMAGE_TOOLS_DEBUG=true
 
 ## 限制
 
-- **需要 FAL 凭据**（直连 `FAL_KEY` 或 Nous 订阅网关）  
+- **需要 FAL 凭据**（使用你自己的 `FAL_KEY`）
 - **仅文生图** — 不支持局部重绘、图生图或编辑类工作流  
 - **临时 URL** — FAL 托管链接会在数小时至数天后过期；请自行落盘保存  
 - **按模型能力裁剪** — 部分模型不支持 `seed`、`num_inference_steps` 等；`supports` 会静默丢弃不支持的参数，属预期行为  

@@ -100,7 +100,7 @@ wsl --shutdown
 打开 WSL2 shell 后执行：
 
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | bash
 source ~/.bashrc
 eternal
 ```
@@ -258,7 +258,7 @@ WSL2 在轻量级虚拟机中运行，拥有独立的网络栈。这意味着 WS
 
 ## 在 Windows 上长期运行 Eternal 服务
 
-Eternal 的 [Tool Gateway](/user-guide/features/tool-gateway) 和 API 服务器都是长期运行的进程。在 WSL2 中，有以下几种方式保持它们持续运行。
+Eternal 的[工具服务](/user-guide/features/tools)和 API 服务器可以作为长期运行的进程。在 WSL2 中，有以下几种方式保持它们持续运行。
 
 ### 在 WSL 内使用 systemd（推荐）
 
@@ -329,4 +329,4 @@ WSL2 将虚拟机磁盘存储为 `%LOCALAPPDATA%\Packages\...` 下的稀疏 VHDX
 - **[安装说明](/getting-started/installation)** —— 实际安装步骤（Linux/WSL2/Termux 均使用同一安装程序）。
 - **[集成 → Providers → WSL2 网络配置](/integrations/providers#wsl2-networking-windows-users)** —— 本地模型服务器网络配置的权威深度说明。
 - **[MCP 指南 → WSL → Windows Chrome](/guides/use-mcp-with-eternal#wsl2-bridge-eternal-in-wsl-to-windows-chrome)** —— 从 WSL 中的 Eternal 控制你已登录的 Windows Chrome。
-- **[Tool Gateway](/user-guide/features/tool-gateway)** 和 **[Web Dashboard](/user-guide/features/web-dashboard)** —— 你最常需要从 WSL 暴露到网络其他部分的长期运行服务。
+- **[工具服务](/user-guide/features/tools)** 和 **[Web Dashboard](/user-guide/features/web-dashboard)** —— 你最常需要从 WSL 暴露到网络其他部分的长期运行服务。

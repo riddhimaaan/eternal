@@ -81,8 +81,8 @@ Settings → Gateway."*
        - **Session token** — paste the dashboard session token from the
          remote gateway. When editing, *"Leave blank to keep the saved
          token."*
-       - **OAuth** — sign in through the Nous Portal browser flow; no token
-         to paste.
+       - **OAuth/OIDC** — sign in through the identity provider configured by
+         the backend; there is no token to paste.
    - *SSH only:*
      - **SSH host** — one composite field in `user@host:22` form (user and
        port optional). Your SSH key is used; the app adopts a dashboard

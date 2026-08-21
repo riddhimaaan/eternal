@@ -18,7 +18,7 @@ Eternal discovers memory providers from four sources, in this precedence order:
 
 | Source | Location | Notes |
 |---|---|---|
-| Bundled | `plugins/memory/<name>/` | Ships with Eternal. Closed to new providers — see [CONTRIBUTING](https://github.com/NousResearch/hermes-agent/blob/main/CONTRIBUTING.md). |
+| Bundled | `plugins/memory/<name>/` | Ships with Eternal. Closed to new providers — see [CONTRIBUTING](https://github.com/riddhimaaan/eternal/blob/main/CONTRIBUTING.md). |
 | User | `$ETERNAL_HOME/plugins/<name>/` | Dropped in by the user, per profile. |
 | Project | `./.eternal/plugins/<name>/` | Opt-in via `ETERNAL_ENABLE_PROJECT_PLUGINS=1`. |
 | Package | `eternal_agent.memory_providers` entry point | `pip install`, nothing to copy. |

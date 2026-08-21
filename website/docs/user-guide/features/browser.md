@@ -35,8 +35,10 @@ Key capabilities:
 
 ## Setup
 
-:::tip Nous Subscribers
-If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, you can use browser automation through the **[Tool Gateway](tool-gateway.md)** without any separate API keys. New installs can run `eternal setup --portal` to log in and turn on every gateway tool at once; existing installs can pick **Nous Subscription** as the browser provider via `eternal model` or `eternal tools`.
+:::tip Choose your backend
+Run `eternal tools` to select local Chromium, Camofox, Browserbase, Browser Use,
+or another installed browser backend. Cloud services require credentials from
+that provider; local browser automation does not require a subscription.
 :::
 
 ### Browserbase cloud mode
@@ -68,7 +70,7 @@ Browser Use mode uses the [Browser Use CLI 3.0](https://github.com/browser-use/b
 
 **This is the default browser mode**: when `browser.backend` is unset and the `browser-use` CLI is runnable (installed, or available through `uvx`), the agent gets the single `browser_exec` tool. If the CLI can't run, Eternal falls back to the built-in browser tools automatically.
 
-The mode is a **driver** that composes with your configured browser backend: it drives your local Chrome, a Nous-subscription cloud browser, Browserbase, Firecrawl, or Browser Use cloud browsers — whichever browser source is selected in `eternal tools` → Browser Automation. The one exception is Camofox, which has no CDP endpoint for the harness to attach to; Camofox setups automatically keep the built-in browser tools.
+The mode is a **driver** that composes with your configured browser backend: it drives your local Chrome, Browserbase, Firecrawl, or Browser Use cloud browsers — whichever browser source is selected in `eternal tools` → Browser Automation. The one exception is Camofox, which has no CDP endpoint for the harness to attach to; Camofox setups automatically keep the built-in browser tools.
 
 **Concurrent sessions:** `browser_exec` accepts a `session=<name>` argument that isolates browser work per name on every backend. Each name gets its own harness daemon (its own IPC socket, log, and state), and on cloud backends its own browser — so parallel subagents or simultaneous chats no longer clobber a single shared connection. Omitting `session` uses the shared default daemon, which is fine for one-at-a-time browsing.
 
@@ -493,7 +495,7 @@ The `browser` toolset must be included in your config's `toolsets` list or enabl
 Navigate to a URL. Must be called before any other browser tool. Initializes the Browserbase session.
 
 ```
-Navigate to https://github.com/NousResearch
+Navigate to https://github.com/riddhimaaan/eternal
 ```
 
 :::tip

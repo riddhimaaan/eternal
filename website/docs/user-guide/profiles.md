@@ -29,7 +29,8 @@ That's it. `coder` is now its own Eternal profile with its own config, memory, a
 ## Creating a profile
 
 :::tip
-Quickest setup: run `eternal setup --portal` inside the new profile to wire up models + tools at once. See [Nous Portal](/integrations/nous-portal).
+Run `eternal setup` inside the new profile, choose its model provider, then
+configure only the tools that profile needs.
 :::
 
 ### Blank profile

@@ -49,7 +49,6 @@ Each entry requires both `provider` and `model`. Entries missing either field ar
 |----------|-------|-------------|
 | AI Gateway | `ai-gateway` | `AI_GATEWAY_API_KEY` |
 | OpenRouter | `openrouter` | `OPENROUTER_API_KEY` |
-| Nous Portal | `nous` | `eternal setup --portal` (fresh) or `eternal auth add nous` (OAuth) |
 | OpenAI Codex | `openai-codex` | `eternal model` → **ChatGPT or Codex Subscription** (ChatGPT OAuth) |
 | GitHub Copilot | `copilot` | `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or `GITHUB_TOKEN` |
 | GitHub Copilot ACP | `copilot-acp` | External process (editor integration) |
@@ -140,17 +139,6 @@ fallback_providers:
     model: anthropic/claude-sonnet-4
 ```
 
-**Nous Portal as fallback for OpenRouter:**
-```yaml
-model:
-  provider: openrouter
-  default: anthropic/claude-opus-4
-
-fallback_providers:
-  - provider: nous
-    model: nous-hermes-3
-```
-
 **Local model as fallback for cloud:**
 ```yaml
 fallback_providers:
@@ -214,14 +202,14 @@ The task-specific chain is most precise and wins when present. The top-level `fa
 **Built-in text discovery chain (compression, web extract, title generation, etc.):**
 
 ```text
-OpenRouter → Nous Portal → Custom endpoint → Codex OAuth →
+OpenRouter → Custom endpoint → Codex OAuth →
 API-key providers (z.ai, Kimi, MiniMax, Xiaomi MiMo, Hugging Face, Anthropic) → give up
 ```
 
 **Built-in vision discovery chain:**
 
 ```text
-Main provider (if vision-capable) → OpenRouter → Nous Portal →
+Main provider (if vision-capable) → OpenRouter →
 Codex OAuth → Anthropic → Custom endpoint → give up
 ```
 
@@ -234,7 +222,7 @@ Each task can be configured independently in `config.yaml`:
 ```yaml
 auxiliary:
   vision:
-    provider: "auto"              # auto | openrouter | nous | codex | main | anthropic
+    provider: "auto"              # auto | openrouter | codex | main | anthropic
     model: ""                     # e.g. "openai/gpt-4o"
     base_url: ""                  # direct endpoint (takes precedence over provider)
     api_key: ""                   # API key for base_url
@@ -290,7 +278,6 @@ These options apply to `auxiliary:`, `compression:`, and `fallback_providers:` e
 |----------|-------------|-------------|
 | `"auto"` | Try providers in order until one works (default) | At least one provider configured |
 | `"openrouter"` | Force OpenRouter | `OPENROUTER_API_KEY` |
-| `"nous"` | Force Nous Portal | `eternal auth` |
 | `"codex"` | Force Codex OAuth | `eternal model` → ChatGPT or Codex Subscription |
 | `"main"` | Use whatever provider the main agent uses (auxiliary tasks only) | Active main provider configured |
 | `"anthropic"` | Force Anthropic native | `ANTHROPIC_API_KEY` or Claude Code credentials |
@@ -336,7 +323,7 @@ auxiliary:
     fallback_chain:
       - provider: openrouter
         model: google/gemini-3-flash-preview
-      - provider: nous
+      - provider: openrouter
         model: anthropic/claude-sonnet-4
 
   compression:
@@ -370,7 +357,7 @@ Context compression uses the `auxiliary.compression` config block to control whi
 ```yaml
 auxiliary:
   compression:
-    provider: "auto"                              # auto | openrouter | nous | main
+    provider: "auto"                              # auto | openrouter | main
     model: "google/gemini-3-flash-preview"
 ```
 

@@ -100,7 +100,7 @@ The `metadata` mount option above is important — without it, files on `/mnt/c/
 Once you have a WSL2 shell open:
 
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | bash
 source ~/.bashrc
 eternal
 ```
@@ -258,7 +258,7 @@ For webhooks from cloud messaging providers (Telegram `setWebhook`, Slack events
 
 ## Running Eternal services long-term on Windows
 
-The Eternal [Tool Gateway](/user-guide/features/tool-gateway) and the API server are long-lived processes. In WSL2 you have a few options for keeping them up.
+Eternal's configured [tool services](/user-guide/features/tools) and API server can be long-lived processes. In WSL2 you have a few options for keeping them up.
 
 ### Desktop shortcut for opening Eternal quickly
 
@@ -355,4 +355,4 @@ WSL2 stores its VM disk as a sparse VHDX under `%LOCALAPPDATA%\Packages\...`. It
 - **[Installation](/getting-started/installation)** — actual install steps (Linux/WSL2/Termux all use the same installer).
 - **[Integrations → Providers → WSL2 Networking](/integrations/providers#wsl2-networking-windows-users)** — the canonical networking deep-dive for local model servers.
 - **[MCP guide → WSL → Windows Chrome](/guides/use-mcp-with-eternal#wsl2-bridge-eternal-in-wsl-to-windows-chrome)** — controlling your signed-in Windows Chrome from Eternal in WSL.
-- **[Tool Gateway](/user-guide/features/tool-gateway)** and **[Web Dashboard](/user-guide/features/web-dashboard)** — the long-lived services you'll most often want to expose from WSL to the rest of your network.
+- **[Tool services](/user-guide/features/tools)** and **[Web Dashboard](/user-guide/features/web-dashboard)** — the long-lived services you'll most often want to expose from WSL to the rest of your network.

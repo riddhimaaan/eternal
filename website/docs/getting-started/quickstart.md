@@ -8,21 +8,6 @@ description: "Your first conversation with Eternal Agent — from install to cha
 
 This guide gets you from zero to a working Eternal setup that survives real use. Install, choose a provider, verify a working chat, and know exactly what to do when something breaks.
 
-## Prefer to watch?
-
-**Onchain AI Garage** put together a Masterclass walkthrough of installation, setup, and basic commands — a good companion to this page if you'd rather follow along on video. For more, see the full [Eternal Agent Tutorials & Use Cases](https://www.youtube.com/playlist?list=PLmpUb_PWAkDxewld5ZYyKifuHxgIbiq2d) playlist.
-
-<div style={{position: 'relative', paddingBottom: '56.25%', height: 0, overflow: 'hidden', maxWidth: '100%', marginBottom: '1.5rem'}}>
-  <iframe
-    style={{position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}
-    src="https://www.youtube-nocookie.com/embed/R3YOGfTBcQg"
-    title="Eternal Agent Masterclass: Installation, Setup, Basic Commands"
-    frameBorder="0"
-    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-    allowFullScreen
-  ></iframe>
-</div>
-
 ## Who this is for
 
 - Brand new and want the shortest path to a working setup
@@ -47,22 +32,20 @@ Pick the row that matches your goal:
 ---
 
 ## 1. Install Eternal Agent
-### With the Eternal Desktop installer on macOS or Windows (recommended)
-To easily install the command-line and desktop applications, [download the Eternal Desktop installer](https://hermes-agent.nousresearch.com/) from our website and run it.
-
-### Without Eternal Desktop:
-For a command-line only install without Eternal Desktop, run:
+Eternal is currently distributed as source. Install the command-line runtime
+first; after setup, `eternal desktop` builds and launches the desktop app from
+the same checkout.
 
 #### Linux / macOS / WSL2 / Android (Termux)
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.sh | bash
 ```
 
 #### Windows (native)
 
 Run in powershell:
 ```powershell
-iex (irm https://hermes-agent.nousresearch.com/install.ps1) 
+iex (irm https://raw.githubusercontent.com/riddhimaaan/eternal/main/scripts/install.ps1)
 ```
 
 :::tip Android / Termux
@@ -85,20 +68,21 @@ The single most important setup step. Use `eternal model` to walk through the ch
 eternal model
 ```
 
-:::tip Easiest path: Nous Portal
-One subscription covers 300+ models plus the [Tool Gateway](../user-guide/features/tool-gateway.md) (web search, image generation, TTS, cloud browser). On a fresh install:
+:::tip Practical first provider: OpenRouter
+OpenRouter gives one API key access to models from multiple providers. On a
+fresh install, run:
 
 ```bash
-eternal setup --portal
+eternal setup
 ```
 
-That logs you in, sets Nous as your provider, and turns on the Tool Gateway in one command.
+Choose OpenRouter, enter your key, select a model, and then configure only the
+tools you intend to use.
 :::
 
 :::info Setup modes
-On a fresh install, `eternal setup` offers three modes:
+On a fresh install, `eternal setup` offers guided and advanced configuration:
 
-- **Quick Setup (Nous Portal)** — free OAuth login, no API keys; sets up a model plus the Tool Gateway tools. The recommended fast path.
 - **Full Setup** — walk through every provider, tool, and option yourself (bring your own keys).
 - **Blank Slate** — everything starts **off** except the bare minimum needed to run an agent: **provider & model, the File Operations toolset, and the Terminal toolset**. No web, browser, code execution, vision, memory, delegation, cron, skills, plugins, or MCP servers — and compression, checkpoints, smart routing, and memory capture are all disabled. After the minimal baseline is applied, you choose one of two paths: **start with everything disabled** (finish now with the minimal agent), or **walk through all configurations** (opt in to tools, skills, plugins, MCP, and messaging). Pick this when you want a minimal, fully-controlled agent and intend to enable only exactly what you need.
 
@@ -109,7 +93,6 @@ Good defaults:
 
 | Provider | What it is | How to set up |
 |----------|-----------|---------------|
-| **Nous Portal** | Subscription-based, zero-config | OAuth login via `eternal model` |
 | **OpenAI Codex** | ChatGPT or Codex subscription, uses Codex models | Device code auth via `eternal model` → **ChatGPT or Codex Subscription** |
 | **Anthropic** | Claude models directly — Max plan + extra usage credits (OAuth), or API key for pay-per-token | `eternal model` → OAuth login (requires Max + extra credits), or an Anthropic API key |
 | **OpenRouter** | Multi-provider routing across many models | Enter your API key |

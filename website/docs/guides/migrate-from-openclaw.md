@@ -13,7 +13,8 @@ Coming from **Claude Code** or **OpenAI Codex CLI** instead? Use [`eternal impor
 :::
 
 :::tip
-If your OpenClaw setup was multi-provider, `eternal setup --portal` collapses it to one OAuth — 300+ models plus the Tool Gateway in a single login. See [Nous Portal](/integrations/nous-portal).
+If your OpenClaw setup used several providers, migrate one provider first and
+verify a normal conversation before adding fallback or tool credentials.
 :::
 
 ## Quick start

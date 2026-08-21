@@ -1,4 +1,4 @@
-"""Generic managed-tool gateway helpers for Nous-hosted vendor passthroughs."""
+"""Legacy managed-tool gateway compatibility helpers."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 from eternal_constants import get_eternal_home
 from tools.tool_backend_helpers import managed_nous_tools_enabled
 
-_DEFAULT_TOOL_GATEWAY_DOMAIN = "nousresearch.com"
+_DEFAULT_TOOL_GATEWAY_DOMAIN = ""
 _DEFAULT_TOOL_GATEWAY_SCHEME = "https"
 _NOUS_ACCESS_TOKEN_REFRESH_SKEW_SECONDS = 120
 
@@ -168,7 +168,9 @@ def build_vendor_gateway_url(vendor: str) -> str:
     if shared_domain:
         return f"{shared_scheme}://{vendor}-gateway.{shared_domain}"
 
-    return f"{shared_scheme}://{vendor}-gateway.{_DEFAULT_TOOL_GATEWAY_DOMAIN}"
+    if _DEFAULT_TOOL_GATEWAY_DOMAIN:
+        return f"{shared_scheme}://{vendor}-gateway.{_DEFAULT_TOOL_GATEWAY_DOMAIN}"
+    return ""
 
 
 def resolve_managed_tool_gateway(
@@ -449,4 +451,3 @@ def build_managed_media_uploader(
         return f"nous-upload:{token}"
 
     return upload
-

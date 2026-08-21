@@ -791,7 +791,7 @@ def _make_redirect_handler(port: int, redirect_uri: str | None = None):
                 f"         ssh -N -L {port}:127.0.0.1:{port} <user>@<this-host>\n"
                 f"       then open the URL above and let it redirect normally.\n"
                 f"\n"
-                f"  See: https://hermes-agent.nousresearch.com/docs/guides/oauth-over-ssh\n",
+                f"  See: https://github.com/riddhimaaan/eternal/tree/main/website/docs/guides/oauth-over-ssh.md\n",
                 file=sys.stderr,
             )
 

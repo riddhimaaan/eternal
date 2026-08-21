@@ -32,8 +32,10 @@ High-level categories:
 
 For the authoritative code-derived registry, see [Built-in Tools Reference](/reference/tools-reference) and [Toolsets Reference](/reference/toolsets-reference).
 
-:::tip Nous Tool Gateway
-Paid [Nous Portal](https://portal.nousresearch.com) subscribers can use web search, image generation, TTS, and browser automation through the **[Tool Gateway](tool-gateway.md)** — no separate API keys needed. Run `eternal model` to enable it, or configure individual tools with `eternal tools`.
+:::tip Configure tool providers
+Configure optional tool providers with `eternal tools`. Web search, image
+generation, speech, and cloud browser services use their own API keys; local
+and self-hosted choices are available for several categories.
 :::
 
 ## Using Toolsets

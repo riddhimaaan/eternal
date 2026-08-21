@@ -11,7 +11,8 @@ Chat with Eternal from Telegram, Discord, Slack, WhatsApp, Signal, SMS, Email, H
 For the full voice feature set — including CLI microphone mode, spoken replies in messaging, and Discord voice-channel conversations — see [Voice Mode](/user-guide/features/voice-mode) and [Use Voice Mode with Eternal](/guides/use-voice-mode-with-eternal).
 
 :::tip
-Bots need both a model provider and tool providers (TTS, web). A [Nous Portal](/integrations/nous-portal) subscription bundles all of them.
+Bots need a model provider and, when used, separately configured speech or web
+providers. Verify each credential before making the bot persistent.
 :::
 
 ## Platform Comparison

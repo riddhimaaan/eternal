@@ -8,8 +8,10 @@ description: "Text-to-speech and voice message transcription across all platform
 
 Eternal Agent supports both text-to-speech output and voice message transcription across all messaging platforms.
 
-:::tip Nous Subscribers
-If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, OpenAI TTS is available through the **[Tool Gateway](tool-gateway.md)** without a separate OpenAI API key. New installs can run `eternal setup --portal` to log in and turn on every gateway tool at once; existing installs can pick **Nous Subscription** for just TTS via `eternal model` or `eternal tools`.
+:::tip Choose your backend
+Run `eternal tools` to choose a speech provider. Direct OpenAI, ElevenLabs,
+MiniMax, Mistral, Gemini, and xAI options use their own credentials; Edge TTS,
+KittenTTS, Piper, and other local choices are available where supported.
 :::
 
 ## Text-to-Speech

@@ -20,7 +20,7 @@ import httpx
 
 # Default pairing API base URL (Nous-hosted Cloudflare Worker).
 # Override for PoC/staging with TELEGRAM_ONBOARDING_URL.
-DEFAULT_API_URL = "https://setup.hermes-agent.nousresearch.com"
+DEFAULT_API_URL = ""
 TELEGRAM_ONBOARDING_URL_ENV = "TELEGRAM_ONBOARDING_URL"
 
 # The Nous-hosted manager bot username (without @). The backend returns the
@@ -174,9 +174,13 @@ def create_pairing(
     pairing id, and secret poll token. The token is only used as a bearer
     credential while polling.
     """
+    resolved_api_url = _api_url(api_url)
+    if not resolved_api_url:
+        return None
+
     try:
         resp = httpx.post(
-            f"{_api_url(api_url)}/v1/telegram/pairings",
+            f"{resolved_api_url}/v1/telegram/pairings",
             json={"bot_name": bot_name},
             timeout=timeout,
         )
@@ -285,6 +289,12 @@ def auto_setup_telegram_bot_result(
     """Run the full automatic Telegram bot creation flow."""
     _ = manager_bot, profile_name
     resolved_api_url = _api_url(api_url)
+    if not resolved_api_url:
+        print()
+        print("  Managed Telegram setup is not configured for Eternal.")
+        print("  Set TELEGRAM_ONBOARDING_URL to a service you operate, or use manual setup.")
+        return None
+
     print()
     print(f"  Contacting Eternal Telegram onboarding service: {resolved_api_url}")
     sys.stdout.flush()

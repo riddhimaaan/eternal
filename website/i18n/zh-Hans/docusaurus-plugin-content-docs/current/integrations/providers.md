@@ -14,7 +14,7 @@ sidebar_position: 1
 
 | 提供商 | 配置方式 |
 |----------|-------|
-| **Nous Portal** | `eternal model`（OAuth，订阅制） |
+| **OpenRouter** | `OPENROUTER_API_KEY`（使用你自己的 API key） |
 | **OpenAI Codex** | `eternal model` → **ChatGPT or Codex Subscription**（ChatGPT OAuth，使用 Codex 模型） |
 | **GitHub Copilot** | `eternal model`（OAuth 设备码流程，`COPILOT_GITHUB_TOKEN`、`GH_TOKEN` 或 `gh auth token`） |
 | **GitHub Copilot ACP** | `eternal model`（在本地生成 `copilot --acp --stdio` 子进程） |
@@ -51,19 +51,9 @@ sidebar_position: 1
 :::
 
 
-### Nous Portal
+### OpenRouter
 
-[Nous Portal](https://portal.nousresearch.com) 是 Nous Research 的统一订阅网关，也是**运行 Eternal Agent 的推荐方式**。一次 OAuth 登录即可访问 300+ 前沿智能体模型（Claude、GPT、Gemini、DeepSeek、Qwen、Kimi、GLM、MiniMax、Grok 等）以及 [Tool Gateway](/user-guide/features/tool-gateway)（网页搜索、图像生成、TTS、浏览器自动化）——费用从你的 Nous 订阅中扣除，无需单独管理各提供商账户。
-
-```bash
-eternal setup --portal     # 全新安装——一条命令完成 OAuth + 提供商 + 网关配置
-eternal model              # 已有安装——从列表中选择"Nous Portal"
-eternal portal info        # 随时查看登录状态和路由信息
-```
-
-还没有订阅？前往 [portal.nousresearch.com/manage-subscription](https://portal.nousresearch.com/manage-subscription) 购买。
-
-**完整详情：** 参见专属的 [Nous Portal 集成页面](/integrations/nous-portal)（订阅内容、模型目录、故障排查）以及分步指南[使用 Nous Portal 运行 Eternal Agent](/guides/run-eternal-with-nous-portal)。
+[OpenRouter](https://openrouter.ai) 可通过一枚 API key 访问多个模型。创建自己的 key 后运行 `eternal setup`，或使用 `eternal model` 切换到 OpenRouter。
 
 
 :::info Codex 说明
@@ -73,11 +63,11 @@ OpenAI Codex 提供商通过设备码（device code）认证——打开一个 U
 :::
 
 :::warning
-即使使用 Nous Portal、Codex 或自定义端点，某些工具（视觉、网页摘要、MoA）仍会使用单独的"辅助"模型。默认情况下（`auxiliary.*.provider: "auto"`），Eternal 将这些任务路由到你的**主聊天模型**——即你在 `eternal model` 中选择的同一模型。你可以单独覆盖每个任务，将其路由到更便宜/更快的模型（例如 OpenRouter 上的 Gemini Flash）——参见[辅助模型](/user-guide/configuration#auxiliary-models)。
+即使使用 Codex 或自定义端点，某些工具（视觉、网页摘要、MoA）仍会使用单独的"辅助"模型。默认情况下（`auxiliary.*.provider: "auto"`），Eternal 将这些任务路由到你的**主聊天模型**。你可以单独覆盖每个任务——参见[辅助模型](/user-guide/configuration#auxiliary-models)。
 :::
 
-:::tip Nous Tool Gateway
-付费 Nous Portal 订阅者还可访问 **[Tool Gateway](/user-guide/features/tool-gateway)**——网页搜索、图像生成、TTS 和浏览器自动化，均通过你的订阅路由。无需额外 API key。全新安装时，`eternal setup --portal` 一条命令即可完成登录、设置 Nous 为提供商并开启网关。现有用户可通过 `eternal model` 或 `eternal tools` 按工具启用。随时使用 `eternal portal info` 查看路由状态。
+:::tip 工具提供商
+使用 `eternal tools` 分别配置网页搜索、图像生成、TTS 和浏览器自动化。托管服务使用你自己的 API key；部分工具也有本地或自托管选项。
 :::
 
 ### 模型管理的两个命令
@@ -1089,9 +1079,8 @@ Eternal 使用多源解析链来检测模型和提供商的正确上下文窗口
 4. **端点 `/models`** — 查询服务器 API（本地/自定义端点）
 5. **Anthropic `/v1/models`** — 查询 Anthropic API 获取 `max_input_tokens`（仅 API key 用户）
 6. **OpenRouter API** — 来自 OpenRouter 的实时模型元数据
-7. **Nous Portal** — 将 Nous 模型 ID 后缀匹配到 OpenRouter 元数据
-8. **[models.dev](https://models.dev)** — 社区维护的注册表，包含 100+ 提供商 3800+ 模型的提供商特定上下文长度
-9. **回退默认值** — 广泛的模型系列模式（默认 128K）
+7. **[models.dev](https://models.dev)** — 社区维护的注册表，包含 100+ 提供商 3800+ 模型的提供商特定上下文长度
+8. **回退默认值** — 广泛的模型系列模式（默认 128K）
 
 大多数配置开箱即用。该系统具有提供商感知能力——同一模型在不同服务商处可能有不同的上下文限制（例如 `claude-opus-4.6` 在 Anthropic 直连时为 1M，在 GitHub Copilot 上为 128K）。
 
@@ -1291,7 +1280,7 @@ model:
 
 | 使用场景 | 推荐方案 |
 |----------|-------------|
-| **只想让它工作** | OpenRouter（默认）或 Nous Portal |
+| **只想让它工作** | OpenRouter（默认）或 OpenRouter |
 | **本地模型，简单配置** | Ollama |
 | **生产 GPU 服务** | vLLM 或 SGLang |
 | **Mac / 无 GPU** | Ollama 或 llama.cpp |
@@ -1404,7 +1393,7 @@ fallback_model:
 
 激活时，故障转移在不丢失对话的情况下中途切换模型和提供商。链按条目逐一尝试；每个会话激活一次。
 
-支持的提供商：`openrouter`、`nous`、`openai-codex`、`copilot`、`copilot-acp`、`anthropic`、`gemini`、`qwen-oauth`、`huggingface`、`zai`、`kimi-coding`、`kimi-coding-cn`、`minimax`、`minimax-cn`、`minimax-oauth`、`deepseek`、`nvidia`、`xai`、`xai-oauth`、`ollama-cloud`、`bedrock`、`azure-foundry`、`opencode-zen`、`opencode-go`、`kilocode`、`xiaomi`、`arcee`、`gmi`、`stepfun`、`lmstudio`、`alibaba`、`alibaba-coding-plan`、`tencent-tokenhub`、`custom`。
+支持的提供商：`openrouter`、`openrouter`、`openai-codex`、`copilot`、`copilot-acp`、`anthropic`、`gemini`、`qwen-oauth`、`huggingface`、`zai`、`kimi-coding`、`kimi-coding-cn`、`minimax`、`minimax-cn`、`minimax-oauth`、`deepseek`、`nvidia`、`xai`、`xai-oauth`、`ollama-cloud`、`bedrock`、`azure-foundry`、`opencode-zen`、`opencode-go`、`kilocode`、`xiaomi`、`arcee`、`gmi`、`stepfun`、`lmstudio`、`alibaba`、`alibaba-coding-plan`、`tencent-tokenhub`、`custom`。
 
 :::tip
 故障转移仅通过 `config.yaml` 配置——或通过 `eternal fallback` 交互式配置。有关触发时机、链推进方式以及与辅助任务和委托的交互，参见[故障转移提供商](/user-guide/features/fallback-providers)。

@@ -9,7 +9,9 @@ description: "Practical advice to get the most out of Eternal Agent — prompt t
 A quick-wins collection of practical tips that make you immediately more effective with Eternal Agent. Each section targets a different aspect — scan the headers and jump to what's relevant.
 
 :::tip Confused which model to pick?
-Run `eternal setup --portal` — you get 300+ models including Claude, GPT-5, and Gemini under one subscription. See [Nous Portal](/integrations/nous-portal).
+Run `eternal model` and start with a current tool-capable model that has at
+least a 64K context window. OpenRouter is convenient for comparing models;
+direct Anthropic, OpenAI, Gemini, and local endpoints are also supported.
 :::
 
 ---

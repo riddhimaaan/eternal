@@ -2566,20 +2566,11 @@ class TestNewEndpoints:
         """Each provider row carries a server-computed readiness `status`.
 
         Regression: the GUI pilled every zero-env-var row "Ready" — including
-        logged-out Nous Subscription rows, xAI TTS without Grok OAuth, and
+        xAI TTS without Grok OAuth and
         never-installed KittenTTS/Piper. The endpoint now reports the honest
         state so keyless ≠ ready.
         """
         import eternal_cli.tools_config as tools_config
-        from eternal_cli.nous_account import NousPortalAccountInfo
-
-        # Logged out of Nous Portal → managed subscription rows need sign-in.
-        monkeypatch.setattr(
-            "eternal_cli.nous_subscription.get_nous_portal_account_info",
-            lambda *a, **k: NousPortalAccountInfo(
-                logged_in=False, source="none", fresh=False, paid_service_access=None
-            ),
-        )
         # No xAI credentials → the Grok OAuth-backed row needs sign-in.
         monkeypatch.setattr(tools_config, "_xai_credentials_present", lambda: False)
         # Local TTS engines not installed → their rows need setup.
@@ -2596,7 +2587,6 @@ class TestNewEndpoints:
         # Genuinely-free keyless row stays Ready.
         assert by_name["Microsoft Edge TTS"]["status"] == "ready"
         # Keyless ≠ ready for gated rows:
-        assert by_name["Nous Subscription"]["status"] == "needs_auth"
         assert by_name["xAI TTS"]["status"] == "needs_auth"
         assert by_name["KittenTTS"]["status"] == "needs_setup"
         assert by_name["Piper"]["status"] == "needs_setup"
@@ -2606,39 +2596,6 @@ class TestNewEndpoints:
 
 
 
-
-
-    def test_select_managed_nous_provider_reports_needs_nous_auth(self, monkeypatch):
-        """Selecting a managed Nous row while logged out flags needs_nous_auth.
-
-        Regression: the GUI PUT wrote browser.cloud_provider + use_gateway
-        but skipped the Portal entitlement handshake the CLI runs inline
-        (ensure_nous_portal_access) — so the row never activated and nothing
-        told the user to sign in. The endpoint now reports the entitlement
-        gap so the client can drive the existing Nous OAuth flow.
-        """
-        from eternal_cli.nous_account import NousPortalAccountInfo
-
-        monkeypatch.setattr(
-            "eternal_cli.nous_subscription.get_nous_portal_account_info",
-            lambda *a, **k: NousPortalAccountInfo(
-                logged_in=False, source="none", fresh=False, paid_service_access=None
-            ),
-        )
-
-        resp = self.client.put(
-            "/api/tools/toolsets/browser/provider",
-            json={"provider": "Nous Subscription (Browser Use cloud)"},
-        )
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["ok"] is True
-        assert data["needs_nous_auth"] is True
-        assert data["feature"] == "browser"
-        # The selection is still persisted — activation is what's gated.
-        from eternal_cli.config import load_config
-        cfg = load_config()
-        assert cfg["browser"]["cloud_provider"] == "browser-use"
 
 
     # -- Web capability split (search vs extract backends) ------------------

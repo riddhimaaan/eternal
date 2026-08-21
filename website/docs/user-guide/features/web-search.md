@@ -31,8 +31,10 @@ Brave Search, DDGS, and xAI are **search-only** — pair any of them with Firecr
 
 **Per-capability split:** you can use different providers for search and extract independently — for example SearXNG (free) for search and Firecrawl for extract. See [Per-capability configuration](#per-capability-configuration) below.
 
-:::tip Nous Subscribers
-If you have a paid [Nous Portal](https://portal.nousresearch.com) subscription, web search and extract are available through the **[Tool Gateway](tool-gateway.md)** via managed Firecrawl — no API key needed. New installs can run `eternal setup --portal` to log in and turn on all gateway tools at once; existing installs can flip just web via `eternal tools`.
+:::tip Choose your backend
+Run `eternal tools` to choose a web backend. Firecrawl, Exa, Parallel, Tavily,
+Brave, and xAI use their own credentials; SearXNG can be self-hosted and
+DuckDuckGo can run without an API key.
 :::
 
 ---
@@ -356,7 +358,7 @@ If no backend is explicitly configured, Eternal picks the first available one ba
 | `TAVILY_API_KEY` | tavily |
 | `EXA_API_KEY` | exa |
 | `PARALLEL_API_KEY` | parallel |
-| `FIRECRAWL_API_KEY` or `FIRECRAWL_API_URL` (or the Nous Tool Gateway is ready) | firecrawl |
+| `FIRECRAWL_API_KEY` or `FIRECRAWL_API_URL` | firecrawl |
 | `SEARXNG_URL` | searxng |
 | `BRAVE_SEARCH_API_KEY` | brave-free |
 | `ddgs` package importable | ddgs |

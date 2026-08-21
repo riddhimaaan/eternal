@@ -66,7 +66,6 @@ const sidebars: SidebarsConfig = {
       collapsed: true,
       items: [
         'user-guide/features/overview',
-        'user-guide/features/tool-gateway',
         {
           type: 'category',
           label: 'Core',
@@ -133,7 +132,6 @@ const sidebars: SidebarsConfig = {
             'user-guide/features/web-dashboard',
             'user-guide/features/extending-the-dashboard',
             'user-guide/features/api-server',
-            'user-guide/features/subscription-proxy',
           ],
         },
         {
@@ -697,7 +695,6 @@ const sidebars: SidebarsConfig = {
       collapsed: true,
       items: [
         'integrations/index',
-        'integrations/nous-portal',
         'integrations/providers',
         'integrations/buzz',
         'user-guide/features/mcp',
@@ -712,8 +709,6 @@ const sidebars: SidebarsConfig = {
       label: 'Guides & Tutorials',
       collapsed: true,
       items: [
-        'guides/run-nemotron-3-ultra-free',
-        'guides/run-eternal-with-nous-portal',
         'guides/tips',
         'guides/local-llm-on-mac',
         'guides/daily-briefing-bot',

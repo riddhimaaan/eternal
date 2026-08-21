@@ -371,7 +371,6 @@ TIPS = [
     # --- Credential Pools & Routing ---
     'eternal auth reset <provider> clears all cooldowns and exhaustion flags on a credential pool.',
     'credential_pool_strategies.<provider>: round_robin cycles keys evenly instead of the fill_first default.',
-    'use_gateway: true per-tool routes web, image, tts, or browser through your Nous subscription — no extra keys.',
     'provider_routing.data_collection: deny excludes data-storing providers on OpenRouter.',
     'provider_routing.require_parameters: true only routes to providers that support every param in your request.',
 

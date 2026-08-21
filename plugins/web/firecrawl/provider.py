@@ -177,35 +177,17 @@ def check_firecrawl_api_key() -> bool:
 
 
 def _firecrawl_backend_help_suffix() -> str:
-    """Return optional managed-gateway guidance for Firecrawl help text."""
-    import tools.web_tools as _wt
-
-    if not _wt.managed_nous_tools_enabled():
-        return ""
-    return (
-        ", or use the Nous Tool Gateway via your subscription "
-        "(FIRECRAWL_GATEWAY_URL or TOOL_GATEWAY_DOMAIN)"
-    )
+    """Return optional extra guidance for Firecrawl help text."""
+    return ""
 
 
 def _raise_web_backend_configuration_error() -> None:
     """Raise a clear error for unsupported web backend configuration."""
-    import tools.web_tools as _wt
-
     message = (
         "Web tools are not configured. "
         "Set FIRECRAWL_API_KEY for cloud Firecrawl or set FIRECRAWL_API_URL "
         "for a self-hosted Firecrawl instance."
     )
-    if _wt.managed_nous_tools_enabled():
-        message += (
-            " With your Nous subscription you can also use the Tool Gateway. "
-            "run `eternal tools` and select Nous Subscription as the web provider."
-        )
-    else:
-        message += " " + _wt.nous_tool_gateway_unavailable_message(
-            "managed Firecrawl web tools",
-        )
     raise ValueError(message)
 
 

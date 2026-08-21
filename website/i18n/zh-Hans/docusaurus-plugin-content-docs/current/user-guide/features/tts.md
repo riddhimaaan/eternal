@@ -8,8 +8,8 @@ description: "跨所有平台的文字转语音与语音消息转录"
 
 Eternal Agent 支持跨所有消息平台的文字转语音（TTS）输出和语音消息转录（STT）。
 
-:::tip Nous 订阅用户
-如果你拥有付费的 [Nous Portal](https://portal.nousresearch.com) 订阅，OpenAI TTS 可通过 **[Tool Gateway](tool-gateway.md)** 使用，无需单独的 OpenAI API 密钥。新安装可运行 `eternal setup --portal` 登录并一次性开启所有 gateway 工具；已有安装可通过 `eternal model` 或 `eternal tools` 选择 **Nous Subscription** 仅启用 TTS。
+:::tip 选择后端
+运行 `eternal tools` 选择语音后端。OpenAI、ElevenLabs、MiniMax、Mistral、Gemini 和 xAI 使用你自己的凭据；Edge TTS、KittenTTS 和 Piper 等本地选项无需订阅。
 :::
 
 ## 文字转语音（TTS）

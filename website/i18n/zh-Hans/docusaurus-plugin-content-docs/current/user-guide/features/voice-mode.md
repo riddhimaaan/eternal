@@ -22,8 +22,8 @@ Eternal Agent 支持在 CLI 和消息平台上进行完整的语音交互。通�
 `~/.eternal/` 目录和默认的 `config.yaml` 会在首次运行 `eternal` 时自动创建。只需手动创建 `~/.eternal/.env` 来存放 API 密钥。
 :::
 
-:::tip Nous Portal 同时覆盖两项
-付费的 [Nous Portal](/user-guide/features/tool-gateway) 订阅通过 Tool Gateway 同时提供 LLM（第 2 步）**和** OpenAI TTS — 无需单独的 OpenAI 密钥。全新安装时，`eternal setup --portal` 可一次性完成两项配置。
+:::tip OpenRouter 同时覆盖两项
+模型与 TTS 分别配置：先用 `eternal setup` 选择模型，再用 `eternal tools` 选择本地语音后端或添加语音服务的 API key。
 :::
 
 ## 概览

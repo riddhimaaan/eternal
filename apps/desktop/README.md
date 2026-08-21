@@ -1,13 +1,12 @@
 # Eternal Desktop ☤
 
 <p align="center">
-  <a href="https://github.com/NousResearch/hermes-agent/releases"><img src="https://img.shields.io/badge/Download-macOS%20%C2%B7%20Windows%20%C2%B7%20Linux-FFD700?style=for-the-badge" alt="Download"></a>
-  <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-eternal--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
-  <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://github.com/riddhimaaan/eternal"><img src="https://img.shields.io/badge/Source-GitHub-FFD700?style=for-the-badge&logo=github" alt="Source on GitHub"></a>
+  <a href="https://github.com/riddhimaaan/eternal/tree/main/website/docs"><img src="https://img.shields.io/badge/Docs-GitHub-FFD700?style=for-the-badge" alt="Documentation"></a>
+  <a href="https://github.com/riddhimaaan/eternal/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
 </p>
 
-**The native desktop app for [Eternal Agent](../../README.md) — the self-improving AI agent from [Nous Research](https://nousresearch.com).** Same agent, same skills, same memory as the CLI and gateway, in a polished native window — chat with streaming tool output, side-by-side previews, a file browser, voice, and settings, no terminal required. Available for **macOS, Windows, and Linux**.
+**The native desktop app for [Eternal Agent](../../README.md).** Same agent, same skills, and same memory as the CLI and gateway, in a native window with streaming tool output, previews, files, voice, and settings.
 
 <table>
 <tr><td><b>Chat with the full agent</b></td><td>Streaming responses, live tool activity, structured tool summaries, and the same conversation history as every other Eternal surface.</td></tr>
@@ -32,9 +31,8 @@ eternal desktop
 
 It builds and launches the GUI against your existing install — same config, keys, sessions, and skills. If Desktop cannot find a usable runtime or saved remote connection, first launch lets you connect to an existing Eternal gateway or install Eternal locally. Local onboarding then walks you through choosing a provider and model.
 
-### Prebuilt installers
-
-Prebuilt installers are built and distributed via [the Eternal Desktop website.](https://hermes-agent.nousresearch.com/).
+Eternal Desktop is currently distributed as source. Platform installers may be
+added later once there is a maintained release and support process.
 
 ---
 
@@ -203,9 +201,8 @@ Remove-Item -Recurse -Force "$env:LOCALAPPDATA\eternal\eternal-agent\venv"
 
 ## Community
 
-- 💬 [Discord](https://discord.gg/NousResearch)
-- 📖 [Documentation](https://hermes-agent.nousresearch.com/docs/)
-- 🐛 [Issues](https://github.com/NousResearch/hermes-agent/issues)
+- 📖 [Documentation](https://github.com/riddhimaaan/eternal/tree/main/website/docs)
+- 🐛 [Issues](https://github.com/riddhimaaan/eternal/issues)
 
 ---
 
@@ -213,4 +210,5 @@ Remove-Item -Recurse -Force "$env:LOCALAPPDATA\eternal\eternal-agent\venv"
 
 MIT — see [LICENSE](../../LICENSE).
 
-Built by [Nous Research](https://nousresearch.com).
+Eternal is built on the MIT-licensed Hermes Agent project. See [NOTICE](../../NOTICE)
+for upstream attribution.

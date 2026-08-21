@@ -3911,63 +3911,6 @@ def _safe_call(mod, fn_name: str, default):
 
 
 # ---------------------------------------------------------------------------
-# Portal endpoint — Nous Portal auth + Tool Gateway routing status (read-only).
-# ---------------------------------------------------------------------------
-
-
-@app.get("/api/portal")
-async def get_portal_status():
-    # load_config() + auth/subscription snapshots are disk reads — this is a
-    # polled endpoint, so keep them off the event loop.
-    def _run():
-        return _get_portal_status_sync()
-
-    return await asyncio.to_thread(_run)
-
-
-def _get_portal_status_sync():
-    cfg = load_config() or {}
-    auth: Dict[str, Any] = {}
-    try:
-        from eternal_cli.auth import get_nous_auth_status_local
-
-        # Read-only dashboard endpoint: refresh-free snapshot so polling
-        # never performs an OAuth refresh or burns a refresh token.
-        auth = get_nous_auth_status_local() or {}
-    except Exception:
-        auth = {}
-
-    features = []
-    try:
-        from eternal_cli.nous_subscription import get_nous_subscription_features
-
-        feats = get_nous_subscription_features(cfg)
-        if feats is not None:
-            for feat in feats.items():
-                if getattr(feat, "managed_by_nous", False):
-                    state = "via Nous Portal"
-                elif getattr(feat, "active", False) and getattr(feat, "current_provider", None):
-                    state = feat.current_provider
-                elif getattr(feat, "active", False):
-                    state = "active"
-                else:
-                    state = "not configured"
-                features.append({"label": getattr(feat, "label", ""), "state": state})
-    except Exception:
-        _log.exception("portal features failed")
-
-    model_cfg = cfg.get("model") if isinstance(cfg.get("model"), dict) else {}
-    return {
-        "logged_in": bool(auth.get("logged_in")),
-        "portal_url": auth.get("portal_base_url"),
-        "inference_url": auth.get("inference_base_url"),
-        "provider": str((model_cfg or {}).get("provider") or ""),
-        "subscription_url": "https://portal.nousresearch.com/manage-subscription",
-        "features": features,
-    }
-
-
-# ---------------------------------------------------------------------------
 # Diagnostics: prompt-size, support dump, debug upload, config migrate.
 # All produce text output, so they spawn background actions tailed via
 # /api/actions/<name>/status.
@@ -8107,7 +8050,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "email": {
         "name": "Email",
         "description": "Talk to Eternal through an IMAP/SMTP mailbox.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging",
         "env_vars": (
             "EMAIL_ADDRESS",
             "EMAIL_PASSWORD",
@@ -8150,7 +8093,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "google_chat": {
         "name": "Google Chat",
         "description": "Connect Eternal to Google Chat via Cloud Pub/Sub.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/google_chat",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/google_chat.md",
     },
     "wecom": {
         "name": "WeCom (group bot)",
@@ -8179,7 +8122,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "weixin": {
         "name": "Weixin / WeChat (Personal)",
         "description": "Connect a personal WeChat account through Tencent's iLink Bot API.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/weixin/",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/weixin.md",
         "env_vars": ("WEIXIN_ACCOUNT_ID", "WEIXIN_TOKEN", "WEIXIN_BASE_URL"),
         "required_env": ("WEIXIN_ACCOUNT_ID", "WEIXIN_TOKEN"),
     },
@@ -8206,34 +8149,34 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     # Channels page can point at the Microsoft Teams setup guide.
     "teams": {
         "description": "Connect Eternal to Microsoft Teams chats via the Bot Framework.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/teams",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/teams.md",
     },
     # Bundled platform plugins: name comes from the plugin registry label;
     # give each a human description (the registry's install_hint is a
     # dependency note, not a description) and a docs link.
     "irc": {
         "description": "Relay messages between an IRC channel (or DMs) and Eternal.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/irc",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/irc.md",
     },
     "line": {
         "description": "Use Eternal from LINE via the LINE Messaging API webhook.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/line",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/line.md",
     },
     "ntfy": {
         "description": "Chat with Eternal over ntfy push topics (ntfy.sh or self-hosted).",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/ntfy",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/ntfy.md",
     },
     "photon": {
         "description": "Use Eternal through iMessage via Photon's managed Spectrum platform.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/photon",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/photon.md",
     },
     "raft": {
         "description": "Join a Raft workspace as an external agent.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/raft",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/raft.md",
     },
     "simplex": {
         "description": "Talk to Eternal over SimpleX Chat via a local simplex-chat daemon.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/simplex",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/simplex.md",
     },
     "yuanbao": {
         "name": "Yuanbao (元宝)",
@@ -8244,7 +8187,7 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "api_server": {
         "name": "API server",
         "description": "Expose Eternal as an OpenAI-compatible HTTP API for tools like Open WebUI.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging",
         "env_vars": (
             "API_SERVER_ENABLED",
             "API_SERVER_KEY",
@@ -8257,20 +8200,20 @@ _PLATFORM_OVERRIDES: dict[str, dict[str, Any]] = {
     "webhook": {
         "name": "Webhooks",
         "description": "Receive events from GitHub, GitLab, and other webhook sources.",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/webhooks/",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/webhooks.md",
         "env_vars": ("WEBHOOK_ENABLED", "WEBHOOK_PORT", "WEBHOOK_SECRET"),
         "required_env": (),
     },
     "msgraph_webhook": {
         "name": "Microsoft Graph Webhook",
         "description": "Receive Microsoft Graph change notifications (Teams meetings, Outlook, …).",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/msgraph-webhook",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/msgraph-webhook.md",
         "required_env": (),
     },
     "whatsapp_cloud": {
         "name": "WhatsApp Cloud API",
         "description": "Use Eternal via Meta's hosted WhatsApp Cloud API (no local bridge).",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/user-guide/messaging/whatsapp-cloud",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/messaging/whatsapp-cloud.md",
     },
     "relay": {
         "name": "Relay (experimental)",
@@ -9329,7 +9272,7 @@ async def cancel_whatsapp_onboarding(pairing_id: str):
     return {"ok": True}
 
 
-_TELEGRAM_ONBOARDING_DEFAULT_URL = "https://setup.hermes-agent.nousresearch.com"
+_TELEGRAM_ONBOARDING_DEFAULT_URL = ""
 _TELEGRAM_ONBOARDING_USER_AGENT = f"EternalDashboard/{__version__}"
 @dataclass
 class _TelegramOnboardingPairing:
@@ -9402,6 +9345,16 @@ def _telegram_onboarding_request_sync(
 ) -> dict[str, Any]:
     import httpx
 
+    base_url = _telegram_onboarding_base_url()
+    if not base_url:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Managed Telegram setup is not configured for Eternal. "
+                "Set TELEGRAM_ONBOARDING_URL to a service you operate, or configure Telegram manually."
+            ),
+        )
+
     headers = {
         "Accept": "application/json",
         "User-Agent": _TELEGRAM_ONBOARDING_USER_AGENT,
@@ -9413,7 +9366,7 @@ def _telegram_onboarding_request_sync(
     if bearer_token:
         headers["Authorization"] = f"Bearer {bearer_token}"
 
-    url = f"{_telegram_onboarding_base_url()}{path}"
+    url = f"{base_url}{path}"
     try:
         with httpx.Client(timeout=httpx.Timeout(10.0)) as client:
             response = client.request(
@@ -10122,7 +10075,7 @@ _OAUTH_PROVIDER_CATALOG: tuple[Dict[str, Any], ...] = (
         # 127.0.0.1 callback.
         "flow": "device_code",
         "cli_command": "eternal auth add xai-oauth",
-        "docs_url": "https://hermes-agent.nousresearch.com/docs/guides/xai-grok-oauth",
+        "docs_url": "https://github.com/riddhimaaan/eternal/tree/main/website/docs/guides/xai-grok-oauth.md",
         "status_fn": None,  # dispatched via auth.get_xai_oauth_auth_status
     },
     {
@@ -10322,7 +10275,7 @@ def _build_oauth_catalog() -> list[Dict[str, Any]]:
     try:
         from eternal_cli.provider_catalog import provider_catalog
         for d in provider_catalog():
-            if d.tab != "accounts" or d.slug in seen:
+            if d.tab != "accounts" or d.slug in seen or d.slug == "nous":
                 continue
             seen.add(d.slug)
             rows.append({
@@ -18360,23 +18313,6 @@ def start_server(
         # escape hatch that serves the dashboard without authentication.
         from eternal_cli.dashboard_auth import list_providers
         if not list_providers():
-            # Surface the *specific* reason any bundled provider declined
-            # to register (e.g. missing ETERNAL_DASHBOARD_OAUTH_CLIENT_ID).
-            # Each provider plugin that ships with Eternal Agent exposes a
-            # module-level ``LAST_SKIP_REASON`` string for this purpose;
-            # without it the operator would only see "no providers" which
-            # is misleading when the provider IS installed but unconfigured.
-            skip_reasons: list[str] = []
-            try:
-                from plugins.dashboard_auth import nous as _nous_plugin
-
-                if _nous_plugin.LAST_SKIP_REASON:
-                    skip_reasons.append(
-                        f"  • nous: {_nous_plugin.LAST_SKIP_REASON}"
-                    )
-            except Exception:
-                pass
-
             _fix_hint = (
                 "Configure an auth provider before exposing the dashboard:\n"
                 "  • Password: set dashboard.basic_auth.username + "
@@ -18384,8 +18320,7 @@ def start_server(
                 "    (hash with: python -c \"from "
                 "plugins.dashboard_auth.basic import hash_password; "
                 "print(hash_password('your-password'))\")\n"
-                "  • OAuth: run `eternal dashboard register` (Nous Portal) or "
-                "install a DashboardAuthProvider plugin.\n"
+                "  • OAuth: install and configure a DashboardAuthProvider plugin.\n"
                 "There is no unauthenticated public-bind option — to keep it "
                 "local, bind 127.0.0.1 and tunnel in (SSH / Tailscale)."
             )
@@ -18415,16 +18350,6 @@ def start_server(
                     ) + _fix_hint
             except Exception:
                 pass
-            if skip_reasons:
-                raise SystemExit(
-                    f"Refusing to bind dashboard to {host} — the auth gate "
-                    f"engages on non-loopback binds, but no auth providers "
-                    f"are registered.\n\n"
-                    f"Bundled providers reported these issues:\n"
-                    + "\n".join(skip_reasons)
-                    + "\n\n"
-                    + _fix_hint
-                )
             raise SystemExit(
                 f"Refusing to bind dashboard to {host} — the auth gate "
                 f"engages on non-loopback binds, but no auth providers are "

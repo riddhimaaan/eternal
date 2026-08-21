@@ -225,7 +225,7 @@ def build_parser(parent_subparsers: argparse._SubParsersAction) -> argparse.Argu
             "Durable SQLite-backed task board shared across Eternal profiles. "
             "Tasks are claimed atomically, can depend on other tasks, and "
             "are executed by a named profile in an isolated workspace. "
-            "See https://hermes-agent.nousresearch.com/docs/user-guide/features/kanban "
+            "See https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/features/kanban.md "
             "or docs/eternal-kanban-v1-spec.pdf for the full design."
         ),
     )

@@ -9,13 +9,11 @@ import {
   getActionStatus,
   getToolsetConfig,
   getToolsetModels,
-  pollOAuthSession,
   revealEnvVar,
   runToolsetPostSetup,
   selectToolsetModel,
   selectToolsetProvider,
-  setEnvVar,
-  startOAuthLogin
+  setEnvVar
 } from '@/eternal'
 import { useI18n } from '@/i18n'
 import { Check, Loader2, Save, Terminal } from '@/lib/icons'
@@ -525,7 +523,7 @@ export function ToolsetConfigPanel({ toolset, onConfiguredChange, profile }: Too
   // Default-provider selection and a user click race just after config arrives:
   // a stale initialization effect must never replace an explicit choice.
   const providerChoiceClaimedRef = useRef(false)
-  // Guard the Nous Portal sign-in poll loop against unmount/state updates.
+  // Guard asynchronous setup work against unmount/state updates.
   const mountedRef = useRef(true)
 
   // eslint-disable-next-line no-restricted-syntax -- mount flag guarding an async poll loop, not an atom mirror
@@ -563,13 +561,20 @@ export function ToolsetConfigPanel({ toolset, onConfiguredChange, profile }: Too
     void refresh()
   }, [refresh])
 
-  const providers = useMemo(() => cfg?.providers ?? [], [cfg])
+  // Managed Nous backends belong to the upstream service and are not part of
+  // Eternal. Older runtimes can still return them in the capability payload,
+  // so filter them at the UI boundary instead of allowing the old sign-in flow
+  // to reappear in Desktop.
+  const providers = useMemo(
+    () => (cfg?.providers ?? []).filter(provider => !provider.requires_nous_auth && provider.name.toLowerCase() !== 'nous'),
+    [cfg]
+  )
 
   // Default the expanded provider to the one actually active in config
   // (`is_active` / `cfg.active_provider`, mirroring the CLI picker), then the
   // first fully-configured provider, else the first provider. Without this the
-  // panel highlighted the first keyless provider (e.g. Nous Portal) even when
-  // the user had already selected another (e.g. DuckDuckGo).
+  // panel highlighted the first keyless provider even when the user had
+  // already selected another (e.g. DuckDuckGo).
   // eslint-disable-next-line no-restricted-syntax -- one-shot provider-choice claim flag, not an atom mirror
   useEffect(() => {
     if (providerChoiceClaimedRef.current || expandedProvider || providers.length === 0) {
@@ -599,7 +604,7 @@ export function ToolsetConfigPanel({ toolset, onConfiguredChange, profile }: Too
     setSelecting(provider.name)
 
     try {
-      const result = await selectToolsetProvider(toolset, provider.name, undefined, profile)
+      await selectToolsetProvider(toolset, provider.name, undefined, profile)
       // Mirror the backend write locally so dependent UI (model catalog
       // enablement) tracks the new active backend without a refetch.
       setCfg(current =>
@@ -612,83 +617,12 @@ export function ToolsetConfigPanel({ toolset, onConfiguredChange, profile }: Too
           : current
       )
 
-      if (result.needs_nous_auth) {
-        // Managed Nous row selected without Portal entitlement: the config
-        // keys are written but the backend won't activate until the user
-        // signs in (the CLI runs this gate inline; the GUI surfaces it as a
-        // sign-in action). Reuses the existing Nous Portal device-code flow.
-        notify({
-          kind: 'warning',
-          title: copy.nousAuthNeededTitle,
-          message: copy.nousAuthNeededMessage(provider.name),
-          action: { label: copy.nousAuthSignIn, onClick: () => void signInToNousPortal() }
-        })
-
-        return
-      }
-
       notify({ kind: 'success', title: copy.selectedTitle, message: copy.selectedMessage(provider.name) })
       onConfiguredChange?.()
     } catch (err) {
       notifyError(err, copy.failedSelect(provider.name))
     } finally {
       setSelecting(null)
-    }
-  }
-
-  // Drive the existing Nous Portal OAuth device-code flow (the same session
-  // machinery onboarding uses: start → open verification URL → poll), then
-  // refetch the toolset config so is_active / status flip once entitled.
-  async function signInToNousPortal() {
-    try {
-      const start = await startOAuthLogin('nous', profile)
-
-      if (start.flow !== 'device_code') {
-        notifyError(new Error(`unexpected flow: ${start.flow}`), copy.nousAuthFailed)
-
-        return
-      }
-
-      const url = start.verification_url
-
-      if (window.eternalDesktop?.openExternal) {
-        try {
-          await window.eternalDesktop.openExternal(url)
-        } catch {
-          window.open(url, '_blank', 'noopener,noreferrer')
-        }
-      } else {
-        window.open(url, '_blank', 'noopener,noreferrer')
-      }
-
-      // Poll until the device-code session resolves (~5s cadence, bounded).
-      for (let attempt = 0; attempt < 120 && mountedRef.current; attempt += 1) {
-        await new Promise(resolve => window.setTimeout(resolve, 5000))
-
-        if (!mountedRef.current) {
-          return
-        }
-
-        const polled = await pollOAuthSession('nous', start.session_id, profile)
-
-        if (polled.status === 'approved') {
-          notify({ kind: 'success', title: copy.nousAuthDoneTitle, message: copy.nousAuthDoneMessage })
-          await refresh()
-          onConfiguredChange?.()
-
-          return
-        }
-
-        if (polled.status !== 'pending') {
-          notifyError(new Error(polled.error_message || `Sign-in ${polled.status}`), copy.nousAuthFailed)
-
-          return
-        }
-      }
-    } catch (err) {
-      if (mountedRef.current) {
-        notifyError(err, copy.nousAuthFailed)
-      }
     }
   }
 
@@ -857,9 +791,6 @@ export function ToolsetConfigPanel({ toolset, onConfiguredChange, profile }: Too
                       </Button>
                     )}
                   </div>
-                )}
-                {provider.requires_nous_auth && (
-                  <p className="text-[0.72rem] text-muted-foreground">{copy.nousIncluded}</p>
                 )}
                 {provider.env_vars.length === 0 ? (
                   <p className="text-[0.72rem] text-muted-foreground">{copy.noApiKeyRequired}</p>

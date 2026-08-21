@@ -99,7 +99,7 @@ proxy:
   # Extra allowed upstream hosts beyond the bundled defaults.
   # Wildcards (`*.foo.com`) are supported. The defaults cover OpenRouter,
   # OpenAI, Anthropic, Google, xAI, Mistral, Groq, Together, DeepSeek,
-  # and Nous Research.
+  # and other model providers.
   extra_allowed_hosts: []
 ```
 
@@ -111,7 +111,7 @@ api.openai.com          api.anthropic.com
 generativelanguage.googleapis.com
 api.x.ai                api.mistral.ai
 api.groq.com            api.together.xyz
-api.deepseek.com        inference.nousresearch.com
+api.deepseek.com
 ```
 
 If your agent needs an upstream that isn't on the list — a self-hosted inference endpoint, an extra cloud LLM, an MCP server — add it to `proxy.extra_allowed_hosts`. Wildcards are matched against the full hostname (`*.example.com` matches `api.example.com` and `staging.example.com` but not `example.com` itself).
@@ -151,7 +151,7 @@ The `secrets` transform swaps the proxy token wherever it appears in a matched l
 
 | Provider | Env var | Swapped in |
 |---|---|---|
-| OpenRouter, OpenAI, Groq, Together, DeepSeek, Mistral, xAI, Nous | `*_API_KEY` | `Authorization` header |
+| OpenRouter, OpenAI, Groq, Together, DeepSeek, Mistral, xAI | `*_API_KEY` | `Authorization` header |
 | Anthropic native | `ANTHROPIC_API_KEY` | `x-api-key` + `Authorization` |
 | Azure OpenAI | `AZURE_OPENAI_API_KEY` | `api-key` + `Authorization` (`*.openai.azure.com`, `*.cognitiveservices.azure.com`, `*.services.ai.azure.com`) |
 | Google AI Studio (Gemini) | `GEMINI_API_KEY` / `GOOGLE_API_KEY` | `x-goog-api-key` header or `?key=` query param |

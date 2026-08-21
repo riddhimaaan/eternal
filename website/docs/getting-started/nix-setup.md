@@ -41,17 +41,17 @@ No clone needed. Nix fetches, builds, and runs everything:
 
 ```bash
 # Run the desktop app
-nix run github:NousResearch/hermes-agent#desktop
+nix run github:riddhimaaan/eternal#desktop
 
 # Or install persistently
-nix profile install github:NousResearch/hermes-agent#desktop
+nix profile install github:riddhimaaan/eternal#desktop
 
 # run the tui
-nix run github:NousResearch/hermes-agent -- setup
-nix run github:NousResearch/hermes-agent -- --tui
+nix run github:riddhimaaan/eternal -- setup
+nix run github:riddhimaaan/eternal -- --tui
 
 # or install it in your profile
-nix profile install github:NousResearch/hermes-agent
+nix profile install github:riddhimaaan/eternal
 eternal setup
 eternal --tui
 ```
@@ -69,7 +69,7 @@ The `default` package adds ~700 MB to the closure. If you only need messaging pl
 <summary><strong>Running from a local clone</strong></summary>
 
 ```bash
-git clone https://github.com/NousResearch/hermes-agent.git
+git clone https://github.com/riddhimaaan/eternal.git
 cd eternal-agent
 nix develop
 eternal setup
@@ -94,7 +94,7 @@ This module requires NixOS. For non-NixOS systems (macOS, other Linux distros), 
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    eternal-agent.url = "github:NousResearch/hermes-agent";
+    eternal-agent.url = "github:riddhimaaan/eternal";
   };
 
   outputs = { nixpkgs, eternal-agent, ... }: {
@@ -733,7 +733,7 @@ External flakes can override the package directly:
 
 ```nix
 {
-  inputs.eternal-agent.url = "github:NousResearch/hermes-agent";
+  inputs.eternal-agent.url = "github:riddhimaaan/eternal";
   outputs = { eternal-agent, nixpkgs, ... }: {
     nixpkgs.overlays = [ eternal-agent.overlays.default ];
     # Then:

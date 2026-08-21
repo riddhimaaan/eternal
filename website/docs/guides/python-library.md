@@ -15,7 +15,7 @@ Eternal isn't just a CLI tool. You can import `AIAgent` directly and use it prog
 Clone Eternal and create its supported editable development environment:
 
 ```bash
-git clone https://github.com/NousResearch/hermes-agent.git
+git clone https://github.com/riddhimaaan/eternal.git
 cd eternal-agent
 uv sync
 ```

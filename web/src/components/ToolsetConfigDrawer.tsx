@@ -212,6 +212,12 @@ export function ToolsetConfigDrawer({ toolset, profile, onClose, onChanged }: Pr
 
   const labelText = toolset.label?.trim() || toolset.name;
   const platformText = toolset.platform_label?.trim() || toolset.platform;
+  // Managed Nous rows can still arrive from an older backend. They are not
+  // part of Eternal and must not reappear in the dashboard.
+  const providers = (config?.providers ?? []).filter(
+    (provider) =>
+      !provider.requires_nous_auth && provider.name.toLowerCase() !== "nous",
+  );
 
   return createPortal(
     <div
@@ -275,12 +281,12 @@ export function ToolsetConfigDrawer({ toolset, profile, onClose, onChanged }: Pr
               This toolset has no configurable backends — toggle it on or off
               above. It works with no provider selection or API keys.
             </p>
-          ) : config.providers.length === 0 ? (
+          ) : providers.length === 0 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">
               No providers are available for this toolset in this install.
             </p>
           ) : (
-            config.providers.map((provider) => {
+            providers.map((provider) => {
               const isActive = provider.name === activeProvider;
               return (
                 <div
@@ -298,11 +304,6 @@ export function ToolsetConfigDrawer({ toolset, profile, onClose, onChanged }: Pr
                       {provider.badge && (
                         <Badge tone="secondary" className="text-xs">
                           {provider.badge}
-                        </Badge>
-                      )}
-                      {provider.requires_nous_auth && (
-                        <Badge tone="outline" className="text-xs">
-                          Nous Portal
                         </Badge>
                       )}
                     </div>

@@ -11,7 +11,8 @@ This guide is the practical companion to the [Voice Mode feature reference](/use
 If the feature page explains what voice mode can do, this guide shows how to actually use it well.
 
 :::tip
-[Nous Portal](/integrations/nous-portal) bundles both the LLM and TTS through one OAuth — voice mode works end-to-end with no extra credentials.
+Voice mode uses your configured model plus a separately configured speech
+backend. Run `eternal tools` to choose the TTS and transcription providers.
 :::
 
 ## What voice mode is good for

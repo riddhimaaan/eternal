@@ -10,7 +10,8 @@ Eternal can optionally hand `openai/*` and `openai-codex/*` turns to the [Codex 
 This is **opt-in only**. Default Eternal behavior is unchanged unless you flip the flag. Eternal never auto-routes you onto this runtime.
 
 :::tip
-Not using OpenAI Codex? `eternal setup --portal` configures a non-Codex backend with Claude/Gemini/etc. in one step. See [Nous Portal](/integrations/nous-portal).
+Not using OpenAI Codex? Run `eternal model` to select another configured
+provider such as Anthropic, Gemini, OpenRouter, or a custom endpoint.
 :::
 
 ## Why
@@ -99,7 +100,7 @@ What also works because the MCP callback exposes them:
 - **`kanban_show` / `kanban_list`** — read-only board queries for the worker to check its own context.
 - **`kanban_create` / `kanban_unblock` / `kanban_link`** — orchestrator-only operations. Available for orchestrator agents running on the codex runtime that need to dispatch new tasks.
 
-The kanban tools are gated by `ETERNAL_KANBAN_TASK` env var the dispatcher sets — that var is propagated to the codex subprocess (codex inherits env) and from there to the spawned `eternal-tools` MCP server subprocess. So the tools see the right task id and gate correctly. For Codex app-server workers, Eternal also passes narrow app-server sandbox overrides when `ETERNAL_KANBAN_TASK` is present: keep `workspace-write` sandboxing, add the **board DB directory plus every Kanban path the dispatcher pinned** as extra writable roots (`ETERNAL_KANBAN_WORKSPACES_ROOT`, `ETERNAL_KANBAN_WORKSPACE`, legacy `ETERNAL_KANBAN_ROOT` — deduplicated, DB-dir first), and keep network disabled by default. This avoids the brittle `:danger-no-sandbox` workaround while letting `kanban_complete` / `kanban_block` update the board DB **and** letting workers write reports/artifacts under workspace mounts that live outside the DB directory (e.g. `/media/.../kanban-workspaces/...` on a separate drive — [issue #27941](https://github.com/NousResearch/hermes-agent/issues/27941)).
+The kanban tools are gated by `ETERNAL_KANBAN_TASK` env var the dispatcher sets — that var is propagated to the codex subprocess (codex inherits env) and from there to the spawned `eternal-tools` MCP server subprocess. So the tools see the right task id and gate correctly. For Codex app-server workers, Eternal also passes narrow app-server sandbox overrides when `ETERNAL_KANBAN_TASK` is present: keep `workspace-write` sandboxing, add the **board DB directory plus every Kanban path the dispatcher pinned** as extra writable roots (`ETERNAL_KANBAN_WORKSPACES_ROOT`, `ETERNAL_KANBAN_WORKSPACE`, legacy `ETERNAL_KANBAN_ROOT` — deduplicated, DB-dir first), and keep network disabled by default. This avoids the brittle `:danger-no-sandbox` workaround while letting `kanban_complete` / `kanban_block` update the board DB **and** letting workers write reports/artifacts under workspace mounts that live outside the DB directory (e.g. `/media/.../kanban-workspaces/...` on a separate drive — [issue #27941](https://github.com/riddhimaaan/eternal/issues/27941)).
 
 ### Cron jobs
 
@@ -410,7 +411,7 @@ Known limitations:
 - **No inline patch preview in approval prompts when codex doesn't track the changeset.** Codex's `fileChange` approval params don't always carry the changeset. Eternal caches the data from the corresponding `item/started` notification when possible, but if approval arrives before the item has streamed, the prompt falls back to whatever `reason` codex provides.
 - **Sub-second cancellation isn't guaranteed.** Mid-stream interrupts (Ctrl+C while codex is responding) are sent via `turn/interrupt`, but if codex has already flushed the final message, you get the response anyway.
 
-If you find a bug, [open an issue](https://github.com/NousResearch/hermes-agent/issues) with the output of `eternal logs --since 5m`. Mention `codex-runtime` in the title so it's easy to triage.
+If you find a bug, [open an issue](https://github.com/riddhimaaan/eternal/issues) with the output of `eternal logs --since 5m`. Mention `codex-runtime` in the title so it's easy to triage.
 
 ## Architecture
 
@@ -457,4 +458,4 @@ If you find a bug, [open an issue](https://github.com/NousResearch/hermes-agent/
         └──────────────────────────────────────────────────────────┘
 ```
 
-For implementation details, see [PR #24182](https://github.com/NousResearch/hermes-agent/pull/24182) and the [Codex app-server protocol README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md).
+For implementation details, see [PR #24182](https://github.com/riddhimaaan/eternal/pull/24182) and the [Codex app-server protocol README](https://github.com/openai/codex/blob/main/codex-rs/app-server/README.md).

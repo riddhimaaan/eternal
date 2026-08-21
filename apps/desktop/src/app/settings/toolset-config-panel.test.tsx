@@ -544,10 +544,8 @@ describe('ToolsetConfigPanel', () => {
 
   describe('readiness pills', () => {
     it('renders the server status instead of assuming keyless rows are Ready', async () => {
-      // The false-Ready bug: a logged-out Nous Subscription row and a
-      // never-installed local TTS both have zero env vars — the old client
-      // heuristic pilled every such row "Ready". The server now sends an
-      // honest per-provider status; the pill must follow it.
+      // The client follows the backend readiness state for ordinary providers
+      // and excludes legacy managed providers from the product UI.
       getToolsetConfig.mockResolvedValue(
         config({
           providers: [
@@ -589,11 +587,10 @@ describe('ToolsetConfigPanel', () => {
       render(<ToolsetConfigPanel onConfiguredChange={vi.fn()} toolset="tts" />)
 
       await screen.findByText('Microsoft Edge TTS')
-      // Edge is the active backend — its row pill reads Active (which
-      // subsumes Ready); the other rows keep their warn pills.
+      // Edge is the active backend; the local provider keeps its setup warning.
       expect(screen.getAllByText('Active')).toHaveLength(1)
       expect(screen.queryByText('Ready')).toBeNull()
-      expect(screen.getByText('Needs sign-in')).toBeTruthy()
+      expect(screen.queryByText('Nous Subscription')).toBeNull()
       expect(screen.getByText('Setup required')).toBeTruthy()
     })
 
@@ -794,7 +791,7 @@ describe('ToolsetConfigPanel', () => {
     })
   })
 
-  describe('managed Nous provider activation', () => {
+  describe('legacy managed provider filtering', () => {
     const nousBrowserConfig = () =>
       config({
         name: 'browser',
@@ -813,119 +810,15 @@ describe('ToolsetConfigPanel', () => {
         ]
       })
 
-    it('surfaces a sign-in notice when the PUT reports needs_nous_auth', async () => {
-      // Regression (Windows 11 Capabilities journey): the GUI wrote
-      // browser.cloud_provider but skipped the Portal entitlement handshake,
-      // so the managed row silently never activated. The endpoint now
-      // reports needs_nous_auth and the panel must surface a sign-in action
-      // instead of the misleading "provider selected" success toast.
-      const { notify } = await import('@/store/notifications')
-
+    it('does not render or activate a managed Nous row returned by an older backend', async () => {
       getToolsetConfig.mockResolvedValue(nousBrowserConfig())
-      selectToolsetProvider.mockResolvedValue({
-        ok: true,
-        name: 'browser',
-        provider: 'Nous Subscription (Browser Use cloud)',
-        needs_nous_auth: true,
-        feature: 'browser'
-      })
 
       const { ToolsetConfigPanel } = await import('./toolset-config-panel')
       render(<ToolsetConfigPanel onConfiguredChange={vi.fn()} toolset="browser" />)
 
-      // The single Nous row auto-expands; activate via the explicit button.
-      await screen.findByRole('button', { name: /Nous Subscription/ })
-      fireEvent.click(await screen.findByRole('button', { name: /Use this backend/ }))
-
-      await waitFor(() =>
-        expect(selectToolsetProvider).toHaveBeenCalledWith('browser', 'Nous Subscription (Browser Use cloud)')
-      )
-      await waitFor(() =>
-        expect(notify).toHaveBeenCalledWith(
-          expect.objectContaining({
-            kind: 'warning',
-            action: expect.objectContaining({ label: expect.any(String) })
-          })
-        )
-      )
-      // No success toast — the row is not active yet.
-      expect(notify).not.toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' }))
-    })
-
-    it('drives the existing Nous OAuth device-code flow from the sign-in action and refetches', async () => {
-      const { notify } = await import('@/store/notifications')
-
-      getToolsetConfig.mockResolvedValue(nousBrowserConfig())
-      selectToolsetProvider.mockResolvedValue({
-        ok: true,
-        name: 'browser',
-        provider: 'Nous Subscription (Browser Use cloud)',
-        needs_nous_auth: true,
-        feature: 'browser'
-      })
-      startOAuthLogin.mockResolvedValue({
-        flow: 'device_code',
-        session_id: 'sess-1',
-        user_code: 'NOUS-1234',
-        verification_url: 'https://portal.nousresearch.com/device?user_code=NOUS-1234',
-        poll_interval: 5,
-        expires_in: 600
-      })
-      pollOAuthSession.mockResolvedValue({ session_id: 'sess-1', status: 'approved' })
-      const openSpy = vi.spyOn(window, 'open').mockReturnValue(null)
-
-      try {
-        const { ToolsetConfigPanel } = await import('./toolset-config-panel')
-        render(<ToolsetConfigPanel onConfiguredChange={vi.fn()} toolset="browser" />)
-
-        await screen.findByRole('button', { name: /Nous Subscription/ })
-        fireEvent.click(await screen.findByRole('button', { name: /Use this backend/ }))
-
-        // Grab the sign-in action off the warning notification and invoke it —
-        // this is the affordance the toast renders as a button.
-        await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ kind: 'warning' })))
-
-        const warning = vi
-          .mocked(notify)
-          .mock.calls.map(call => call[0])
-          .find(input => input.kind === 'warning')
-
-        expect(warning?.action).toBeTruthy()
-        getToolsetConfig.mockClear()
-        warning!.action!.onClick()
-
-        await waitFor(() => expect(startOAuthLogin).toHaveBeenCalledWith('nous'))
-        expect(openSpy).toHaveBeenCalledWith(
-          'https://portal.nousresearch.com/device?user_code=NOUS-1234',
-          '_blank',
-          'noopener,noreferrer'
-        )
-        // Approved poll → the panel refetches the config so status flips.
-        await waitFor(() => expect(pollOAuthSession).toHaveBeenCalledWith('nous', 'sess-1'), { timeout: 8000 })
-        await waitFor(() => expect(getToolsetConfig).toHaveBeenCalled(), { timeout: 8000 })
-      } finally {
-        openSpy.mockRestore()
-      }
-    }, 20000)
-
-    it('shows the plain success toast when the managed row is already entitled', async () => {
-      const { notify } = await import('@/store/notifications')
-
-      getToolsetConfig.mockResolvedValue(nousBrowserConfig())
-      selectToolsetProvider.mockResolvedValue({
-        ok: true,
-        name: 'browser',
-        provider: 'Nous Subscription (Browser Use cloud)'
-      })
-
-      const { ToolsetConfigPanel } = await import('./toolset-config-panel')
-      render(<ToolsetConfigPanel onConfiguredChange={vi.fn()} toolset="browser" />)
-
-      await screen.findByRole('button', { name: /Nous Subscription/ })
-      fireEvent.click(await screen.findByRole('button', { name: /Use this backend/ }))
-
-      await waitFor(() => expect(notify).toHaveBeenCalledWith(expect.objectContaining({ kind: 'success' })))
-      expect(startOAuthLogin).not.toHaveBeenCalled()
+      expect(await screen.findByText('No providers are available for this toolset right now.')).toBeTruthy()
+      expect(screen.queryByText(/Nous Subscription/)).toBeNull()
+      expect(selectToolsetProvider).not.toHaveBeenCalled()
     })
   })
 

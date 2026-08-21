@@ -5,7 +5,8 @@ import { usePageHeader } from "@/contexts/usePageHeader";
 import { cn } from "@/lib/utils";
 import { PluginSlot } from "@/plugins";
 
-export const ETERNAL_DOCS_URL = "https://hermes-agent.nousresearch.com/docs/";
+export const ETERNAL_DOCS_URL =
+  "https://github.com/riddhimaaan/eternal/tree/main/website/docs";
 
 const DS_BUTTON_OUTLINED_LINK_CN = cn(
   "group relative inline-grid grid-cols-[auto_1fr_auto] items-center",
@@ -44,25 +45,28 @@ export default function DocsPage() {
       )}
     >
       <PluginSlot name="docs:top" />
-      <iframe
-        title={t.app.nav.documentation}
-        src={ETERNAL_DOCS_URL}
+      <div
         className={cn(
-          "min-h-0 w-full min-w-0 flex-1",
-          "rounded-sm border border-current/20",
-          // Docusaurus paints over a transparent <html> / <body> and
-          // relies on the browser's canvas color (light by default) to
-          // fill the viewport. Inheriting the dashboard's dark color
-          // scheme makes that canvas dark, so the docs body text — which
-          // is tuned for a light canvas — becomes near-invisible. Force a
-          // light color scheme + white background on the iframe element so
-          // the docs render cleanly regardless of the active dashboard
-          // theme or the user's prefers-color-scheme.
-          "[color-scheme:light] bg-white",
+          "grid min-h-0 w-full min-w-0 flex-1 place-items-center",
+          "rounded-sm border border-current/20 p-8 text-center",
         )}
-        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-        referrerPolicy="no-referrer-when-downgrade"
-      />
+      >
+        <div className="grid max-w-xl gap-4">
+          <h2 className="text-xl font-semibold">Eternal documentation</h2>
+          <p className="text-sm text-text-tertiary">
+            The documentation is maintained with Eternal's source code.
+          </p>
+          <a
+            className={DS_BUTTON_OUTLINED_LINK_CN}
+            href={ETERNAL_DOCS_URL}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <ExternalLink className="size-3.5" />
+            {t.app.openDocumentation}
+          </a>
+        </div>
+      </div>
       <PluginSlot name="docs:bottom" />
     </div>
   );

@@ -81,7 +81,7 @@ python $ETERNAL_HOME/skills/devops/watchers/scripts/watch_rss.py \
 
 ```bash
 python $ETERNAL_HOME/skills/devops/watchers/scripts/watch_github.py \
-  --name eternal-issues --repo NousResearch/hermes-agent --scope issues
+  --name eternal-issues --repo riddhimaaan/eternal --scope issues
 ```
 
 轮询任意 JSON API：

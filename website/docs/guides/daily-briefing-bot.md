@@ -11,7 +11,8 @@ In this tutorial, you'll build a personal briefing bot that wakes up every morni
 By the end, you'll have a fully automated workflow combining **web search**, **cron scheduling**, **delegation**, and **messaging delivery** — no code required.
 
 :::tip
-This recipe hits web search, summarization, and optional TTS — all bundled in a Portal subscription. The fastest setup is `eternal setup --portal`. See [Nous Portal](/integrations/nous-portal).
+This recipe uses web search, model summarization, and optional TTS. Configure
+and test each selected provider before scheduling the job.
 :::
 
 ## What We're Building

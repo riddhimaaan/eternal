@@ -432,7 +432,7 @@ def _print_curator_first_run_notice() -> None:
     print("  Preview now:  eternal curator run --dry-run")
     print("  Pause it:     eternal curator pause")
     print(
-        "  Docs:         https://hermes-agent.nousresearch.com/docs/user-guide/features/curator"
+        "  Docs:         https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/features/curator.md"
     )
 
 def _print_fts_optimize_available_notice() -> None:
@@ -997,7 +997,7 @@ def _update_via_zip(args, *, had_desktop_app_before_update: bool = False):
         print("  Your existing install was left in place.")
         print(
             "  Re-run `eternal update` to retry; if the agent won't start, "
-            "reinstall from https://hermes-agent.nousresearch.com"
+            "reinstall from the Eternal source repository"
         )
         _m().sys.exit(1)
     finally:
@@ -4558,7 +4558,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
         else:
             print("✗ Not a git repository. Please reinstall:")
             print(
-                "  curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash"
+                "  scripts/install.sh"
             )
             sys.exit(1)
 
@@ -5192,7 +5192,7 @@ def _cmd_update_impl(args, gateway_mode: bool):
             print(f"  ⚠ {failing_module} still fails to import after updating:")
             print(f"      {import_error}")
             print("    Run `eternal update` again — if it persists, reinstall:")
-            print("    https://hermes-agent.nousresearch.com")
+            print("    https://github.com/riddhimaaan/eternal")
 
         node_failures = _update_node_dependencies()
         _m()._build_web_ui(_m().PROJECT_ROOT / "web")

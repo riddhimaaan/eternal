@@ -7,11 +7,11 @@ const config: Config = {
   tagline: 'The self-improving AI agent',
   favicon: 'img/favicon.ico',
 
-  url: 'https://hermes-agent.nousresearch.com',
-  baseUrl: '/docs/',
+  url: 'https://riddhimaaan.github.io',
+  baseUrl: '/eternal/',
 
-  organizationName: 'NousResearch',
-  projectName: 'eternal-agent',
+  organizationName: 'riddhimaaan',
+  projectName: 'eternal',
 
   onBrokenLinks: 'warn',
 
@@ -80,7 +80,7 @@ const config: Config = {
         docs: {
           routeBasePath: '/',  // Docs at the root of /docs/
           sidebarPath: './sidebars.ts',
-          editUrl: 'https://github.com/NousResearch/hermes-agent/edit/main/website/',
+          editUrl: 'https://github.com/riddhimaaan/eternal/edit/main/website/',
         },
         blog: false,
         theme: {
@@ -135,27 +135,12 @@ const config: Config = {
           position: 'left',
         },
         {
-          href: 'https://hermes-agent.nousresearch.com/',
-          label: 'Download',
-          position: 'left',
-        },
-        {
           type: 'localeDropdown',
           position: 'right',
         },
         {
-          href: 'https://hermes-agent.nousresearch.com',
-          label: 'Home',
-          position: 'right',
-        },
-        {
-          href: 'https://github.com/NousResearch/hermes-agent',
+          href: 'https://github.com/riddhimaaan/eternal',
           label: 'GitHub',
-          position: 'right',
-        },
-        {
-          href: 'https://discord.gg/NousResearch',
-          label: 'Discord',
           position: 'right',
         },
       ],
@@ -173,23 +158,23 @@ const config: Config = {
           ],
         },
         {
-          title: 'Community',
+          title: 'Project',
           items: [
-            { label: 'Discord', href: 'https://discord.gg/NousResearch' },
-            { label: 'GitHub Issues', href: 'https://github.com/NousResearch/hermes-agent/issues' },
+            { label: 'GitHub', href: 'https://github.com/riddhimaaan/eternal' },
+            { label: 'GitHub Issues', href: 'https://github.com/riddhimaaan/eternal/issues' },
             { label: 'Skills Hub', href: 'https://agentskills.io' },
           ],
         },
         {
           title: 'More',
           items: [
-            { label: 'Desktop Download', href: 'https://hermes-agent.nousresearch.com/' },
-            { label: 'GitHub', href: 'https://github.com/NousResearch/hermes-agent' },
-            { label: 'Nous Research', href: 'https://nousresearch.com' },
+            { label: 'Source', href: 'https://github.com/riddhimaaan/eternal' },
+            { label: 'License', href: 'https://github.com/riddhimaaan/eternal/blob/main/LICENSE' },
+            { label: 'Upstream attribution', href: 'https://github.com/riddhimaaan/eternal/blob/main/NOTICE' },
           ],
         },
       ],
-      copyright: `Built by <a href="https://nousresearch.com">Nous Research</a> · MIT License · ${new Date().getFullYear()}`,
+      copyright: `Eternal Agent · MIT License · ${new Date().getFullYear()}`,
     },
     prism: {
       theme: prismThemes.github,

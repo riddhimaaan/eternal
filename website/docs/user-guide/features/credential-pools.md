@@ -16,7 +16,7 @@ Provider-side prompt caches (Anthropic, OpenAI, OpenRouter) are scoped to the ac
 :::
 
 :::tip
-Credential pools are mainly for API-key providers (OpenRouter, Anthropic). A single [Nous Portal](/integrations/nous-portal) OAuth covers 300+ models, so most users don't need a pool when on Portal.
+Credential pools are mainly useful when you operate several API keys for the same provider, such as OpenRouter or Anthropic.
 :::
 
 ## How It Works
@@ -95,7 +95,7 @@ What would you like to do?
   5. Exit
 ```
 
-For providers that support both API keys and OAuth (Anthropic, Nous, Codex), the add flow asks which type:
+For providers that support both API keys and OAuth (such as Anthropic and Codex), the add flow asks which type:
 
 ```
 anthropic supports both API keys and OAuth login.
@@ -184,7 +184,7 @@ Eternal automatically discovers credentials from multiple sources and seeds the 
 | Source | Example | Auto-seeded? |
 |--------|---------|-------------|
 | Environment variables | `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY` | Yes |
-| OAuth tokens (auth.json) | Codex device code, Nous device code | Yes |
+| OAuth tokens (auth.json) | Codex and other supported device-code flows | Yes |
 | Claude Code credentials | `~/.claude/.credentials.json` | Yes (Anthropic) |
 | Eternal PKCE OAuth | `~/.eternal/auth.json` | Yes (Anthropic) |
 | Custom endpoint config | `model.api_key` in config.yaml | Yes (custom endpoints) |

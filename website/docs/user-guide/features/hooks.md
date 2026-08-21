@@ -1389,7 +1389,7 @@ def my_callback(
 **Use cases:** Inject a per-user or per-chat vocabulary list before the audio is uploaded, force `language` from the caller's locale, downgrade `model` for long recordings, route noisy sources to a different model.
 
 ```python
-VOCAB = "Eternal, Teknium, Nous Research, kanban"
+VOCAB = "Eternal, kanban"
 
 def add_vocab(provider, prompt, source, **kwargs):
     if source != "gateway":

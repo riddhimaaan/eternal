@@ -33,8 +33,8 @@ Eternal Agent 内置完整的浏览器自动化工具集，支持多种后端选
 
 ## 配置
 
-:::tip Nous 订阅用户
-如果您拥有付费 [Nous Portal](https://portal.nousresearch.com) 订阅，可通过 **[Tool Gateway](tool-gateway.md)** 使用浏览器自动化功能，无需单独的 API 密钥。新安装可运行 `eternal setup --portal` 登录并一次性开启所有 gateway 工具；已有安装可通过 `eternal model` 或 `eternal tools` 选择 **Nous Subscription** 作为浏览器提供商。
+:::tip 选择后端
+运行 `eternal tools` 选择本地 Chromium、Browserbase、Browser Use 或其他浏览器后端。云服务使用你自己的 API key；本地浏览器自动化无需订阅。
 :::
 
 ### Browserbase 云端模式

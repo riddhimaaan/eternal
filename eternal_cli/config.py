@@ -5680,20 +5680,21 @@ def config_command(args):
 # ── Profile-driven env var injection ─────────────────────────────────────────
 # Any provider registered in providers/ with auth_type="api_key" automatically
 # gets its env_vars exposed in OPTIONAL_ENV_VARS without editing this file.
-# Runs once at import time.
+# Runs at import time and is refreshed when a provider registers later.
 
-_profile_env_vars_injected = False
+_profile_env_vars_injection_running = False
 
 
 def _inject_profile_env_vars() -> None:
     """Populate OPTIONAL_ENV_VARS from provider profiles not already listed.
 
-    Called once at module load time. Idempotent — repeated calls are no-ops.
+    Safe to repeat when lazy or third-party provider discovery registers a new
+    profile after this module has loaded.
     """
-    global _profile_env_vars_injected
-    if _profile_env_vars_injected:
+    global _profile_env_vars_injection_running
+    if _profile_env_vars_injection_running:
         return
-    _profile_env_vars_injected = True
+    _profile_env_vars_injection_running = True
     try:
         from providers import list_providers
         for _pp in list_providers():
@@ -5713,6 +5714,8 @@ def _inject_profile_env_vars() -> None:
                 }
     except Exception:
         pass
+    finally:
+        _profile_env_vars_injection_running = False
 
 
 # Eagerly inject so that OPTIONAL_ENV_VARS is fully populated at import time.

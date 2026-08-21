@@ -214,7 +214,7 @@ If you've worked through this guide and the issue persists:
 
 1. Run the job with `eternal cron run <job_id>` (fires on next gateway tick) and watch for errors in the chat output
 2. Check `~/.eternal/logs/agent.log` for scheduler messages and `~/.eternal/logs/errors.log` for warnings
-3. Open an issue at [github.com/NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) with:
+3. Open an issue at [github.com/riddhimaaan/eternal](https://github.com/riddhimaaan/eternal) with:
    - The job ID and schedule
    - The delivery target
    - What you expected vs. what happened

@@ -81,7 +81,7 @@ Watch a GitHub repo (set `GITHUB_TOKEN` in `${ETERNAL_HOME:-~/.eternal}/.env` to
 
 ```bash
 python $ETERNAL_HOME/skills/devops/watchers/scripts/watch_github.py \
-  --name eternal-issues --repo NousResearch/hermes-agent --scope issues
+  --name eternal-issues --repo riddhimaaan/eternal --scope issues
 ```
 
 Poll an arbitrary JSON API:

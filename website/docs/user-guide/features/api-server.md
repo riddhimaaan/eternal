@@ -11,7 +11,9 @@ The API server exposes eternal-agent as an OpenAI-compatible HTTP endpoint. Any 
 Your agent handles requests with its full toolset (terminal, file operations, web search, memory, skills) and returns the final response. When streaming, tool progress indicators appear inline so frontends can show what the agent is doing.
 
 :::tip One backend covers models + tools
-Eternal itself needs a configured provider and tool backends for the API server to be useful. A [Nous Portal](/user-guide/features/tool-gateway) subscription handles both — 300+ models plus web/image/TTS/browser via the Tool Gateway. Run `eternal setup --portal` once before starting the API server and frontends like Open WebUI or LobeChat get a fully tool-equipped backend.
+Eternal needs a configured model provider before the API server can answer.
+Configure optional tool backends separately, then verify them locally before
+connecting a frontend such as Open WebUI or LobeChat.
 :::
 
 ## Quick Start

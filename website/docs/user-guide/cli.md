@@ -9,7 +9,7 @@ description: "Master the Eternal Agent terminal interface — commands, keybindi
 Eternal Agent's CLI is a full terminal user interface (TUI) — not a web UI. It features multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output. Built for people who live in the terminal.
 
 :::tip First-time setup
-One command — `eternal setup --portal` — and you're ready to `eternal chat`. See [Nous Portal](/integrations/nous-portal).
+One command — `eternal setup` — and you're ready to `eternal chat`. See [AI Providers](/integrations/providers).
 :::
 
 :::tip
@@ -29,7 +29,7 @@ eternal chat -q "Hello"
 eternal chat --model "anthropic/claude-sonnet-4"
 
 # With a specific provider
-eternal chat --provider nous        # Use Nous Portal
+eternal chat --provider openrouter        # Use your OpenRouter API key
 eternal chat --provider openrouter  # Force OpenRouter
 
 # With specific toolsets

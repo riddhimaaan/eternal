@@ -66,6 +66,14 @@ def register_provider(profile: ProviderProfile) -> None:
         _ALIASES[alias] = profile.name
     _PROVIDER_LIST_CACHE = None
 
+    # Configuration may already be loaded when a lazy/user provider registers.
+    # Refresh its API-key catalog so the new provider appears in both the CLI
+    # config flow and desktop settings without requiring a process restart.
+    config_module = sys.modules.get("eternal_cli.config")
+    refresh_env_vars = getattr(config_module, "_inject_profile_env_vars", None)
+    if callable(refresh_env_vars):
+        refresh_env_vars()
+
 
 def get_provider_profile(name: str) -> ProviderProfile | None:
     """Look up a provider profile by name or alias.

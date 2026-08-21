@@ -157,17 +157,14 @@ class TestShowStatusXaiOAuth:
         assert "◆ Auth Providers" in out
 
     def test_import_failure_does_not_break_other_oauth_providers(self, monkeypatch, capsys, tmp_path):
-        """Nous/Codex/MiniMax rows must still appear when xAI import fails."""
+        """Other OAuth rows must still appear when xAI import fails."""
         import eternal_cli.auth as auth_mod
         status_mod = _base_xai_mocks(monkeypatch, tmp_path)
-        monkeypatch.setattr(auth_mod, "get_nous_auth_status_local",
-                            lambda: {"logged_in": True}, raising=False)
         monkeypatch.delattr(auth_mod, "get_xai_oauth_auth_status", raising=False)
 
         status_mod.show_status(SimpleNamespace(all=False, deep=False))
         out = capsys.readouterr().out
 
-        assert "Nous Portal" in out
         assert "MiniMax OAuth" in out
 
     def test_status_function_exception_does_not_crash(self, monkeypatch, capsys, tmp_path):

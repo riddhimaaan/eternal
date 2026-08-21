@@ -881,38 +881,6 @@ def _fake_features(*, logged_in: bool, paid: bool = True):
     return SimpleNamespace(nous_auth_present=logged_in, account_info=account)
 
 
-def test_visible_providers_reuses_logged_out_feature_snapshot(monkeypatch):
-    import eternal_cli.tools_config as tools_config
-
-    account = NousPortalAccountInfo(
-        logged_in=False,
-        source="none",
-        fresh=False,
-        paid_service_access=None,
-    )
-    features = NousSubscriptionFeatures(
-        subscribed=False,
-        nous_auth_present=False,
-        provider_is_nous=False,
-        features={},
-        account_info=account,
-    )
-    monkeypatch.setattr(
-        tools_config,
-        "get_nous_subscription_features",
-        lambda *args, **kwargs: pytest.fail("feature snapshot was resolved again"),
-    )
-
-    providers = _visible_providers(
-        TOOL_CATEGORIES["image_gen"], {}, features=features
-    )
-
-    assert any(
-        provider.get("managed_nous_feature") == "image_gen"
-        for provider in providers
-    )
-
-
 def test_visible_providers_reuses_pool_video_feature_snapshot(monkeypatch):
     import eternal_cli.tools_config as tools_config
 

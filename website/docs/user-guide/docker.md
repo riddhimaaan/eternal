@@ -34,13 +34,13 @@ result before hitting Enter.
 mkdir -p ~/.eternal
 docker run -it --rm \
   -v ~/.eternal:/opt/data \
-  nousresearch/hermes-agent setup
+  ghcr.io/riddhimaaan/eternal:latest setup
 ```
 
 This drops you into the setup wizard, which will prompt you for your API keys and write them to `~/.eternal/.env`. You only need to do this once. It is highly recommended to set up a chat system for the gateway to work with at this point.
 
 :::tip
-Inside the container, run `eternal setup --portal` once — the refresh token persists in the mounted `~/.eternal` volume. See [Nous Portal](/integrations/nous-portal).
+Inside the container, run `eternal setup` once. Provider credentials persist in the mounted `~/.eternal` volume. See [AI Providers](/integrations/providers).
 :::
 
 ## Running in gateway mode
@@ -53,7 +53,7 @@ docker run -d \
   --restart unless-stopped \
   -v ~/.eternal:/opt/data \
   -p 8642:8642 \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 Port 8642 exposes the gateway's [OpenAI-compatible API server](./features/api-server.md) and health endpoint. It's optional if you only use chat platforms (Telegram, Discord, etc.), but required if you want the dashboard or external tools to reach the gateway.
@@ -94,7 +94,7 @@ docker run -d \
   -e API_SERVER_HOST=0.0.0.0 \
   -e API_SERVER_KEY="$(openssl rand -hex 32)" \
   -e API_SERVER_CORS_ORIGINS='*' \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 Opening any port on an internet facing machine is a security risk. You should not do it unless you understand the risks.
@@ -111,7 +111,7 @@ docker run -d \
   -p 8642:8642 \
   -p 9119:9119 \
   -e ETERNAL_DASHBOARD=1 \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 The dashboard is supervised by s6 — if it crashes, `s6-supervise` restarts it automatically after a short backoff. Dashboard stdout/stderr is forwarded to `docker logs <container>` (no prefix; the gateway's own output now lives in a per-profile s6-log file — see [Where the logs go](#where-the-logs-go) below — so the two streams don't clash).
@@ -133,7 +133,7 @@ The dashboard's auth gate engages automatically when both of the following are t
 There are three bundled ways to satisfy the second condition:
 
 - **Username/password** — the simplest for a self-hosted / on-prem / homelab container on a trusted network or behind a VPN: set `ETERNAL_DASHBOARD_BASIC_AUTH_USERNAME` + `ETERNAL_DASHBOARD_BASIC_AUTH_PASSWORD` (and `ETERNAL_DASHBOARD_BASIC_AUTH_SECRET` for restart-stable sessions). Not suitable for direct public-internet exposure.
-- **OAuth (Nous Portal)** — for hosted/public deploys: the `dashboard_auth/nous` provider activates whenever `ETERNAL_DASHBOARD_OAUTH_CLIENT_ID` is set.
+- **OIDC/OAuth** — for hosted or public deployments, connect the dashboard to an identity provider you control.
 - **Self-hosted OIDC** — to authenticate against your own identity provider via standard OpenID Connect: the `dashboard_auth/self_hosted` provider activates when `ETERNAL_DASHBOARD_OIDC_ISSUER` + `ETERNAL_DASHBOARD_OIDC_CLIENT_ID` are set.
 
 Whichever you choose, the gate redirects callers to a login page before they can reach any protected route. See [Web Dashboard → Authentication](features/web-dashboard.md#authentication-gated-mode) for all three providers.
@@ -153,7 +153,7 @@ To open an interactive chat session against a running data directory:
 ```sh
 docker run -it --rm \
   -v ~/.eternal:/opt/data \
-  nousresearch/hermes-agent
+  ghcr.io/riddhimaaan/eternal:latest
 ```
 
 Or if you have already opened a terminal in your running container (via Docker Desktop for instance), just run:
@@ -279,7 +279,7 @@ In those cases, declare one service per profile with distinct `container_name`, 
 ```yaml
 services:
   eternal-work:
-    image: nousresearch/hermes-agent:latest
+    image: ghcr.io/riddhimaaan/eternal:latest
     container_name: eternal-work
     restart: unless-stopped
     command: gateway run
@@ -289,7 +289,7 @@ services:
       - ~/.eternal-work:/opt/data
 
   eternal-personal:
-    image: nousresearch/hermes-agent:latest
+    image: ghcr.io/riddhimaaan/eternal:latest
     container_name: eternal-personal
     restart: unless-stopped
     command: gateway run
@@ -326,7 +326,7 @@ docker run -it --rm \
   -v ~/.eternal:/opt/data \
   -e ANTHROPIC_API_KEY="sk-ant-..." \
   -e OPENAI_API_KEY="sk-..." \
-  nousresearch/hermes-agent
+  ghcr.io/riddhimaaan/eternal:latest
 ```
 
 Direct `-e` flags override values from `.env`. This is useful for CI/CD or secrets-manager integrations where you don't want keys on disk.
@@ -342,7 +342,7 @@ For persistent deployment with both the gateway and dashboard, a `docker-compose
 ```yaml
 services:
   eternal:
-    image: nousresearch/hermes-agent:latest
+    image: ghcr.io/riddhimaaan/eternal:latest
     container_name: eternal
     restart: unless-stopped
     command: gateway run
@@ -397,7 +397,7 @@ ctl.!default {
 Then build a small derived image with the ALSA PulseAudio plugin installed:
 
 ```dockerfile title="Dockerfile.audio"
-FROM nousresearch/hermes-agent:latest
+FROM ghcr.io/riddhimaaan/eternal:latest
 
 USER root
 RUN apt-get update \
@@ -464,7 +464,7 @@ docker run -d \
   --restart unless-stopped \
   --memory=4g --cpus=2 \
   -v ~/.eternal:/opt/data \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 ## What the Dockerfile does
@@ -536,13 +536,13 @@ When a migration is needed, Eternal writes timestamped backups next to
 `config.yaml` and `.env` first.
 
 ```sh
-docker pull nousresearch/hermes-agent:latest
+docker pull ghcr.io/riddhimaaan/eternal:latest
 docker rm -f eternal
 docker run -d \
   --name eternal \
   --restart unless-stopped \
   -v ~/.eternal:/opt/data \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 Or with Docker Compose:
@@ -579,10 +579,10 @@ This is a good fit for tools that are quick to install and used occasionally. Fo
 
 ### Durable installs — build a derived image
 
-When a tool must be available immediately on every container start with no re-install delay, build a new image that inherits from `nousresearch/hermes-agent` and installs the tool in a layer:
+When a tool must be available immediately on every container start with no re-install delay, build a new image that inherits from `ghcr.io/riddhimaaan/eternal:latest` and installs the tool in a layer:
 
 ```dockerfile
-FROM nousresearch/hermes-agent:latest
+FROM ghcr.io/riddhimaaan/eternal:latest
 
 USER root
 RUN apt-get update \
@@ -603,7 +603,7 @@ docker run -d \
   my-eternal:latest gateway run
 ```
 
-The entrypoint script and `/opt/data` semantics are inherited unchanged, so the rest of this page still applies. Remember to rebuild the image when pulling a newer upstream `nousresearch/hermes-agent`.
+The entrypoint script and `/opt/data` semantics are inherited unchanged, so the rest of this page still applies. Remember to rebuild the image when pulling a newer upstream `ghcr.io/riddhimaaan/eternal:latest`.
 
 ### Complex tools or multi-service stacks — run a sidecar container
 
@@ -612,7 +612,7 @@ For tools that bring their own service (a database, a web server, a queue, a hea
 ```yaml
 services:
   eternal:
-    image: nousresearch/hermes-agent:latest
+    image: ghcr.io/riddhimaaan/eternal:latest
     container_name: eternal
     restart: unless-stopped
     command: gateway run
@@ -639,7 +639,7 @@ From inside the Eternal container, the sidecar is reachable at `http://my-tool:<
 
 ### Broadly useful tools — open an issue or pull request
 
-If a tool is likely to be useful to most Eternal Agent users, consider contributing it upstream rather than carrying it in a private derived image. Open an issue or pull request on the [eternal-agent repository](https://github.com/NousResearch/hermes-agent) describing the tool and its use case. Tools that get bundled into the official image benefit every user and avoid the maintenance overhead of a downstream fork.
+If a tool is likely to be useful to most Eternal Agent users, consider contributing it upstream rather than carrying it in a private derived image. Open an issue or pull request on the [eternal-agent repository](https://github.com/riddhimaaan/eternal) describing the tool and its use case. Tools that get bundled into the official image benefit every user and avoid the maintenance overhead of a downstream fork.
 
 ## Connecting to local inference servers (vLLM, Ollama, etc.)
 
@@ -670,7 +670,7 @@ services:
             - capabilities: [gpu]
 
   eternal:
-    image: nousresearch/hermes-agent:latest
+    image: ghcr.io/riddhimaaan/eternal:latest
     container_name: eternal
     restart: unless-stopped
     command: gateway run
@@ -714,7 +714,7 @@ docker run -d \
   --name eternal \
   -v ~/.eternal:/opt/data \
   -p 8642:8642 \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 ```yaml
@@ -733,7 +733,7 @@ docker run -d \
   --name eternal \
   --network host \
   -v ~/.eternal:/opt/data \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 ```yaml
@@ -797,7 +797,7 @@ docker run -d \
   --name eternal \
   -e PUID=1000 -e PGID=10 \
   -v /volume1/docker/eternal:/opt/data \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 `docker exec eternal <cmd>` automatically drops to UID 10000 too — see [`docker exec` automatically drops to the `eternal` user](#docker-exec-automatically-drops-to-the-eternal-user) for details and the per-invocation opt-out.
@@ -811,7 +811,7 @@ docker run -d \
   --name eternal \
   --shm-size=1g \
   -v ~/.eternal:/opt/data \
-  nousresearch/hermes-agent gateway run
+  ghcr.io/riddhimaaan/eternal:latest gateway run
 ```
 
 ### Gateway not reconnecting after network issues
@@ -826,6 +826,6 @@ docker restart eternal
 
 ```sh
 docker logs --tail 50 eternal          # Recent logs
-docker run -it --rm nousresearch/hermes-agent:latest version     # Verify version
+docker run -it --rm ghcr.io/riddhimaaan/eternal:latest version     # Verify version
 docker stats eternal                    # Resource usage
 ```

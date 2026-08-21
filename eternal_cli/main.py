@@ -4135,8 +4135,8 @@ def _aux_config_menu() -> None:
         print()
         print("  Side tasks (vision, compression, web extraction, etc.) default")
         print('  to your main chat model.  "auto" means "use my main model" —')
-        print("  Eternal only falls back to a lightweight backend (OpenRouter,")
-        print("  Nous Portal) if the main model is unavailable.  Override a")
+        print("  Eternal only falls back to a lightweight backend (OpenRouter)")
+        print("  if the main model is unavailable. Override a")
         print("  task below if you want it pinned to a specific provider/model.")
         print()
 
@@ -5314,7 +5314,7 @@ def cmd_sync(args):
                 file=sys.stderr,
             )
         if not status.get("logged_in"):
-            print("\nNot logged into Nous Portal — sync is inert.", file=sys.stderr)
+            print("\nNo sync identity is configured — sync is inert.", file=sys.stderr)
         elif not status.get("nous_admin"):
             print(
                 "\nSync is not enabled for your account yet.",
@@ -10748,10 +10748,9 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
         "(--insecure no longer bypasses this)."
     )
     print()
-    print("  How do you want to authenticate the dashboard?")
-    print("    [1] Username & password (quickest; for a trusted LAN / VPN)")
-    print("    [2] OAuth via Nous Portal (run `eternal dashboard register`)")
-    print("    [3] Cancel")
+    print("  Configure a username and password for this dashboard?")
+    print("    [1] Continue")
+    print("    [2] Cancel")
     print()
 
     try:
@@ -10759,19 +10758,6 @@ def _maybe_setup_dashboard_auth_interactively(args) -> None:
     except (EOFError, KeyboardInterrupt):
         print("\n  Cancelled.")
         sys.exit(1)
-
-    if choice == "2":
-        print()
-        print(
-            "  Run this on the host where the dashboard lives, then start "
-            "the dashboard again:\n"
-            "    eternal dashboard register\n"
-            "  It provisions a Nous Portal OAuth client and writes "
-            "ETERNAL_DASHBOARD_OAUTH_CLIENT_ID into ~/.eternal/.env for you.\n"
-            "  Docs: https://hermes-agent.nousresearch.com/docs/"
-            "user-guide/features/web-dashboard#authentication-gated-mode"
-        )
-        sys.exit(0)
 
     if choice not in ("1",):
         print("  Cancelled.")
@@ -11279,13 +11265,6 @@ def cmd_dashboard(args):
     )
 
 
-def cmd_dashboard_register(args):
-    """Register a self-hosted dashboard OAuth client with Nous Portal."""
-    from eternal_cli.dashboard_register import cmd_dashboard_register as _impl
-
-    _impl(args)
-
-
 def cmd_gateway_enroll(args):
     """Enroll a self-hosted gateway with a relay connector."""
     from eternal_cli.gateway_enroll import cmd_gateway_enroll as _impl
@@ -11349,7 +11328,7 @@ def _build_provider_choices() -> list[str]:
     except Exception:
         # Fallback: static list guarantees the CLI always works
         return [
-            "auto", "openrouter", "nous", "openai-codex", "xai-oauth", "copilot-acp", "copilot",
+            "auto", "openrouter", "openai-codex", "xai-oauth", "copilot-acp", "copilot",
             "anthropic", "gemini", "vertex", "xai", "bedrock", "azure-foundry",
             "ollama-cloud", "huggingface", "zai", "kimi-coding", "kimi-coding-cn",
             "stepfun", "minimax", "minimax-cn", "kilocode", "novita", "xiaomi", "arcee",
@@ -12147,7 +12126,7 @@ def main():
             "Manage the fallback provider chain.  Fallback providers are tried "
             "in order when the primary model fails with rate-limit, overload, or "
             "connection errors.  See: "
-            "https://hermes-agent.nousresearch.com/docs/user-guide/features/fallback-providers"
+            "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/features/fallback-providers.md"
         ),
     )
     fallback_subparsers = fallback_parser.add_subparsers(dest="fallback_command")
@@ -12181,7 +12160,7 @@ def main():
             "Pull API keys from an external secret manager at process startup "
             "instead of storing them in ~/.eternal/.env.  Supports Bitwarden "
             "Secrets Manager and 1Password.  See: "
-            "https://hermes-agent.nousresearch.com/docs/user-guide/secrets/"
+            "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/secrets"
         ),
     )
     secrets_subparsers = secrets_parser.add_subparsers(dest="secrets_command")
@@ -12232,7 +12211,7 @@ def main():
             "Manage iron-proxy, the optional TLS-intercepting egress firewall "
             "that swaps proxy tokens for real API credentials before outbound "
             "requests leave a sandbox.  Disabled by default.  See: "
-            "https://hermes-agent.nousresearch.com/docs/user-guide/egress/iron-proxy"
+            "https://github.com/riddhimaaan/eternal/tree/main/website/docs/user-guide/egress/iron-proxy.md"
         ),
     )
 
@@ -13423,7 +13402,6 @@ def main():
     build_dashboard_parser(
         subparsers,
         cmd_dashboard=cmd_dashboard,
-        cmd_dashboard_register=cmd_dashboard_register,
     )
 
 

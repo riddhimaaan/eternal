@@ -13,7 +13,8 @@ If you haven't installed Eternal Agent yet, begin with the [Installation guide](
 :::
 
 :::tip First-time provider setup
-First-time users almost always want `eternal setup --portal` — one OAuth covers a model plus the four Tool Gateway tools (search/image/TTS/browser). See [Nous Portal](/integrations/nous-portal).
+First-time users should run `eternal setup`, verify one working model, and add
+search, image, speech, or browser providers only when needed.
 :::
 
 ## How to Use This Page

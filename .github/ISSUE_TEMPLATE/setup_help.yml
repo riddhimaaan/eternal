@@ -1,19 +1,18 @@
 name: "🔧 Setup / Installation Help"
-description: Having trouble installing or configuring Eternal? Ask here.
+description: Report a reproducible installation or configuration problem.
 title: "[Setup]: "
 labels: ["setup"]
 body:
   - type: markdown
     attributes:
       value: |
-        Sorry you're having trouble! Please fill out the details below so we can help.
+        Eternal is maintained on a best-effort basis and does not currently offer guaranteed support. Please provide enough detail for a maintainer or community contributor to reproduce the problem.
 
         **Quick checks first:**
         - Run `eternal debug share` and paste the links in the Debug Report section below
         - If you're in a chat session, you can use `/debug` instead — it does the same thing
         - Try `eternal update` to get the latest version
-        - Check the [README troubleshooting section](https://github.com/NousResearch/hermes-agent#troubleshooting)
-        - For general questions, consider the [Nous Research Discord](https://discord.gg/NousResearch) for faster help
+        - Check the [README troubleshooting section](https://github.com/riddhimaaan/eternal#troubleshooting)
 
   - type: textarea
     id: description
@@ -21,7 +20,7 @@ body:
       label: What's Going Wrong?
       description: Describe what you're trying to do and where it fails.
       placeholder: |
-        I ran `eternal setup` and selected Nous Portal, but when I try to
+        I ran `eternal setup` and selected OpenRouter, but when I try to
         start the gateway I get...
     validations:
       required: true

@@ -24,8 +24,10 @@ Before using voice features, make sure you have:
 The `~/.eternal/` directory and default `config.yaml` are created automatically the first time you run `eternal`. You only need to create `~/.eternal/.env` manually for API keys.
 :::
 
-:::tip Nous Portal covers both
-A paid [Nous Portal](/user-guide/features/tool-gateway) subscription supplies the LLM (step 2) **and** OpenAI TTS via the Tool Gateway — no separate OpenAI key needed. On a fresh install, `eternal setup --portal` wires both up at once.
+:::tip Configure model and speech separately
+Voice mode uses your selected LLM plus the speech backend configured under
+`eternal tools`. They may use the same vendor, but each service must be
+available through credentials you control.
 :::
 
 ## Overview

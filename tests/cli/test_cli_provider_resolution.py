@@ -548,58 +548,6 @@ def test_model_flow_custom_persists_selected_api_mode(monkeypatch):
     assert saved_env[key_env] == "test-key"
 
 
-def test_cmd_model_forwards_nous_login_tls_options(monkeypatch):
-    monkeypatch.setattr(eternal_main, "_require_tty", lambda *a: None)
-    monkeypatch.setattr(
-        "eternal_cli.config.load_config",
-        lambda: {"model": {"default": "gpt-5", "provider": "nous"}},
-    )
-    monkeypatch.setattr("eternal_cli.config.save_config", lambda cfg: None)
-    monkeypatch.setattr("eternal_cli.config.get_env_value", lambda key: "")
-    monkeypatch.setattr("eternal_cli.config.save_env_value", lambda key, value: None)
-    monkeypatch.setattr("eternal_cli.auth.resolve_provider", lambda requested, **kwargs: "nous")
-    monkeypatch.setattr("eternal_cli.auth.get_provider_auth_state", lambda provider_id: None)
-    monkeypatch.setattr(eternal_main, "_prompt_provider_choice", lambda choices, **kwargs: 0)
-
-    captured = {}
-
-    def _fake_login(login_args, provider_config):
-        captured["portal_url"] = login_args.portal_url
-        captured["inference_url"] = login_args.inference_url
-        captured["client_id"] = login_args.client_id
-        captured["scope"] = login_args.scope
-        captured["no_browser"] = login_args.no_browser
-        captured["timeout"] = login_args.timeout
-        captured["ca_bundle"] = login_args.ca_bundle
-        captured["insecure"] = login_args.insecure
-
-    monkeypatch.setattr("eternal_cli.auth._login_nous", _fake_login)
-
-    eternal_main.cmd_model(
-        SimpleNamespace(
-            portal_url="https://portal.nousresearch.com",
-            inference_url="https://inference.nousresearch.com/v1",
-            client_id="eternal-local",
-            scope="openid profile",
-            no_browser=True,
-            timeout=7.5,
-            ca_bundle="/tmp/local-ca.pem",
-            insecure=True,
-        )
-    )
-
-    assert captured == {
-        "portal_url": "https://portal.nousresearch.com",
-        "inference_url": "https://inference.nousresearch.com/v1",
-        "client_id": "eternal-local",
-        "scope": "openid profile",
-        "no_browser": True,
-        "timeout": 7.5,
-        "ca_bundle": "/tmp/local-ca.pem",
-        "insecure": True,
-    }
-
-
 # ---------------------------------------------------------------------------
 # _auto_provider_name — unit tests
 # ---------------------------------------------------------------------------
@@ -678,5 +626,4 @@ def test_custom_endpoint_key_env_is_a_valid_posix_name_for_ip_endpoints():
 
     for identity in ("127.0.0.1_8080", "0.0.0.0", "10.0.0.7:11434", "", "-–-"):
         assert _ENV_VAR_NAME_RE.match(custom_endpoint_key_env(identity)), identity
-
 

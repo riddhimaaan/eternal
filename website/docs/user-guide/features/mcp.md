@@ -51,9 +51,9 @@ List the files in /home/user/projects and summarize the repo structure.
 
 Eternal will discover the MCP server's tools and use them like any other tool.
 
-## Catalog: one-click install for Nous-approved MCPs
+## Catalog: one-click install for curated MCPs
 
-Eternal ships a curated catalog of MCP servers that Nous staff has reviewed
+Eternal ships a curated catalog of MCP servers that project maintainers have reviewed
 and merged. They're disabled by default — install only what you actually
 want.
 
@@ -73,8 +73,8 @@ github       installed (disabled)   GitHub repo + PR tools
 
 Hit `Enter` on a row to install (and walk through any required credentials),
 enable, disable, or uninstall. Catalog entries are stored under
-`optional-mcps/` in the eternal-agent repo — presence in that directory means
-Nous approval. There is no community submission tier; entries are added by
+`optional-mcps/` in the Eternal repo — presence in that directory means
+the entry passed project review. There is no community submission tier; entries are added by
 merging a PR.
 
 Catalog entries can require:
@@ -123,13 +123,13 @@ reachable to refine.
 Installing a catalog entry runs whatever the manifest specifies — `git clone`,
 the entry's `bootstrap` commands (`pip install`, `npm install`, etc.), and
 ultimately the MCP server's own code. Manifests are gated by PR review into
-the eternal-agent repo, so Nous has reviewed each entry before it shipped —
+the Eternal repo, so project maintainers reviewed each entry before it shipped —
 **but you should still read the manifest before installing**, especially the
 `source:` field's repository, the `install.bootstrap:` commands, and any
 `transport.command:` invocation.
 
 Manifests live at
-[`optional-mcps/<name>/manifest.yaml`](https://github.com/NousResearch/hermes-agent/tree/main/optional-mcps)
+[`optional-mcps/<name>/manifest.yaml`](https://github.com/riddhimaaan/eternal/tree/main/optional-mcps)
 on GitHub. The picker also prints the manifest's `source:` URL at install
 time so you can quickly verify the upstream repo. The web dashboard's MCP
 page surfaces the same detail per catalog entry — transport, auth type, the
@@ -180,7 +180,7 @@ MCPs are never auto-updated. Re-run `eternal mcp install <name>` to refresh
 after a Eternal update if a manifest version changed.
 
 To add an MCP to the catalog, open a PR against
-[`optional-mcps/`](https://github.com/NousResearch/hermes-agent/tree/main/optional-mcps).
+[`optional-mcps/`](https://github.com/riddhimaaan/eternal/tree/main/optional-mcps).
 
 ### Suggestion metadata (`suggest:`)
 
