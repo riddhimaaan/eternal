@@ -3,28 +3,24 @@
 </p>
 
 # Eternal Agent ☤
-<p align="center">
-  <a href="https://hermes-agent.nousresearch.com/">Eternal Agent</a> | <a href="https://hermes-agent.nousresearch.com/">Eternal Desktop</a>
-</p>
 
 <p align="center">
-  <a href="https://github.com/NousResearch/hermes-agent"><img src="https://img.shields.io/badge/Fork%20of-Hermes%20Agent-blueviolet?style=for-the-badge" alt="Fork of Hermes Agent"></a>
-  <a href="https://hermes-agent.nousresearch.com/docs/"><img src="https://img.shields.io/badge/Docs-eternal--agent.nousresearch.com-FFD700?style=for-the-badge" alt="Documentation"></a>
-  <a href="https://discord.gg/NousResearch"><img src="https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a>
-  <a href="https://github.com/NousResearch/hermes-agent/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
-  <a href="https://nousresearch.com"><img src="https://img.shields.io/badge/Built%20by-Nous%20Research-blueviolet?style=for-the-badge" alt="Built by Nous Research"></a>
+  <a href="website/docs/"><img src="https://img.shields.io/badge/Docs-in%20this%20repo-FFD700?style=for-the-badge" alt="Documentation"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green?style=for-the-badge" alt="License: MIT"></a>
+  <a href="https://github.com/NousResearch/hermes-agent"><img src="https://img.shields.io/badge/Fork%20of-Hermes%20Agent-lightgrey?style=for-the-badge" alt="Fork of Hermes Agent"></a>
   <a href="README.zh-CN.md"><img src="https://img.shields.io/badge/Lang-中文-red?style=for-the-badge" alt="中文"></a>
   <a href="README.ur-pk.md"><img src="https://img.shields.io/badge/Lang-اردو-green?style=for-the-badge" alt="اردو"></a>
   <a href="README.es.md"><img src="https://img.shields.io/badge/Lang-Español-orange?style=for-the-badge" alt="Español"></a>
 </p>
 
-> **ETERNAL is a personal fork of [Hermes Agent](https://github.com/NousResearch/hermes-agent), created by [Nous Research](https://nousresearch.com) and used here under the MIT License.**
-> It is not affiliated with, endorsed by, or supported by Nous Research. For the original project, its
-> documentation, and its community, go upstream — don't file ETERNAL issues there.
+> **Eternal is a fork of [Hermes Agent](https://github.com/NousResearch/hermes-agent), used under the MIT License.**
+> It is **not affiliated with, endorsed by, or supported by Nous Research.** Do not file Eternal
+> issues, support requests, or bug reports with the upstream project. Attribution for the original
+> work is preserved in [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
 
-**The self-improving AI agent built by [Nous Research](https://nousresearch.com).** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
+**A self-improving AI agent.** It's the only agent with a built-in learning loop — it creates skills from experience, improves them during use, nudges itself to persist knowledge, searches its own past conversations, and builds a deepening model of who you are across sessions. Run it on a $5 VPS, a GPU cluster, or serverless infrastructure that costs nearly nothing when idle. It's not tied to your laptop — talk to it from Telegram while it works on a cloud VM.
 
-Use any model you want — [Nous Portal](https://portal.nousresearch.com), OpenRouter, OpenAI, your own endpoint, and [many others](https://hermes-agent.nousresearch.com/docs/integrations/providers). Switch with `eternal model` — no code changes, no lock-in.
+Use any model you want — OpenRouter, OpenAI, Anthropic, your own endpoint, and many others. Switch with `eternal model` — no code changes, no lock-in.
 
 <table>
 <tr><td><b>A real terminal interface</b></td><td>Full TUI with multiline editing, slash-command autocomplete, conversation history, interrupt-and-redirect, and streaming tool output.</td></tr>
@@ -38,31 +34,54 @@ Use any model you want — [Nous Portal](https://portal.nousresearch.com), OpenR
 
 ---
 
-## Quick Install
+## Install
 
-### Linux, macOS, WSL2, Termux
+Eternal is distributed as a self-contained desktop application with a licence
+key. There is no public install one-liner — the commands below build and run it
+from this checkout.
+
+### Desktop app (Linux)
 
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+cd apps/desktop
+npm run build:pty-portable   # required before every packaging run
+npm run dist:linux           # AppImage, .deb and .rpm land in apps/desktop/release/
 ```
 
-### Windows (native, PowerShell)
+The AppImage is fully self-contained — the target machine needs no Python, no
+Node, and no system packages. See the [desktop guide](website/docs/user-guide/desktop.md).
 
-> **Heads up:** Native Windows runs Eternal without WSL — CLI, gateway, TUI, and tools all work natively. If you'd rather use WSL2, the Linux/macOS one-liner above works there too. Found a bug? Please [file issues](https://github.com/NousResearch/hermes-agent/issues).
+### Docker
 
-Run this in PowerShell:
+```bash
+docker compose up -d
+```
+
+The image is `ghcr.io/riddhimaaan/eternal`. It is a **private** package: run
+`docker login ghcr.io` with a token that has read access to it. See the
+[Docker guide](website/docs/user-guide/docker.md).
+
+### From source (development)
+
+The installer scripts live in this repo rather than on a public URL:
+
+```bash
+scripts/install.sh          # Linux, macOS, WSL2, Termux
+```
 
 ```powershell
-iex (irm https://hermes-agent.nousresearch.com/install.ps1)
+powershell -ExecutionPolicy Bypass -File scripts\install.ps1   # Windows (native)
 ```
+
+> **Heads up:** Native Windows runs Eternal without WSL — CLI, gateway, TUI, and tools all work natively. If you'd rather use WSL2, the Linux/macOS script works there too.
 
 The installer handles everything: uv, Python 3.11, Node.js, ripgrep, ffmpeg, **and a portable Git Bash** (MinGit, unpacked to `%LOCALAPPDATA%\eternal\git` — no admin required, completely isolated from any system Git install). Eternal uses this bundled Git Bash to run shell commands.
 
 If you already have Git installed, the installer detects it and uses that instead. Otherwise a ~45MB MinGit download is all you need — it won't touch or interfere with any system Git.
 
-> **Android / Termux:** The tested manual path is documented in the [Termux guide](https://hermes-agent.nousresearch.com/docs/getting-started/termux). On Termux, Eternal installs a curated `.[termux]` extra because the full `.[all]` extra currently pulls Android-incompatible voice dependencies.
+> **Android / Termux:** The tested manual path is documented in the [Termux guide](website/docs/getting-started/termux.md). On Termux, Eternal installs a curated `.[termux]` extra because the full `.[all]` extra currently pulls Android-incompatible voice dependencies.
 >
-> **Windows:** Native Windows is fully supported — the PowerShell one-liner above installs everything. If you'd rather use WSL2, the Linux command works there too. Native Windows install lives under `%LOCALAPPDATA%\eternal`; WSL2 installs under `~/.eternal` as on Linux.
+> **Windows:** Native Windows is fully supported — the PowerShell script above installs everything. If you'd rather use WSL2, the Linux script works there too. Native Windows install lives under `%LOCALAPPDATA%\eternal`; WSL2 installs under `~/.eternal` as on Linux.
 
 After installation:
 
@@ -123,26 +142,7 @@ eternal update       # Update to the latest version
 eternal doctor       # Diagnose any issues
 ```
 
-📖 **[Full documentation →](https://hermes-agent.nousresearch.com/docs/)**
-
----
-
-## Skip the API-key collection — Nous Portal
-
-Eternal works with whatever provider you want — that's not changing. But if you'd rather not collect five separate API keys for the model, web search, image generation, TTS, and a cloud browser, **[Nous Portal](https://portal.nousresearch.com)** covers all of them under one subscription:
-
-- **300+ models** — pick any of them with `/model <name>`
-- **Tool Gateway** — web search (Firecrawl), image generation (FAL), text-to-speech (OpenAI), cloud browser (Browser Use), all routed through your sub. No extra accounts.
-
-One command from a fresh install:
-
-```bash
-eternal setup --portal
-```
-
-That logs you in via OAuth, sets Nous as your provider, and turns on the Tool Gateway. Check what's wired up any time with `eternal portal info`. Full details on the [Tool Gateway docs page](https://hermes-agent.nousresearch.com/docs/user-guide/features/tool-gateway).
-
-You can still bring your own keys per-tool whenever you want — the gateway is per-backend, not all-or-nothing.
+📖 **[Full documentation →](website/docs/)** — the complete docs source lives in this repo under `website/`.
 
 ---
 
@@ -162,7 +162,7 @@ Eternal has two entry points: start the terminal UI with `eternal`, or run the g
 | Interrupt current work         | `Ctrl+C` or send a new message                | `/stop` or send a new message                                                    |
 | Platform-specific status       | `/platforms`                                  | `/status`, `/sethome`                                                            |
 
-For the full command lists, see the [CLI guide](https://hermes-agent.nousresearch.com/docs/user-guide/cli) and the [Messaging Gateway guide](https://hermes-agent.nousresearch.com/docs/user-guide/messaging).
+For the full command lists, see the [CLI guide](website/docs/user-guide/cli.md) and the [Messaging Gateway guides](website/docs/user-guide/messaging/).
 
 ---
 
@@ -209,25 +209,25 @@ installed.
 
 ## Documentation
 
-All documentation lives at **[hermes-agent.nousresearch.com/docs](https://hermes-agent.nousresearch.com/docs/)**:
+The full documentation source lives in this repo under [`website/docs/`](website/docs/). It is a Docusaurus site — `cd website && npm start` renders it locally.
 
 | Section                                                                                             | What's Covered                                             |
 | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- |
-| [Quickstart](https://hermes-agent.nousresearch.com/docs/getting-started/quickstart)                 | Install → setup → first conversation in 2 minutes          |
-| [CLI Usage](https://hermes-agent.nousresearch.com/docs/user-guide/cli)                              | Commands, keybindings, personalities, sessions             |
-| [Configuration](https://hermes-agent.nousresearch.com/docs/user-guide/configuration)                | Config file, providers, models, all options                |
-| [Messaging Gateway](https://hermes-agent.nousresearch.com/docs/user-guide/messaging)                | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
-| [Security](https://hermes-agent.nousresearch.com/docs/user-guide/security)                          | Command approval, DM pairing, container isolation          |
-| [Tools & Toolsets](https://hermes-agent.nousresearch.com/docs/user-guide/features/tools)            | 40+ tools, toolset system, terminal backends               |
-| [Skills System](https://hermes-agent.nousresearch.com/docs/user-guide/features/skills)              | Procedural memory, Skills Hub, creating skills             |
-| [Memory](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory)                     | Persistent memory, user profiles, best practices           |
-| [MCP Integration](https://hermes-agent.nousresearch.com/docs/user-guide/features/mcp)               | Connect any MCP server for extended capabilities           |
-| [Cron Scheduling](https://hermes-agent.nousresearch.com/docs/user-guide/features/cron)              | Scheduled tasks with platform delivery                     |
-| [Context Files](https://hermes-agent.nousresearch.com/docs/user-guide/features/context-files)       | Project context that shapes every conversation             |
-| [Architecture](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture)             | Project structure, agent loop, key classes                 |
-| [Contributing](https://hermes-agent.nousresearch.com/docs/developer-guide/contributing)             | Development setup, PR process, code style                  |
-| [CLI Reference](https://hermes-agent.nousresearch.com/docs/reference/cli-commands)                  | All commands and flags                                     |
-| [Environment Variables](https://hermes-agent.nousresearch.com/docs/reference/environment-variables) | Complete env var reference                                 |
+| [Quickstart](website/docs/getting-started/quickstart.md)                 | Install → setup → first conversation in 2 minutes          |
+| [CLI Usage](website/docs/user-guide/cli.md)                              | Commands, keybindings, personalities, sessions             |
+| [Configuration](website/docs/user-guide/configuration.md)                | Config file, providers, models, all options                |
+| [Messaging Gateway](website/docs/user-guide/messaging/)                | Telegram, Discord, Slack, WhatsApp, Signal, Home Assistant |
+| [Security](website/docs/user-guide/security.md)                          | Command approval, DM pairing, container isolation          |
+| [Tools & Toolsets](website/docs/user-guide/features/tools.md)            | 40+ tools, toolset system, terminal backends               |
+| [Skills System](website/docs/user-guide/features/skills.md)              | Procedural memory, Skills Hub, creating skills             |
+| [Memory](website/docs/user-guide/features/memory.md)                     | Persistent memory, user profiles, best practices           |
+| [MCP Integration](website/docs/user-guide/features/mcp.md)               | Connect any MCP server for extended capabilities           |
+| [Cron Scheduling](website/docs/user-guide/features/cron.md)              | Scheduled tasks with platform delivery                     |
+| [Context Files](website/docs/user-guide/features/context-files.md)       | Project context that shapes every conversation             |
+| [Architecture](website/docs/developer-guide/architecture.md)             | Project structure, agent loop, key classes                 |
+| [Contributing](website/docs/developer-guide/contributing.md)             | Development setup, PR process, code style                  |
+| [CLI Reference](website/docs/reference/cli-commands.md)                  | All commands and flags                                     |
+| [Environment Variables](website/docs/reference/environment-variables.md) | Complete env var reference                                 |
 
 ---
 
@@ -263,15 +263,15 @@ See `eternal claw migrate --help` for all options, or use the `openclaw-migratio
 
 ## Contributing
 
-We welcome contributions! See the [Contributing Guide](https://hermes-agent.nousresearch.com/docs/developer-guide/contributing) for development setup, code style, and PR process.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and the [contributing guide](website/docs/developer-guide/contributing.md) for development setup, code style, and PR process.
 
-Quick start for contributors — use the standard installer, then work from the
+Quick start — run the installer from this checkout, then work from the
 full git checkout it creates at `$ETERNAL_HOME/eternal-agent` (usually
 `~/.eternal/eternal-agent`). This matches the layout used by `eternal update`, the
 managed venv, lazy dependencies, gateway, and docs tooling.
 
 ```bash
-curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash
+scripts/install.sh
 cd "${ETERNAL_HOME:-$HOME/.eternal}/eternal-agent"
 uv pip install -e ".[all,dev]"
 scripts/run_tests.sh
@@ -294,11 +294,10 @@ scripts/run_tests.sh
 
 ---
 
-## Community
+## Related projects
 
-- 💬 [Discord](https://discord.gg/NousResearch)
-- 📚 [Skills Hub](https://agentskills.io)
-- 🐛 [Issues](https://github.com/NousResearch/hermes-agent/issues)
+- 📚 [Skills Hub](https://agentskills.io) — the open skills standard Eternal is compatible with
+- 🐛 [Issues](https://github.com/riddhimaaan/eternal/issues) — for Eternal itself
 - 🔌 [computer-use-linux](https://github.com/avifenesh/computer-use-linux) — Linux desktop-control MCP server for Eternal and other MCP hosts, with AT-SPI accessibility trees, Wayland/X11 input, screenshots, and compositor window targeting.
 - 🔌 [EternalClaw](https://github.com/AaronWong1999/eternalclaw) — Community WeChat bridge: Run Eternal Agent and OpenClaw on the same WeChat account.
 
@@ -306,6 +305,8 @@ scripts/run_tests.sh
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
-Built by [Nous Research](https://nousresearch.com).
+Eternal is a fork of [Hermes Agent](https://github.com/NousResearch/hermes-agent), originally
+created by Nous Research and used under the MIT License. Eternal is not affiliated with,
+endorsed by, or supported by Nous Research.

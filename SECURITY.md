@@ -6,10 +6,12 @@ scope for vulnerability reports.
 
 ## 1. Reporting a Vulnerability
 
-Report privately via [GitHub Security Advisories](https://github.com/NousResearch/hermes-agent/security/advisories/new)
-or **security@nousresearch.com**. Do not open public issues for
-security vulnerabilities. **Eternal Agent does not operate a bug
-bounty program.**
+Report privately via [GitHub Security Advisories on this
+repository](https://github.com/riddhimaaan/eternal/security/advisories/new).
+Do not open public issues for security vulnerabilities, and do not report
+Eternal vulnerabilities to Nous Research — Eternal is an independent fork and
+they do not maintain it. **Eternal Agent does not operate a bug bounty
+program.**
 
 A useful report includes:
 
@@ -329,7 +331,6 @@ that:
 
 - **Coordinated disclosure window:** 90 days from report, or until a
   fix is released, whichever comes first.
-- **Channel:** the GHSA thread or email correspondence with
-  security@nousresearch.com.
+- **Channel:** the GHSA thread on this repository.
 - **Credit:** reporters are credited in release notes unless
   anonymity is requested.
