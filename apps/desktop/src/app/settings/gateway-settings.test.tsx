@@ -59,6 +59,17 @@ afterEach(() => {
 })
 
 describe('GatewaySettings', () => {
+  it('does not offer Eternal Cloud as a connection mode', async () => {
+    const { GatewaySettings } = await import('./gateway-settings')
+
+    render(<GatewaySettings />)
+
+    expect(await screen.findByText('Local gateway')).toBeTruthy()
+    expect(screen.getByText('Remote gateway')).toBeTruthy()
+    expect(screen.getByText('Connect via SSH')).toBeTruthy()
+    expect(screen.queryByText('Eternal Cloud')).toBeNull()
+  })
+
   it('labels local mode as default inheritance for a named profile', async () => {
     const { GatewaySettings } = await import('./gateway-settings')
 
