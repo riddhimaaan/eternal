@@ -520,90 +520,18 @@ def _load_fal_client() -> Any:
         return _fal_client
 
 
-# ---------------------------------------------------------------------------
-# Managed FAL gateway (Nous Subscription)
-# ---------------------------------------------------------------------------
-
-_managed_fal_video_client: Any = None
-_managed_fal_video_client_config: Any = None
-_managed_fal_video_client_lock = threading.Lock()
-
-
-def _resolve_managed_fal_video_gateway():
-    """Return managed fal-queue gateway config when the user prefers the gateway
-    or direct FAL credentials are absent."""
-    from tools.tool_backend_helpers import fal_key_is_configured, prefers_gateway
-
-    if fal_key_is_configured() and not prefers_gateway("video_gen"):
-        return None
-    from tools.managed_tool_gateway import resolve_managed_tool_gateway
-
-    return resolve_managed_tool_gateway("fal-queue")
-
-
-def _get_managed_fal_video_client(managed_gateway):
-    """Reuse the managed FAL client so its internal httpx.Client is not leaked per call."""
-    global _managed_fal_video_client, _managed_fal_video_client_config
-    from tools.fal_common import _ManagedFalSyncClient
-
-    client_config = (
-        managed_gateway.gateway_origin.rstrip("/"),
-        managed_gateway.nous_user_token,
-    )
-    with _managed_fal_video_client_lock:
-        if _managed_fal_video_client is not None and _managed_fal_video_client_config == client_config:
-            return _managed_fal_video_client
-
-        _load_fal_client()
-        _managed_fal_video_client = _ManagedFalSyncClient(
-            _fal_client,
-            key=managed_gateway.nous_user_token,
-            queue_run_origin=managed_gateway.gateway_origin,
-        )
-        _managed_fal_video_client_config = client_config
-        return _managed_fal_video_client
-
-
 def _submit_fal_video_request(endpoint: str, arguments: Dict[str, Any]):
-    """Submit a FAL video request using direct credentials or the managed queue gateway.
-
-    Returns a request handle whose ``.get()`` blocks until the result is ready.
-    """
+    """Submit a FAL video request using the user's direct credentials."""
     _load_fal_client()
     request_headers = {"x-idempotency-key": str(uuid.uuid4())}
-    managed_gateway = _resolve_managed_fal_video_gateway()
-    if managed_gateway is None:
-        return _fal_client.submit(endpoint, arguments=arguments, headers=request_headers)
-
-    managed_client = _get_managed_fal_video_client(managed_gateway)
-    try:
-        return managed_client.submit(
-            endpoint,
-            arguments=arguments,
-            headers=request_headers,
-        )
-    except Exception as exc:
-        from tools.fal_common import _extract_http_status
-
-        status = _extract_http_status(exc)
-        if status is not None and 400 <= status < 500:
-            raise ValueError(
-                f"Nous Subscription gateway rejected endpoint '{endpoint}' "
-                f"(HTTP {status}). This model may not yet be enabled on "
-                f"the Nous Portal's FAL proxy. Either:\n"
-                f"  • Set FAL_KEY in your environment to use FAL.ai directly, or\n"
-                f"  • Pick a different model via `eternal tools` → Video Generation."
-            ) from exc
-        raise
+    return _fal_client.submit(endpoint, arguments=arguments, headers=request_headers)
 
 
 def _check_fal_video_available() -> bool:
-    """True if the FAL.ai video backend is reachable (direct key or managed gateway)."""
+    """True if a direct FAL.ai key is configured."""
     from tools.tool_backend_helpers import fal_key_is_configured
 
-    if fal_key_is_configured():
-        return True
-    return _resolve_managed_fal_video_gateway() is not None
+    return fal_key_is_configured()
 
 
 # ---------------------------------------------------------------------------
@@ -634,10 +562,6 @@ def _upscale_video(
             "upscale_mode": "factor",
             "upscale_factor": UPSCALER_FACTOR,
         }
-        if _resolve_managed_fal_video_gateway() is not None:
-            if not source_request_id:
-                raise RuntimeError("Managed SeedVR upscale requires the source FAL request id")
-            arguments["source_request_id"] = source_request_id
         handle = _submit_fal_video_request(UPSCALER_ENDPOINT, arguments)
         result = handle.get()
     except Exception as exc:  # noqa: BLE001

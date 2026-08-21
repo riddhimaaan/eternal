@@ -28,8 +28,6 @@ from eternal_cli.auth import (
     _ALLOWED_NOUS_INFERENCE_HOSTS,
     _validate_nous_inference_url_from_network,
 )
-
-
 class TestValidatorRules:
 
 
@@ -55,7 +53,6 @@ class TestValidatorRules:
             _validate_nous_inference_url_from_network(DEFAULT_NOUS_INFERENCE_URL)
             == DEFAULT_NOUS_INFERENCE_URL.rstrip("/")
         )
-
 
 
 class TestCallSiteWiring:
@@ -108,17 +105,6 @@ class TestCallSiteWiring:
         )
         assert refresh_count == 2, f"expected 2 refresh sites, found {refresh_count}"
         assert mint_count == 0, f"expected 0 mint sites, found {mint_count}"
-
-    def test_proxy_adapter_also_validates(self):
-        """The Nous proxy adapter applies the validator as defense-in-depth
-        even though auth.py already validates at the source, so a future
-        bypass at the source layer still gets caught at the forward
-        boundary."""
-        from pathlib import Path
-        import eternal_cli.proxy.adapters.nous_portal as _nous_adapter
-        source = Path(_nous_adapter.__file__).read_text(encoding="utf-8")
-        assert "_validate_nous_inference_url_from_network" in source
-
 
 class TestEnvOverrideNotGated:
     """The documented dev/staging env-var override must keep working.
@@ -283,27 +269,3 @@ class TestEnvOverrideWins:
             "poisoned stored URL must heal to the production default on the "
             f"no-refresh read path, got {result['base_url']!r}"
         )
-
-
-
-class TestProxyAdapterEnvOverride:
-    """The Nous proxy adapter is the second chokepoint: it re-validates the
-    base_url returned by resolve_nous_runtime_credentials() against the prod
-    allowlist. That re-validation must not clobber a legitimate
-    NOUS_INFERENCE_BASE_URL staging override.
-    """
-
-    def test_proxy_adapter_consults_env_override(self):
-        """Grep contract: the proxy adapter's forward-boundary base_url
-        resolution consults the env override before the network validator,
-        so a staging override survives the defense-in-depth re-validation."""
-        from pathlib import Path
-        import eternal_cli.proxy.adapters.nous_portal as _nous_adapter
-
-        source = Path(_nous_adapter.__file__).read_text(encoding="utf-8")
-        assert "_nous_inference_env_override()" in source, (
-            "proxy adapter must layer the env override on top of the network "
-            "validator, else a staging override is rejected at the forward boundary"
-        )
-        # The validator must still be present (defense-in-depth preserved).
-        assert "_validate_nous_inference_url_from_network" in source

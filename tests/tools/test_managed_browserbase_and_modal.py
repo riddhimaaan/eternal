@@ -9,9 +9,6 @@ from unittest.mock import patch
 
 import pytest
 
-from eternal_cli.nous_account import NousPortalAccountInfo
-
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = REPO_ROOT / "tools"
 PLUGINS_DIR = REPO_ROOT / "plugins"
@@ -62,26 +59,6 @@ def _restore_tool_and_agent_modules():
     finally:
         _reset_modules(("tools", "agent"))
         sys.modules.update(original_modules)
-
-
-@pytest.fixture(autouse=True)
-def _enable_managed_nous_tools(monkeypatch):
-    """Ensure managed_nous_tools_enabled() returns True even after module reloads.
-
-    The _install_fake_tools_package() helper resets and reimports tool modules,
-    so a simple monkeypatch on tool_backend_helpers doesn't survive.  We patch
-    the *source* modules that the reimported modules will import from — both
-    eternal_cli.nous_account — so the function body returns True.
-    """
-    monkeypatch.setattr(
-        "eternal_cli.nous_account.get_nous_portal_account_info",
-        lambda: NousPortalAccountInfo(
-            logged_in=True,
-            source="jwt",
-            fresh=False,
-            paid_service_access=True,
-        ),
-    )
 
 
 def _install_fake_tools_package():
@@ -155,11 +132,6 @@ def _install_fake_tools_package():
             **{_classname: _provider_stub_cls},
         )
 
-    sys.modules["tools.managed_tool_gateway"] = _load_tool_module(
-        "tools.managed_tool_gateway",
-        "managed_tool_gateway.py",
-    )
-
     interrupt_event = threading.Event()
     sys.modules["tools.interrupt"] = types.SimpleNamespace(
         set_interrupt=lambda value=True: interrupt_event.set() if value else interrupt_event.clear(),
@@ -210,10 +182,9 @@ def _install_fake_tools_package():
     sys.modules["tools.environments.ssh"] = types.SimpleNamespace(SSHEnvironment=_DummyEnvironment)
     sys.modules["tools.environments.docker"] = types.SimpleNamespace(DockerEnvironment=_DummyEnvironment)
     sys.modules["tools.environments.modal"] = types.SimpleNamespace(ModalEnvironment=_DummyEnvironment)
-    sys.modules["tools.environments.managed_modal"] = types.SimpleNamespace(ManagedModalEnvironment=_DummyEnvironment)
 
 
-def test_browser_use_explicit_local_mode_stays_local_even_when_managed_gateway_is_ready(tmp_path):
+def test_browser_use_explicit_local_mode_ignores_legacy_gateway_env(tmp_path):
     _install_fake_tools_package()
     (tmp_path / "config.yaml").write_text("browser:\n  cloud_provider: local\n", encoding="utf-8")
     env = os.environ.copy()
@@ -263,10 +234,7 @@ def test_terminal_tool_respects_direct_modal_mode_without_falling_back_to_manage
     with patch.dict(os.environ, env, clear=True):
         terminal_tool = _load_tool_module("tools.terminal_tool", "terminal_tool.py")
 
-        with (
-            patch.object(terminal_tool, "is_managed_tool_gateway_ready", return_value=True),
-            patch.object(Path, "exists", return_value=False),
-        ):
+        with patch.object(Path, "exists", return_value=False):
             with pytest.raises(ValueError, match="direct Modal credentials"):
                 terminal_tool._create_environment(
                     env_type="modal",

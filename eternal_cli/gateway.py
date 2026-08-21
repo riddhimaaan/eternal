@@ -6223,34 +6223,10 @@ def _setup_standard_platform(platform: dict):
         if not prompt_yes_no(f"  Reconfigure {label}?", False):
             return
 
+    # Eternal uses a bot owned by the user. Telegram tokens come directly
+    # from BotFather; there is no hosted provisioning service in this fork.
     auto_token_saved = False
     auto_owner_user_id = None
-    if platform.get("key") == "telegram":
-        print()
-        print_info("  Telegram can be configured automatically with a managed bot:")
-        print_info("  [1] Automatic (scan QR → confirm in Telegram → done)")
-        print_info("  [2] Manual BotFather token")
-        choice = prompt("  Choice [1/2]", default="1")
-        if choice.strip() == "1":
-            try:
-                from eternal_cli.telegram_managed_bot import (
-                    auto_setup_telegram_bot_result,
-                    is_valid_telegram_bot_token,
-                )
-            except ImportError:
-                print_warning("  Automatic setup is unavailable in this install.")
-            else:
-                result = auto_setup_telegram_bot_result()
-                if result and is_valid_telegram_bot_token(result.token):
-                    save_env_value(token_var, result.token)
-                    print_success("  Saved TELEGRAM_BOT_TOKEN")
-                    auto_token_saved = True
-                    auto_owner_user_id = result.owner_user_id
-                else:
-                    if result:
-                        print_warning("  Automatic setup returned an invalid Telegram token.")
-                    print()
-                    print_info("  Falling back to manual setup...")
 
     allowed_val_set = None  # Track if user set an allowlist (for home channel offer)
 

@@ -1033,8 +1033,8 @@ export interface ToolProvider {
   /** True when this is the provider currently written to config (mirrors the
    *  CLI `eternal tools` active-provider detection). */
   is_active: boolean
-  /** Honest readiness computed server-side (keys ∧ Nous entitlement ∧
-   *  post-setup install state). Optional for older backends. */
+  /** Honest readiness computed server-side from provider requirements and
+   *  post-setup install state. Optional for older backends. */
   status?: ToolProviderStatus
   /** Web toolset only: the backend key written to web.*backend config
    *  (e.g. 'searxng'). Absent on other toolsets and older backends. */

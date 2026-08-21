@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { Spinner } from "@nous-research/ui/ui/components/spinner";
+import { Spinner } from "@eternal/ui/ui/components/spinner";
 import {
   getPluginComponent,
   getPluginLoadError,

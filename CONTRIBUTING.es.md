@@ -45,7 +45,7 @@ Las habilidades incluidas (en `skills/`) se envían con cada instalación de Ete
 
 Si tu habilidad es oficial y útil pero no universalmente necesaria (ej., una integración de servicio de pago, una dependencia pesada), ponla en **`optional-skills/`** — se envía con el repositorio pero no está activada por defecto. Los usuarios pueden descubrirla a través de `eternal skills browse` (etiquetada como "oficial") e instalarla con `eternal skills install` (sin advertencia de terceros, confianza integrada).
 
-Si tu habilidad es especializada, contribuida por la comunidad o de nicho, es mejor para un **Skills Hub** — súbela a un registro de habilidades y compártela en el [Discord de Nous Research](https://discord.gg/NousResearch). Los usuarios pueden instalarla con `eternal skills install`.
+Si tu habilidad es especializada, contribuida por la comunidad o de nicho, es mejor para un **Skills Hub**. Los usuarios pueden instalarla con `eternal skills install`.
 
 ---
 
@@ -81,7 +81,7 @@ Esto no es una barra de calidad — es una decisión de acoplamiento y mantenimi
 ### Clonar e instalar
 
 ```bash
-git clone https://github.com/NousResearch/hermes-agent.git
+git clone https://github.com/riddhimaaan/eternal.git
 cd eternal-agent
 
 # Crear venv con Python 3.11
@@ -154,7 +154,7 @@ eternal-agent/
 │   ├── main.py                   # Punto de entrada, análisis de argumentos, despacho de comandos
 │   ├── config.py                 # Gestión de configuración, migración, definiciones de variables de entorno
 │   ├── setup.py                  # Asistente de configuración interactivo
-│   ├── auth.py                   # Resolución de proveedor, OAuth, Nous Portal
+│   ├── auth.py                   # Resolución de proveedor y OAuth
 │   ├── models.py                 # Listas de selección de modelos de OpenRouter
 │   ├── banner.py                 # Banner de bienvenida, arte ASCII
 │   ├── commands.py               # Registro central de comandos de barra (CommandDef), autocompletado, ayudantes del gateway
@@ -194,7 +194,7 @@ eternal-agent/
 ├── skills/                   # Habilidades incluidas (copiadas a ~/.eternal/skills/ en la instalación)
 ├── optional-skills/          # Habilidades opcionales oficiales (descubribles vía hub, no activadas por defecto)
 ├── tests/                    # Suite de tests
-├── website/                  # Sitio de documentación (hermes-agent.nousresearch.com)
+├── website/                  # Sitio de documentación
 │
 ├── cli-config.yaml.example   # Configuración de ejemplo (copiada a ~/.eternal/config.yaml)
 └── AGENTS.md                 # Guía de desarrollo para asistentes de codificación IA
@@ -206,7 +206,7 @@ eternal-agent/
 |------|-----------|
 | `~/.eternal/config.yaml` | Configuración (modelo, terminal, toolsets, compresión, etc.) |
 | `~/.eternal/.env` | Claves API y secretos |
-| `~/.eternal/auth.json` | Credenciales OAuth (Nous Portal) |
+| `~/.eternal/auth.json` | Credenciales OAuth |
 | `~/.eternal/skills/` | Todas las habilidades activas (incluidas + instaladas desde hub + creadas por el agente) |
 | `~/.eternal/memories/` | Memoria persistente (MEMORY.md, USER.md) |
 | `~/.eternal/state.db` | Base de datos de sesiones SQLite |
@@ -581,7 +581,7 @@ test(tools): añadir tests unitarios para file_operations
 
 ## Reportar Issues
 
-- Usa [GitHub Issues](https://github.com/NousResearch/hermes-agent/issues)
+- Usa [GitHub Issues](https://github.com/riddhimaaan/eternal/issues)
 - Incluye: SO, versión de Python, versión de Eternal (`eternal version`), traza de error completa
 - Incluye pasos para reproducir
 - Verifica los issues existentes antes de crear duplicados
@@ -591,7 +591,7 @@ test(tools): añadir tests unitarios para file_operations
 
 ## Comunidad
 
-- **Discord**: [discord.gg/NousResearch](https://discord.gg/NousResearch) — para preguntas, mostrar proyectos y compartir habilidades
+- **GitHub Discussions**: usa el repositorio de Eternal para preguntas, proyectos y habilidades compartidas
 - **GitHub Discussions**: Para propuestas de diseño y discusiones de arquitectura
 - **Skills Hub**: Sube habilidades especializadas a un registro y compártelas con la comunidad
 

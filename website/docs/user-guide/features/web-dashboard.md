@@ -1072,7 +1072,7 @@ Built-in themes:
 |-------|-----------|
 | **Eternal Teal** (`default`) | Dark teal + cream, system fonts, comfortable spacing |
 | **Eternal Teal (Large)** (`default-large`) | Same as default with 18px text and roomier spacing |
-| **Eternal Blue** (`nous-blue`) | Eternal blue accents with airy spacing |
+| **Eternal Blue** (`eternal-blue`) | Eternal blue accents with airy spacing |
 | **Midnight** (`midnight`) | Deep blue-violet, Inter + JetBrains Mono |
 | **Ember** (`ember`) | Warm crimson + bronze, Spectral serif + IBM Plex Mono |
 | **Mono** (`mono`) | Grayscale, IBM Plex, compact |

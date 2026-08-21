@@ -1,5 +1,5 @@
 {
-  description = "Eternal Agent - AI agent framework by Nous Research";
+  description = "Eternal Agent - open-source personal AI agent";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";

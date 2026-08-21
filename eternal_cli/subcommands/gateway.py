@@ -29,9 +29,7 @@ def _add_compat_platform_flag(parser: argparse.ArgumentParser) -> None:
     )
 
 
-def build_gateway_parser(
-    subparsers, *, cmd_gateway: Callable, cmd_proxy: Callable, cmd_gateway_enroll: Callable
-) -> None:
+def build_gateway_parser(subparsers, *, cmd_gateway: Callable, cmd_proxy: Callable) -> None:
     """Attach the ``gateway`` and ``proxy`` subcommands to ``subparsers``."""
     # =========================================================================
     # gateway command
@@ -248,65 +246,6 @@ def build_gateway_parser(
         help="Skip the confirmation prompt",
     )
 
-    # gateway enroll — enroll a self-hosted gateway with a relay connector
-    # (connector⇄gateway auth). Redeems a single-use enrollment token for the
-    # per-gateway secret + per-tenant delivery key and writes them to .env.
-    # See docs/relay-connector-contract.md (and the connector repo's
-    # docs/connector-gateway-auth-design.md). EXPERIMENTAL.
-    gateway_enroll = gateway_subparsers.add_parser(
-        "enroll",
-        help="Enroll this gateway with a relay connector (writes relay auth creds to .env)",
-        description=(
-            "Redeem a single-use enrollment token with a relay connector. "
-            "Authenticates as your Nous Portal account (the connector derives the "
-            "authoritative tenant from it), mints this gateway's per-gateway secret "
-            "and per-tenant delivery key, and writes GATEWAY_RELAY_ID / "
-            "GATEWAY_RELAY_SECRET / GATEWAY_RELAY_DELIVERY_KEY into ~/.eternal/.env. "
-            "Requires being logged in (eternal setup). Not available in managed installs."
-        ),
-    )
-    gateway_enroll.add_argument(
-        "--token",
-        default=None,
-        help=(
-            "The single-use enrollment token from the connector (delivered with "
-            "your gateway config). Also settable via GATEWAY_RELAY_ENROLL_TOKEN."
-        ),
-    )
-    gateway_enroll.add_argument(
-        "--connector-url",
-        dest="connector_url",
-        default=None,
-        help=(
-            "The connector base/relay URL, e.g. wss://connector.example.com/relay "
-            "or https://connector.example.com. Also settable via GATEWAY_RELAY_URL "
-            "/ gateway.relay_url in config.yaml."
-        ),
-    )
-    gateway_enroll.add_argument(
-        "--gateway-id",
-        dest="gateway_id",
-        default=None,
-        help=(
-            "A stable id for this gateway instance (kill-switch granularity). "
-            "Defaults to gw-<hostname>."
-        ),
-    )
-    gateway_enroll.add_argument(
-        "--wake-url",
-        dest="wake_url",
-        default=None,
-        help=(
-            "Phase 5 §5.2 wake URL: a reachable URL the connector pokes "
-            "(payload-free GET) to wake this gateway when buffered work arrives "
-            "while it's idle/suspended, so it reconnects and drains. Persisted as "
-            "GATEWAY_RELAY_WAKE_URL in ~/.eternal/.env and forwarded at provision. "
-            "Optional — without it the gateway still drains whenever it next "
-            "reconnects on its own."
-        ),
-    )
-    gateway_enroll.set_defaults(func=cmd_gateway_enroll)
-
     # =========================================================================
     # proxy command — local OpenAI-compatible proxy that attaches the user's
     # OAuth-authenticated provider credentials to outbound requests. Lets
@@ -318,7 +257,7 @@ def build_gateway_parser(
         help="Local OpenAI-compatible proxy to OAuth providers",
         description=(
             "Run a local HTTP server that forwards OpenAI-compatible requests "
-            "to an OAuth-authenticated provider (e.g. Nous Portal). External "
+            "to an OAuth-authenticated provider. External "
             "apps can point at the proxy with any bearer token; the proxy "
             "attaches your real credentials."
         ),
@@ -330,8 +269,8 @@ def build_gateway_parser(
     )
     proxy_start.add_argument(
         "--provider",
-        default="nous",
-        help="Upstream provider: nous or xai (default: nous). See `eternal proxy providers`.",
+        default="xai",
+        help="Upstream provider (default: xai). See `eternal proxy providers`.",
     )
     proxy_start.add_argument(
         "--host",

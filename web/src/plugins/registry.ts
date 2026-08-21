@@ -19,23 +19,23 @@ import React, {
 } from "react";
 import { api, fetchJSON, authedFetch, buildWsUrl, buildWsAuthParam } from "@/lib/api";
 import { cn, timeAgo, isoTimeAgo } from "@/lib/utils";
-import { Badge } from "@nous-research/ui/ui/components/badge";
-import { Button } from "@nous-research/ui/ui/components/button";
-import { Checkbox } from "@nous-research/ui/ui/components/checkbox";
-import { ConfirmDialog } from "@nous-research/ui/ui/components/confirm-dialog";
+import { Badge } from "@eternal/ui/ui/components/badge";
+import { Button } from "@eternal/ui/ui/components/button";
+import { Checkbox } from "@eternal/ui/ui/components/checkbox";
+import { ConfirmDialog } from "@eternal/ui/ui/components/confirm-dialog";
 import {
   Dialog, DialogClose, DialogContent, DialogDescription,
   DialogFooter, DialogHeader, DialogTitle,
-} from "@nous-research/ui/ui/components/dialog";
-import { Toast } from "@nous-research/ui/ui/components/toast";
-import { useConfirmDelete } from "@nous-research/ui/hooks/use-confirm-delete";
-import { useToast } from "@nous-research/ui/hooks/use-toast";
-import { Select, SelectOption } from "@nous-research/ui/ui/components/select";
-import { Card, CardHeader, CardTitle, CardContent } from "@nous-research/ui/ui/components/card";
-import { Input } from "@nous-research/ui/ui/components/input";
-import { Label } from "@nous-research/ui/ui/components/label";
-import { Separator } from "@nous-research/ui/ui/components/separator";
-import { Tabs, TabsList, TabsTrigger } from "@nous-research/ui/ui/components/tabs";
+} from "@eternal/ui/ui/components/dialog";
+import { Toast } from "@eternal/ui/ui/components/toast";
+import { useConfirmDelete } from "@eternal/ui/hooks/use-confirm-delete";
+import { useToast } from "@eternal/ui/hooks/use-toast";
+import { Select, SelectOption } from "@eternal/ui/ui/components/select";
+import { Card, CardHeader, CardTitle, CardContent } from "@eternal/ui/ui/components/card";
+import { Input } from "@eternal/ui/ui/components/input";
+import { Label } from "@eternal/ui/ui/components/label";
+import { Separator } from "@eternal/ui/ui/components/separator";
+import { Tabs, TabsList, TabsTrigger } from "@eternal/ui/ui/components/tabs";
 import { useI18n } from "@/i18n";
 import { registerSlot, PluginSlot } from "./slots";
 
@@ -154,7 +154,7 @@ export function exposePluginSDK() {
     // plugins that need to build the WS URL themselves.
     buildWsAuthParam,
 
-    // UI components — Nous DS where available, shadcn/ui primitives elsewhere.
+    // UI components — Eternal UI where available, shadcn/ui primitives elsewhere.
     components: {
       Card,
       CardHeader,

@@ -91,11 +91,7 @@ def _resolve_provider_key(env_var: str, provider_id: str) -> str:
         return str(get_env_value(env_var) or "").strip()
     return resolve_provider_secret(env_var, provider_id, env_getter=get_env_value)
 
-from tools.managed_tool_gateway import resolve_managed_tool_gateway
 from tools.tool_backend_helpers import (
-    managed_nous_tools_enabled,
-    nous_tool_gateway_unavailable_message,
-    prefers_gateway,
     resolve_openai_audio_api_key,
 )
 from tools.xai_http import eternal_xai_user_agent
@@ -3778,58 +3774,36 @@ def check_tts_requirements() -> bool:
 
 
 def _resolve_openai_audio_client_config() -> tuple[str, str, bool]:
-    """Return ``(api_key, base_url, is_managed)`` for the OpenAI audio client.
+    """Return ``(api_key, base_url, False)`` for a direct OpenAI audio client.
 
-    ``is_managed`` is True when the config resolves to the Nous managed audio
-    gateway (a restricted proxy), so callers can coerce the request to what the
-    gateway supports. When ``tts.use_gateway`` is set the gateway is preferred
-    even if direct OpenAI credentials are present.
-
-    Resolution order (mirrors the STT resolver):
+    Resolution order:
     1. ``tts.openai.api_key`` / ``tts.openai.base_url`` from ``config.yaml``
     2. ``VOICE_TOOLS_OPENAI_KEY`` / ``OPENAI_API_KEY`` environment variables
        (still honoring ``tts.openai.base_url`` when set)
-    3. Managed OpenAI audio tool gateway
     """
     tts_config = _load_tts_config()
     openai_cfg = (tts_config.get("openai") if isinstance(tts_config, dict) else None) or {}
     cfg_api_key = openai_cfg.get("api_key") or ""
     cfg_base_url = openai_cfg.get("base_url") or ""
-    if cfg_api_key and not prefers_gateway("tts"):
+    if cfg_api_key:
         return cfg_api_key, (cfg_base_url or DEFAULT_OPENAI_BASE_URL), False
 
     direct_api_key = resolve_openai_audio_api_key()
-    if direct_api_key and not prefers_gateway("tts"):
+    if direct_api_key:
         return direct_api_key, (cfg_base_url or DEFAULT_OPENAI_BASE_URL), False
 
-    managed_gateway = resolve_managed_tool_gateway("openai-audio")
-    if managed_gateway is None:
-        message = (
-            "Neither tts.openai.api_key in config nor "
-            "VOICE_TOOLS_OPENAI_KEY/OPENAI_API_KEY is set"
-        )
-        if managed_nous_tools_enabled() or prefers_gateway("tts"):
-            message += (
-                ". "
-                + nous_tool_gateway_unavailable_message(
-                    "managed OpenAI audio for TTS",
-                )
-            )
-        raise ValueError(message)
-
-    return (
-        managed_gateway.nous_user_token,
-        urljoin(f"{managed_gateway.gateway_origin.rstrip('/')}/", "v1"),
-        True,
+    raise ValueError(
+        "Neither tts.openai.api_key in config nor "
+        "VOICE_TOOLS_OPENAI_KEY/OPENAI_API_KEY is set"
     )
 
 
 def _has_openai_audio_backend() -> bool:
-    """Return True when OpenAI audio can use config/env credentials or the managed gateway."""
+    """Return True when OpenAI audio has direct config/env credentials."""
     openai_cfg = (_load_tts_config().get("openai") or {})
     if openai_cfg.get("api_key"):
         return True
-    return bool(resolve_openai_audio_api_key() or resolve_managed_tool_gateway("openai-audio"))
+    return bool(resolve_openai_audio_api_key())
 
 
 # ===========================================================================

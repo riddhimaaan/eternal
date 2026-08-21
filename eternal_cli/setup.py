@@ -22,8 +22,6 @@ import copy
 from pathlib import Path
 from typing import Optional, Dict, Any
 
-from eternal_cli.nous_subscription import get_nous_subscription_features
-from tools.tool_backend_helpers import managed_nous_tools_enabled
 from eternal_constants import get_optional_skills_dir
 
 logger = logging.getLogger(__name__)
@@ -433,22 +431,30 @@ def _print_setup_summary(config: dict, eternal_home):
         tool_status.append(("Vision (image analysis)", False, "run 'eternal setup' to configure"))
 
 
-    # Web tools (Exa, Parallel, Firecrawl, or Tavily)
-    if subscription_features.web.available and not subscription_features.web.managed_by_nous:
-        label = "Web Search & Extract"
-        if subscription_features.web.current_provider:
-            label = f"Web Search & Extract ({subscription_features.web.current_provider})"
-        tool_status.append((label, True, None))
+    # Web tools (direct user-owned credentials or self-hosted endpoint)
+    if any(get_env_value(name) for name in (
+        "EXA_API_KEY", "PARALLEL_API_KEY", "FIRECRAWL_API_KEY",
+        "FIRECRAWL_API_URL", "TAVILY_API_KEY", "SEARXNG_URL",
+    )):
+        tool_status.append(("Web Search & Extract", True, None))
     else:
         tool_status.append(("Web Search & Extract", False, "EXA_API_KEY, PARALLEL_API_KEY, FIRECRAWL_API_KEY/FIRECRAWL_API_URL, TAVILY_API_KEY, or SEARXNG_URL"))
 
     # Browser tools (local Chromium, Camofox, Browserbase, Browser Use, or Firecrawl)
-    browser_provider = subscription_features.browser.current_provider
-    if subscription_features.browser.available and not subscription_features.browser.managed_by_nous:
-        label = "Browser Automation"
-        if browser_provider:
-            label = f"Browser Automation ({browser_provider})"
-        tool_status.append((label, True, None))
+    browser_cfg = config.get("browser", {})
+    browser_provider_key = (
+        browser_cfg.get("cloud_provider") if isinstance(browser_cfg, dict) else None
+    )
+    browser_provider = {
+        "local": "Local browser",
+        "browserbase": "Browserbase",
+        "browser-use": "Browser Use",
+        "camofox": "Camofox",
+    }.get(browser_provider_key)
+    if shutil.which("agent-browser") or any(get_env_value(name) for name in (
+        "CAMOFOX_URL", "BROWSER_USE_API_KEY", "BROWSERBASE_API_KEY",
+    )):
+        tool_status.append(("Browser Automation", True, None))
     else:
         missing_browser_hint = "npm install -g agent-browser, set CAMOFOX_URL, or configure Browser Use or Browserbase"
         if browser_provider == "Browserbase":
@@ -470,55 +476,46 @@ def _print_setup_summary(config: dict, eternal_home):
             ("Browser Automation", False, missing_browser_hint)
         )
 
-    # Image generation — FAL (direct or via Nous), or any plugin-registered
-    # provider (OpenAI, etc.)
-    if subscription_features.image_gen.available and not subscription_features.image_gen.managed_by_nous:
-        tool_status.append(("Image Generation", True, None))
-    else:
-        # Fall back to probing plugin-registered providers so OpenAI-only
-        # setups don't show as "missing FAL_KEY".
-        _img_backend = None
-        try:
-            from agent.image_gen_registry import list_providers
-            from eternal_cli.plugins import _ensure_plugins_discovered
+    # Image generation — probe every plugin-backed direct provider.
+    _img_backend = None
+    try:
+        from agent.image_gen_registry import list_providers
+        from eternal_cli.plugins import _ensure_plugins_discovered
 
-            _ensure_plugins_discovered()
-            for _p in list_providers():
-                if _p.name == "fal":
-                    continue
-                try:
-                    if _p.is_available():
-                        _img_backend = _p.display_name
-                        break
-                except Exception:
-                    continue
-        except Exception:
-            pass
-        if _img_backend:
-            tool_status.append((f"Image Generation ({_img_backend})", True, None))
-        else:
-            tool_status.append(("Image Generation", False, "FAL_KEY or OPENAI_API_KEY"))
+        _ensure_plugins_discovered()
+        for _p in list_providers():
+            try:
+                if _p.is_available():
+                    _img_backend = _p.display_name
+                    break
+            except Exception:
+                continue
+    except Exception:
+        pass
+    if _img_backend:
+        tool_status.append((f"Image Generation ({_img_backend})", True, None))
+    else:
+        tool_status.append(("Image Generation", False, "FAL_KEY or OPENAI_API_KEY"))
 
     # Video generation — opt-in via `eternal tools` → Video Generation.
     # Only show the row when a plugin reports available so we don't badger
     # users who don't care about video gen with a "missing" status line.
-    if not subscription_features.video_gen.managed_by_nous:
-        try:
-            from agent.video_gen_registry import list_providers as _list_video_providers
-            from eternal_cli.plugins import _ensure_plugins_discovered as _ensure_plugins
-            _ensure_plugins()
-            _video_backend = None
-            for _vp in _list_video_providers():
-                try:
-                    if _vp.is_available():
-                        _video_backend = _vp.display_name
-                        break
-                except Exception:
-                    continue
-        except Exception:
-            _video_backend = None
-        if _video_backend:
-            tool_status.append((f"Video Generation ({_video_backend})", True, None))
+    try:
+        from agent.video_gen_registry import list_providers as _list_video_providers
+        from eternal_cli.plugins import _ensure_plugins_discovered as _ensure_plugins
+        _ensure_plugins()
+        _video_backend = None
+        for _vp in _list_video_providers():
+            try:
+                if _vp.is_available():
+                    _video_backend = _vp.display_name
+                    break
+            except Exception:
+                continue
+    except Exception:
+        _video_backend = None
+    if _video_backend:
+        tool_status.append((f"Video Generation ({_video_backend})", True, None))
 
     # TTS — show configured provider
     tts_provider = cfg_get(config, "tts", "provider", default="edge")
@@ -582,7 +579,7 @@ def _print_setup_summary(config: dict, eternal_home):
             )
 
     if cfg_get(config, "terminal", "backend") == "modal":
-        if subscription_features.modal.direct_override:
+        if get_env_value("MODAL_TOKEN_ID") and get_env_value("MODAL_TOKEN_SECRET"):
             tool_status.append(("Modal Execution (direct Modal)", True, None))
         else:
             tool_status.append(("Modal Execution", False, "run 'eternal setup terminal'"))
@@ -897,8 +894,6 @@ def setup_model_provider(config: dict, *, quick: bool = False):
     # on demand via `eternal auth add`, `eternal setup` vision, and
     # `eternal setup tts`. This keeps both quick and full setup thin.
 
-
-    # Tool Gateway prompt is already shown by _model_flow_nous() above.
     save_config(config)
 
 
@@ -1058,7 +1053,6 @@ def _setup_tts_provider(config: dict):
     """Interactive TTS provider selection with install flow for NeuTTS."""
     tts_config = config.get("tts", {})
     current_provider = tts_config.get("provider", "edge")
-    subscription_features = get_nous_subscription_features(config)
 
     provider_labels = {
         "edge": "Edge TTS",
@@ -1102,15 +1096,6 @@ def _setup_tts_provider(config: dict):
         return
 
     selected = providers[idx]
-    selected_via_nous = selected == "nous-openai"
-    if selected == "nous-openai":
-        selected = "openai"
-        print_info("OpenAI TTS will use the managed Nous gateway and bill to your subscription.")
-        if get_env_value("VOICE_TOOLS_OPENAI_KEY") or get_env_value("OPENAI_API_KEY"):
-            print_warning(
-                "Direct OpenAI credentials are still configured and may take precedence until removed from ~/.eternal/.env."
-            )
-
     if selected == "neutts":
         # Check if already installed
         try:
@@ -1146,7 +1131,7 @@ def _setup_tts_provider(config: dict):
                 print_warning("No API key provided. Falling back to Edge TTS.")
                 selected = "edge"
 
-    elif selected == "openai" and not selected_via_nous:
+    elif selected == "openai":
         existing = get_env_value("VOICE_TOOLS_OPENAI_KEY") or get_env_value("OPENAI_API_KEY")
         if not existing:
             print()
@@ -1810,35 +1795,6 @@ def _is_valid_telegram_bot_token(token: str) -> bool:
     return bool(_TELEGRAM_BOT_TOKEN_RE.match(token))
 
 
-def _setup_telegram_auto_result():
-    """Attempt automatic Telegram bot creation via managed QR onboarding."""
-    try:
-        from eternal_cli.telegram_managed_bot import auto_setup_telegram_bot_result
-    except ImportError:
-        return None
-
-    profile_name: str | None = None
-    try:
-        profile_name = _profile_name_from_eternal_home(Path(get_eternal_home()))
-    except Exception:
-        pass
-
-    return auto_setup_telegram_bot_result(profile_name=profile_name)
-
-
-def _profile_name_from_eternal_home(eternal_home) -> str | None:
-    """Return the active profile name when ETERNAL_HOME is a profile dir."""
-    if eternal_home.parent.name == "profiles":
-        return eternal_home.name
-    return None
-
-
-def _setup_telegram_auto() -> str | None:
-    """Attempt automatic Telegram bot creation and return only the token."""
-    result = _setup_telegram_auto_result()
-    return result.token if result else None
-
-
 def _prompt_telegram_bot_token() -> str | None:
     print_info("Create a bot via @BotFather on Telegram")
     while True:
@@ -1872,37 +1828,7 @@ def _setup_telegram():
                         print_success("Telegram allowlist configured")
             return
 
-    print_info("How would you like to create your Telegram bot?")
-    print()
-    print_info("  [1] Automatic (recommended)")
-    print_info("      Scan a QR code → confirm in Telegram → done.")
-    print_info("      No token copy-paste needed.")
-    print()
-    print_info("  [2] Manual")
-    print_info("      Create a bot via @BotFather yourself and paste the token.")
-    print()
-
-    choice = prompt("Choice [1/2]", default="1")
-    token = None
-    setup_result = None
-
-    if choice.strip() == "1":
-        setup_result = _setup_telegram_auto_result()
-        if setup_result:
-            token = setup_result.token
-            if not _is_valid_telegram_bot_token(token):
-                print_error("Automatic setup returned an invalid Telegram bot token.")
-                token = None
-                setup_result = None
-        else:
-            token = None
-        if not token:
-            print()
-            print_info("Falling back to manual setup...")
-            print()
-
-    if not token:
-        token = _prompt_telegram_bot_token()
+    token = _prompt_telegram_bot_token()
     if not token:
         return
 
@@ -1916,25 +1842,9 @@ def _setup_telegram():
     print_info("   2. It will reply with your numeric ID (e.g., 123456789)")
     print()
 
-    detected_user_id = getattr(setup_result, "owner_user_id", None)
-    if detected_user_id:
-        detected_id = str(detected_user_id)
-        print_success(f"Detected your Telegram user ID: {detected_id}")
-        if prompt_yes_no("Allow this Telegram account to use the bot?", True):
-            extra = prompt("Additional allowed user IDs (comma-separated, optional)")
-            ids = [detected_id]
-            for uid in extra.replace(" ", "").split(","):
-                if uid and uid not in ids:
-                    ids.append(uid)
-            allowed_users = ",".join(ids)
-        else:
-            allowed_users = prompt(
-                "Allowed user IDs (comma-separated, leave empty for open access)"
-            )
-    else:
-        allowed_users = prompt(
-            "Allowed user IDs (comma-separated, leave empty for open access)"
-        )
+    allowed_users = prompt(
+        "Allowed user IDs (comma-separated, leave empty for open access)"
+    )
 
     if allowed_users:
         allowed_users = allowed_users.replace(" ", "")

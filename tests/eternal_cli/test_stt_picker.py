@@ -44,34 +44,18 @@ class TestSttCategory:
 
 
 
-    def test_managed_row_shares_tts_coverage_category(self):
-        from eternal_cli.nous_subscription import MANAGED_FEATURE_COVERAGE_CATEGORY
-
-        managed = [p for p in _stt_cat()["providers"] if p.get("managed_nous_feature")]
-        assert managed, "expected a Nous Subscription row"
-        for p in managed:
-            assert p["managed_nous_feature"] == "stt"
-        assert MANAGED_FEATURE_COVERAGE_CATEGORY["stt"] == "openai-audio"
-
-
 class TestConfigWrites:
     def test_write_provider_config_sets_stt_provider(self):
         config = {}
         prov = _stt_provider_named("Groq")
-        _write_provider_config(prov, config, managed_feature=None)
+        _write_provider_config(prov, config)
         assert config["stt"]["provider"] == "groq"
-        assert config["stt"]["use_gateway"] is False
+        assert "use_gateway" not in config["stt"]
 
 
     def test_apply_provider_selection_stt(self):
         config = {}
-        with patch(
-            "eternal_cli.tools_config.get_nous_subscription_features"
-        ) as feats:
-            feats.return_value = MagicMock(
-                nous_auth_present=False, account_info=None
-            )
-            apply_provider_selection("stt", "OpenAI", config)
+        apply_provider_selection("stt", "OpenAI", config)
         assert config["stt"]["provider"] == "openai"
 
 

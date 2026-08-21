@@ -140,26 +140,13 @@ def _get_direct_firecrawl_config() -> Optional[tuple]:
 
 
 def _get_firecrawl_gateway_url() -> str:
-    """Return the configured Firecrawl gateway URL."""
-    import tools.web_tools as _wt
-
-    return _wt.build_vendor_gateway_url("firecrawl")
+    """Compatibility helper; hosted tool gateways are no longer supported."""
+    return ""
 
 
 def _is_tool_gateway_ready() -> bool:
-    """Return True when gateway URL + Nous Subscriber token are available.
-
-    Reads ``peek_nous_access_token`` and ``resolve_managed_tool_gateway``
-    via :mod:`tools.web_tools` rather than direct imports, so unit tests
-    that ``patch("tools.web_tools._peek_nous_access_token", ...)`` see
-    their patches honored. The names are re-exported on
-    :mod:`tools.web_tools` for exactly this reason.
-    """
-    import tools.web_tools as _wt
-
-    return _wt.resolve_managed_tool_gateway(
-        "firecrawl", token_reader=_wt._peek_nous_access_token
-    ) is not None
+    """Hosted tool gateways are no longer supported."""
+    return False
 
 
 def _has_direct_firecrawl_config() -> bool:
@@ -168,12 +155,12 @@ def _has_direct_firecrawl_config() -> bool:
 
 
 def check_firecrawl_api_key() -> bool:
-    """Return True when Firecrawl backend (direct or gateway) is usable.
+    """Return True when direct Firecrawl configuration is usable.
 
     Re-exported by :mod:`tools.web_tools` for backward compatibility with
     existing tests and the ``eternal tools`` setup flow.
     """
-    return _has_direct_firecrawl_config() or _is_tool_gateway_ready()
+    return _has_direct_firecrawl_config()
 
 
 def _firecrawl_backend_help_suffix() -> str:
@@ -192,48 +179,14 @@ def _raise_web_backend_configuration_error() -> None:
 
 
 def _get_firecrawl_client() -> Any:
-    """Get or create the cached Firecrawl client.
-
-    When ``web.use_gateway`` is set in config, the managed Tool Gateway is
-    preferred even if direct Firecrawl credentials are present. Otherwise
-    direct Firecrawl takes precedence when explicitly configured.
-
-    Raises ValueError when neither path is usable.
-
-    The cached client is stored on :mod:`tools.web_tools` (as
-    ``_firecrawl_client`` and ``_firecrawl_client_config``) rather than on
-    this plugin module so that unit tests that reset the cache via
-    ``tools.web_tools._firecrawl_client = None`` keep working. Helper
-    functions (``prefers_gateway``, ``resolve_managed_tool_gateway``,
-    ``_read_nous_access_token``, ``Firecrawl``) are also looked up via
-    :mod:`tools.web_tools` for the same reason — see
-    :func:`_is_tool_gateway_ready`.
-    """
+    """Get or create the cached direct Firecrawl client."""
     import tools.web_tools as _wt
 
     direct_config = _get_direct_firecrawl_config()
-    if direct_config is not None and not _wt.prefers_gateway("web"):
-        kwargs, client_config = direct_config
-    else:
-        managed_gateway = _wt.resolve_managed_tool_gateway(
-            "firecrawl", token_reader=_wt._read_nous_access_token
-        )
-        if managed_gateway is None:
-            logger.error(
-                "Firecrawl client initialization failed: "
-                "missing direct config and tool-gateway auth."
-            )
-            _raise_web_backend_configuration_error()
-
-        kwargs = {
-            "api_key": managed_gateway.nous_user_token,
-            "api_url": managed_gateway.gateway_origin,
-        }
-        client_config = (
-            "tool-gateway",
-            kwargs["api_url"],
-            managed_gateway.nous_user_token,
-        )
+    if direct_config is None:
+        logger.error("Firecrawl client initialization failed: missing direct config.")
+        _raise_web_backend_configuration_error()
+    kwargs, client_config = direct_config
 
     cached = getattr(_wt, "_firecrawl_client", None)
     cached_config = getattr(_wt, "_firecrawl_client_config", None)

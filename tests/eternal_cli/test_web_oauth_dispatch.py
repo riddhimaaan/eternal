@@ -428,58 +428,6 @@ def test_cancel_oauth_session_marks_dict_cancelled_before_popping():
     assert worker_ref["cancelled"] is True
 
 
-def test_nous_dashboard_poller_preserves_effective_scope_when_token_omits_scope(monkeypatch):
-    from eternal_cli import auth as auth_mod
-    from eternal_cli import web_server as ws
-
-    session_id = "nous-effective-scope-test"
-    ws._oauth_sessions[session_id] = {
-        "session_id": session_id,
-        "provider": "nous",
-        "flow": "device_code",
-        "created_at": time.time(),
-        "status": "pending",
-        "error_message": None,
-        "portal_base_url": "https://portal.nousresearch.com",
-        "client_id": "eternal-cli",
-        "device_code": "device-code",
-        "interval": 5,
-        "expires_at": time.time() + 600,
-        "scope": auth_mod.DEFAULT_NOUS_SCOPE,
-    }
-    captured_state = {}
-
-    def fake_refresh_nous_oauth_from_state(state, **kwargs):
-        captured_state.update(state)
-        return {**state, "agent_key": "jwt-agent-key"}
-
-    monkeypatch.setattr(
-        auth_mod,
-        "_poll_for_token",
-        lambda **kwargs: {
-            "access_token": "access-token",
-            "refresh_token": "refresh-token",
-            "expires_in": 3600,
-            "token_type": "Bearer",
-        },
-    )
-    monkeypatch.setattr(
-        auth_mod,
-        "refresh_nous_oauth_from_state",
-        fake_refresh_nous_oauth_from_state,
-    )
-    monkeypatch.setattr(auth_mod, "persist_nous_credentials", lambda state: None)
-
-    try:
-        ws._nous_poller(session_id)
-        assert captured_state["scope"] == auth_mod.DEFAULT_NOUS_SCOPE
-        assert ws._oauth_sessions[session_id]["status"] == "approved"
-    finally:
-        ws._oauth_sessions.pop(session_id, None)
-
-
-
-
 def test_xai_oauth_listed_as_device_code_flow():
     """xAI Grok OAuth must surface in the catalog as a device-code flow."""
     resp = client.get("/api/providers/oauth", headers=HEADERS)
@@ -693,7 +641,6 @@ def test_status_falls_through_to_generic_dispatcher_for_catalog_only_provider():
     assert out["token_preview"] and "sk-future-secret-token-xyz" not in out["token_preview"]
     assert out["expires_at"] == "2026-12-01T00:00:00Z"
     assert out["has_refresh_token"] is True
-
 
 
 

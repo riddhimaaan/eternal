@@ -794,7 +794,6 @@ from eternal_cli import __version__, __release_date__
 from eternal_cli.model_setup_flows import (
     _prompt_auth_credentials_choice,
     _model_flow_openrouter,
-    _model_flow_nous,
     _model_flow_openai_codex,
     _model_flow_xai_oauth,
     _model_flow_qwen_oauth,
@@ -1035,7 +1034,7 @@ def _has_any_provider_configured() -> bool:
     # while the PROVIDER_REGISTRY sweep below spawns subprocesses (gh) and can
     # take 15-20s — long enough that desktop setup.status calls time out.
 
-    # Check for Nous Portal OAuth credentials
+    # Check for saved OAuth credentials.
     auth_file = get_eternal_home() / "auth.json"
     if auth_file.exists():
         try:
@@ -3875,8 +3874,6 @@ def select_provider_and_model(args=None):
         _model_flow_moa(config, current_model)
     elif selected_provider == "ai-gateway":
         _model_flow_ai_gateway(config, current_model)
-    elif selected_provider == "nous":
-        _model_flow_nous(config, current_model, args=args)
     elif selected_provider == "openai-codex":
         _model_flow_openai_codex(config, current_model)
     elif selected_provider == "xai-oauth":
@@ -11265,13 +11262,6 @@ def cmd_dashboard(args):
     )
 
 
-def cmd_gateway_enroll(args):
-    """Enroll a self-hosted gateway with a relay connector."""
-    from eternal_cli.gateway_enroll import cmd_gateway_enroll as _impl
-
-    _impl(args)
-
-
 def cmd_completion(args, parser=None):
     """Print shell completion script."""
     from eternal_cli.completion import generate_bash, generate_zsh, generate_fish
@@ -12270,9 +12260,7 @@ def main():
     # =========================================================================
     # gateway + proxy commands  (parsers built in eternal_cli/subcommands/gateway.py)
     # =========================================================================
-    build_gateway_parser(
-        subparsers, cmd_gateway=cmd_gateway, cmd_proxy=cmd_proxy, cmd_gateway_enroll=cmd_gateway_enroll
-    )
+    build_gateway_parser(subparsers, cmd_gateway=cmd_gateway, cmd_proxy=cmd_proxy)
 
     # =========================================================================
     # lsp command
@@ -12934,7 +12922,7 @@ def main():
         p.add_argument(
             "--provider",
             help="Only match sessions billed through this provider "
-            "(e.g. openrouter, anthropic, nous)",
+            "(e.g. openrouter, anthropic, openai-codex)",
         )
         p.add_argument(
             "--user", help="Only match sessions from this user ID"

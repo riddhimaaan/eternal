@@ -11,11 +11,7 @@ from eternal_cli.subcommands.dashboard import build_dashboard_parser
 def dashboard_parser():
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command")
-    build_dashboard_parser(
-        subparsers,
-        cmd_dashboard=lambda _args: None,
-        cmd_dashboard_register=lambda _args: None,
-    )
+    build_dashboard_parser(subparsers, cmd_dashboard=lambda _args: None)
     return parser
 
 

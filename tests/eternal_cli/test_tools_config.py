@@ -8,8 +8,6 @@ from unittest.mock import patch
 import pytest
 
 from tools.browser_tool import AGENT_BROWSER_NPX_SPEC
-from eternal_cli.nous_account import NousPortalAccountInfo, NousToolAccessInfo
-from eternal_cli.nous_subscription import NousSubscriptionFeatures
 from eternal_cli.tools_config import (
     _DEFAULT_OFF_TOOLSETS,
     _RECENTLY_SHIPPED_TOOLSETS,
@@ -202,64 +200,6 @@ def test_save_platform_tools_preserves_mcp_server_names():
 
 
 
-
-def test_first_install_nous_auto_configures_video_gen(monkeypatch):
-    """When a Nous subscriber checks video_gen in the toolset checklist,
-    apply_nous_managed_defaults must write video_gen.provider and
-    video_gen.use_gateway so the FAL plugin can route through the gateway
-    at runtime.  Regression test for the bug where video_gen was marked as
-    auto-configured but no config was actually written."""
-    monkeypatch.setattr("eternal_cli.nous_subscription.managed_nous_tools_enabled", lambda: True)
-    config = {
-        "model": {"provider": "nous"},
-        "platform_toolsets": {"cli": []},
-    }
-    for env_var in (
-        "VOICE_TOOLS_OPENAI_KEY",
-        "OPENAI_API_KEY",
-        "ELEVENLABS_API_KEY",
-        "FIRECRAWL_API_KEY",
-        "FIRECRAWL_API_URL",
-        "TAVILY_API_KEY",
-        "PARALLEL_API_KEY",
-        "BROWSERBASE_API_KEY",
-        "BROWSERBASE_PROJECT_ID",
-        "BROWSER_USE_API_KEY",
-        "FAL_KEY",
-    ):
-        monkeypatch.delenv(env_var, raising=False)
-
-    monkeypatch.setattr(
-        "eternal_cli.tools_config._prompt_toolset_checklist",
-        lambda *args, **kwargs: {"video_gen"},
-    )
-    monkeypatch.setattr("eternal_cli.tools_config.save_config", lambda config: None)
-    monkeypatch.setattr(
-        "eternal_cli.tools_config._get_enabled_platforms",
-        lambda: ["cli"],
-    )
-    monkeypatch.setattr(
-        "eternal_cli.nous_subscription.get_nous_portal_account_info",
-        lambda *args, **kwargs: NousPortalAccountInfo(
-            logged_in=True,
-            source="jwt",
-            fresh=False,
-            paid_service_access=True,
-        ),
-    )
-
-    configured = []
-    monkeypatch.setattr(
-        "eternal_cli.tools_config._configure_toolset",
-        lambda ts_key, config: configured.append(ts_key),
-    )
-
-    tools_command(first_install=True, config=config)
-
-    assert config["video_gen"]["provider"] == "fal"
-    assert config["video_gen"]["use_gateway"] is True
-    # video_gen should NOT appear in the manual configure list — it's auto-configured
-    assert "video_gen" not in configured
 
 # ── Platform / toolset consistency ────────────────────────────────────────────
 
@@ -696,15 +636,10 @@ class TestImagegenBackendRegistry:
         assert "fal-ai/flux-2/klein/9b" in catalog
         assert "fal-ai/flux-2-pro" in catalog
 
-    def test_image_gen_providers_tagged_with_fal_backend(self):
-        """Both Nous Subscription and FAL.ai providers must carry the
-        imagegen_backend tag so _configure_provider fires the picker."""
-        from eternal_cli.tools_config import TOOL_CATEGORIES
-        providers = TOOL_CATEGORIES["image_gen"]["providers"]
-        for p in providers:
-            assert p.get("imagegen_backend") == "fal", (
-                f"{p['name']} missing imagegen_backend tag"
-            )
+    def test_fal_provider_is_available_through_plugin_registry(self):
+        providers = _visible_providers(TOOL_CATEGORIES["image_gen"], {})
+        fal_rows = [p for p in providers if p.get("image_gen_plugin_name") == "fal"]
+        assert len(fal_rows) == 1
 
 
 class TestImagegenModelPicker:
@@ -791,7 +726,7 @@ def test_get_effective_configurable_toolsets_dedupes_bundled_plugins():
 
 
 # ---------------------------------------------------------------------------
-# Inline Nous Portal login gate on managed-provider selection
+# Direct-provider selection
 # ---------------------------------------------------------------------------
 
 
@@ -864,57 +799,8 @@ def test_vision_picker_custom_endpoint(tmp_path, monkeypatch):
 # ─── provider_readiness_status ────────────────────────────────────────────────
 #
 # Server-side truth for the GUI "Ready" pill (issue: Capabilities tab showed
-# Ready for every zero-env-var provider row, including logged-out Nous
-# Subscription rows and never-installed KittenTTS/Piper).
-
-
-def _fake_features(*, logged_in: bool, paid: bool = True):
-    account = (
-        NousPortalAccountInfo(
-            logged_in=True, source="jwt", fresh=False, paid_service_access=paid
-        )
-        if logged_in
-        else NousPortalAccountInfo(
-            logged_in=False, source="none", fresh=False, paid_service_access=None
-        )
-    )
-    return SimpleNamespace(nous_auth_present=logged_in, account_info=account)
-
-
-def test_visible_providers_reuses_pool_video_feature_snapshot(monkeypatch):
-    import eternal_cli.tools_config as tools_config
-
-    account = NousPortalAccountInfo(
-        logged_in=True,
-        source="jwt",
-        fresh=False,
-        paid_service_access=False,
-        tool_access=NousToolAccessInfo(
-            enabled=True,
-            coverage={"fal-video": False},
-        ),
-    )
-    features = NousSubscriptionFeatures(
-        subscribed=True,
-        nous_auth_present=True,
-        provider_is_nous=False,
-        features={},
-        account_info=account,
-    )
-    monkeypatch.setattr(
-        tools_config,
-        "get_nous_subscription_features",
-        lambda *args, **kwargs: pytest.fail("feature snapshot was resolved again"),
-    )
-
-    providers = _visible_providers(
-        TOOL_CATEGORIES["video_gen"], {}, features=features
-    )
-
-    assert not any(
-        provider.get("managed_nous_feature") == "video_gen"
-        for provider in providers
-    )
+# Ready for every zero-env-var provider row, including providers whose local
+# post-setup dependency has not been installed yet.
 
 
 
@@ -982,8 +868,7 @@ def _saved_list_from_before(platform="cli"):
 
 @_requires_recently_shipped
 def test_saved_list_gains_toolsets_that_shipped_after_it_was_written():
-    """The bug: a frozen list never gained bfl, so composite users got Nous
-    Portal video generation on upgrade and picker users silently did not."""
+    """A frozen list gains toolsets that shipped after it was written."""
     on_composite = _get_platform_tools(
         {"platform_toolsets": {"cli": ["eternal-cli"]}},
         "cli",

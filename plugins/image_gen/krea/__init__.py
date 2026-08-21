@@ -175,44 +175,6 @@ def _resolve_model(explicit: Optional[str] = None) -> Tuple[str, Dict[str, Any]]
     return DEFAULT_MODEL, _MODELS[DEFAULT_MODEL]
 
 
-def _resolve_managed_krea_gateway():
-    """Return managed Krea gateway config when the user is on the managed path.
-
-    Mirrors ``_resolve_managed_fal_gateway`` in ``tools/image_generation_tool.py``:
-    the Nous-hosted Krea gateway wins when it is resolvable AND either no direct
-    ``KREA_API_KEY`` is configured or the user explicitly opted into the gateway
-    for ``image_gen``. Returns ``None`` (direct/BYO path) otherwise, and never
-    raises — plugin discovery and availability scans must stay robust.
-    """
-    try:
-        from tools.managed_tool_gateway import resolve_managed_tool_gateway
-        from tools.tool_backend_helpers import prefers_gateway
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Managed Krea gateway resolution unavailable: %s", exc)
-        return None
-
-    if get_secret("KREA_API_KEY") and not prefers_gateway("image_gen"):
-        return None
-
-    try:
-        return resolve_managed_tool_gateway("krea")
-    except Exception as exc:  # noqa: BLE001
-        logger.debug("Managed Krea gateway resolution failed: %s", exc)
-        return None
-
-
-def _managed_krea_gateway_ready() -> bool:
-    """Cheap, offline-friendly probe for managed Krea availability."""
-    try:
-        from tools.managed_tool_gateway import is_managed_tool_gateway_ready
-    except Exception:  # noqa: BLE001
-        return False
-    try:
-        return bool(is_managed_tool_gateway_ready("krea"))
-    except Exception:  # noqa: BLE001
-        return False
-
-
 def _resolve_creativity(value: Optional[str]) -> str:
     """Coerce ``creativity`` kwarg to a valid Krea value (default ``medium``)."""
     if isinstance(value, str):
@@ -359,10 +321,7 @@ class KreaImageGenProvider(ImageGenProvider):
         return "Krea"
 
     def is_available(self) -> bool:
-        # Available with a direct Krea key OR via the managed Nous gateway
-        # (Nous Subscription), so portal users with no Krea key can still
-        # reach Krea 2 through the gateway.
-        return bool(get_secret("KREA_API_KEY")) or _managed_krea_gateway_ready()
+        return bool(get_secret("KREA_API_KEY"))
 
     def list_models(self) -> List[Dict[str, Any]]:
         return [
@@ -456,66 +415,22 @@ class KreaImageGenProvider(ImageGenProvider):
                 aspect_ratio=aspect,
             )
 
-        # Route through the managed Nous gateway (Nous Subscription) when the
-        # user is on the managed path; otherwise use the direct Krea API with a
-        # BYO ``KREA_API_KEY``. The gateway owns the shared Krea credential and
-        # meters/bills per generation, so the caller token is the Nous access
-        # token, not a Krea key.
-        managed = _resolve_managed_krea_gateway()
-        if managed is not None:
-            base_url = managed.gateway_origin.rstrip("/")
-            auth_token = managed.nous_user_token
-        else:
-            base_url = BASE_URL
-            auth_token = get_secret("KREA_API_KEY")
-            if not auth_token:
-                return error_response(
-                    error=(
-                        "KREA_API_KEY not set. Run `eternal tools` → Image "
-                        "Generation → Krea to configure, get a key at "
-                        "https://www.krea.ai/settings/api-tokens, or sign in to "
-                        "a Nous account with the managed Krea gateway enabled "
-                        "(`eternal setup`)."
-                    ),
-                    error_type="auth_required",
-                    provider="krea",
-                    aspect_ratio=aspect,
-                )
+        base_url = BASE_URL
+        auth_token = get_secret("KREA_API_KEY")
+        if not auth_token:
+            return error_response(
+                error=(
+                    "KREA_API_KEY not set. Run `eternal tools` → Image "
+                    "Generation → Krea to configure, or get a key at "
+                    "https://www.krea.ai/settings/api-tokens."
+                ),
+                error_type="auth_required",
+                provider="krea",
+                aspect_ratio=aspect,
+            )
 
         model_id, meta = _resolve_model(kwargs.get("model"))
         creativity = _resolve_creativity(kwargs.get("creativity"))
-
-        # The managed gateway only prices base text-to-image and URL
-        # ``image_style_references`` tiers. Trained styles (LoRAs) and
-        # moodboards have no managed price and are rejected at the gateway, so
-        # fail fast here with actionable guidance instead of a raw 400.
-        if managed is not None:
-            if isinstance(kwargs.get("styles"), list) and kwargs.get("styles"):
-                return error_response(
-                    error=(
-                        "Managed Krea (Nous Subscription) does not support "
-                        "trained styles (LoRAs). Set KREA_API_KEY to use Krea "
-                        "directly, or omit `styles`."
-                    ),
-                    error_type="unsupported_argument",
-                    provider="krea",
-                    model=model_id,
-                    prompt=prompt,
-                    aspect_ratio=aspect,
-                )
-            if isinstance(kwargs.get("moodboards"), list) and kwargs.get("moodboards"):
-                return error_response(
-                    error=(
-                        "Managed Krea (Nous Subscription) does not support "
-                        "moodboards. Set KREA_API_KEY to use Krea directly, or "
-                        "omit `moodboards`."
-                    ),
-                    error_type="unsupported_argument",
-                    provider="krea",
-                    model=model_id,
-                    prompt=prompt,
-                    aspect_ratio=aspect,
-                )
 
         payload: Dict[str, Any] = {
             "prompt": prompt,

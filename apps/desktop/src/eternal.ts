@@ -1362,11 +1362,9 @@ export interface SelectToolsetProviderResponse {
   provider: string
   /** Present when the selection was scoped to one web capability. */
   capability?: string
-  /** Present (true) when a managed Nous row was selected but the Portal
-   *  entitlement is missing — the row won't activate until the user signs
-   *  in to Nous Portal. */
+  /** Legacy response field retained for compatibility with older backends. */
   needs_nous_auth?: boolean
-  /** The managed feature key (e.g. "browser") when needs_nous_auth is set. */
+  /** Legacy managed feature key retained for compatibility. */
   feature?: string
 }
 

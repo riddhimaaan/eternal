@@ -5,12 +5,7 @@ ABC introduced in PR #25214). The legacy in-tree module
 ``tools.browser_providers.browser_use`` was removed in the same PR; this file
 is now the canonical implementation.
 
-Browser Use is the only browser backend with dual auth: a direct
-``BROWSER_USE_API_KEY`` for self-billed users, or the managed Nous tool
-gateway (which Eternal uses to bill Browser Use sessions to a Nous
-subscription). The dispatch order — direct API key first, managed gateway
-second — preserves the pre-migration behaviour in
-``tools.browser_providers.browser_use.BrowserUseProvider._get_config_or_none``.
+Browser Use uses a direct ``BROWSER_USE_API_KEY`` supplied by the user.
 
 Config keys this provider responds to::
 
@@ -123,56 +118,25 @@ class BrowserUseBrowserProvider(BrowserProvider):
         return self._get_config_or_none(refresh_token=False) is not None
 
     # ------------------------------------------------------------------
-    # Config resolution (direct API key OR managed Nous gateway)
+    # Config resolution (direct API key)
     # ------------------------------------------------------------------
 
     def _get_config_or_none(self, *, refresh_token: bool = True) -> Optional[Dict[str, Any]]:
-        # Import here to avoid a hard dependency at module-import time —
-        # managed_tool_gateway pulls in the Nous auth stack which can be
-        # heavy and is not needed for direct-API-key users.
-        from tools.managed_tool_gateway import (
-            peek_nous_access_token,
-            resolve_managed_tool_gateway,
-        )
-        from tools.tool_backend_helpers import prefers_gateway
-
-        # Direct API key wins unless the user has explicitly opted into the
-        # managed Nous gateway via ``tool_gateway.browser: gateway``.
         api_key = get_secret("BROWSER_USE_API_KEY")
-        if api_key and not prefers_gateway("browser"):
+        if api_key:
             return {
                 "api_key": api_key,
                 "base_url": _BASE_URL,
                 "managed_mode": False,
             }
-
-        # Keep availability scans off the synchronous OAuth refresh path.
-        managed = resolve_managed_tool_gateway(
-            "browser-use",
-            token_reader=None if refresh_token else peek_nous_access_token,
-        )
-        if managed is None:
-            return None
-
-        return {
-            "api_key": managed.nous_user_token,
-            "base_url": managed.gateway_origin.rstrip("/"),
-            "managed_mode": True,
-        }
+        return None
 
     def _get_config(self) -> Dict[str, Any]:
-        from tools.tool_backend_helpers import managed_nous_tools_enabled
-
         config = self._get_config_or_none()
         if config is None:
             message = (
                 "Browser Use requires a direct BROWSER_USE_API_KEY credential."
             )
-            if managed_nous_tools_enabled():
-                message = (
-                    "Browser Use requires either a direct BROWSER_USE_API_KEY "
-                    "credential or a managed Browser Use gateway configuration."
-                )
             raise ValueError(message)
         return config
 

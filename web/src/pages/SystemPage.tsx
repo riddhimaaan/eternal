@@ -26,19 +26,19 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { Badge } from "@nous-research/ui/ui/components/badge";
-import { Button } from "@nous-research/ui/ui/components/button";
-import { Spinner } from "@nous-research/ui/ui/components/spinner";
-import { H2 } from "@nous-research/ui/ui/components/typography/h2";
-import { Card, CardContent } from "@nous-research/ui/ui/components/card";
-import { Checkbox } from "@nous-research/ui/ui/components/checkbox";
-import { Input } from "@nous-research/ui/ui/components/input";
-import { Label } from "@nous-research/ui/ui/components/label";
-import { Select, SelectOption } from "@nous-research/ui/ui/components/select";
-import { Toast } from "@nous-research/ui/ui/components/toast";
-import { useToast } from "@nous-research/ui/hooks/use-toast";
-import { useConfirmDelete } from "@nous-research/ui/hooks/use-confirm-delete";
-import { ConfirmDialog } from "@nous-research/ui/ui/components/confirm-dialog";
+import { Badge } from "@eternal/ui/ui/components/badge";
+import { Button } from "@eternal/ui/ui/components/button";
+import { Spinner } from "@eternal/ui/ui/components/spinner";
+import { H2 } from "@eternal/ui/ui/components/typography/h2";
+import { Card, CardContent } from "@eternal/ui/ui/components/card";
+import { Checkbox } from "@eternal/ui/ui/components/checkbox";
+import { Input } from "@eternal/ui/ui/components/input";
+import { Label } from "@eternal/ui/ui/components/label";
+import { Select, SelectOption } from "@eternal/ui/ui/components/select";
+import { Toast } from "@eternal/ui/ui/components/toast";
+import { useToast } from "@eternal/ui/hooks/use-toast";
+import { useConfirmDelete } from "@eternal/ui/hooks/use-confirm-delete";
+import { ConfirmDialog } from "@eternal/ui/ui/components/confirm-dialog";
 import { useModalBehavior } from "@/hooks/useModalBehavior";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { EternalConsoleModal } from "@/components/EternalConsoleModal";
