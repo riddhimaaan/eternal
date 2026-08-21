@@ -7529,6 +7529,55 @@ def _desktop_linux_needs_no_sandbox() -> bool:
         return False
 
 
+def _desktop_linux_userns_sandbox_available() -> bool:
+    """Return True when the kernel offers Chromium's user-namespace sandbox.
+
+    Chromium needs the setuid ``chrome-sandbox`` helper ONLY when it cannot
+    build a sandbox out of unprivileged user namespaces. Where userns is
+    available it takes that path and never execs the helper at all, so
+    demanding a root-owned 4755 binary there buys nothing and costs a `sudo`
+    the desktop launcher cannot perform: a `.desktop` entry has no terminal to
+    prompt in, so the launch died with no window and no message (#eternal-icon).
+
+    Every packaging run recreates `release/linux-unpacked/` and resets the
+    helper to a plain user-owned file, so that failure returned after EVERY
+    rebuild until someone re-ran chown/chmod by hand.
+
+    Mirrors the three knobs that actually gate userns, checked the way
+    Chromium's own `Credentials::CanCreateProcessInNewUserNS` ends up behaving:
+
+    * `kernel.apparmor_restrict_unprivileged_userns` — Ubuntu 23.10+ hardening
+    * `kernel.unprivileged_userns_clone` — Debian-family toggle
+    * `user.max_user_namespaces` — hard cap; 0 disables userns outright
+
+    A missing knob means "not restricted by this mechanism", which is why each
+    read falls through on OSError rather than failing closed. This never
+    disables the sandbox — it only picks which sandbox implementation is used.
+    """
+    if sys.platform != "linux":
+        return False
+
+    for path, blocked in (
+        ("/proc/sys/kernel/apparmor_restrict_unprivileged_userns", lambda v: v == "1"),
+        ("/proc/sys/kernel/unprivileged_userns_clone", lambda v: v == "0"),
+    ):
+        try:
+            with open(path, encoding="utf-8") as f:
+                if blocked(f.read().strip()):
+                    return False
+        except OSError:
+            continue
+
+    try:
+        with open("/proc/sys/user/max_user_namespaces", encoding="utf-8") as f:
+            if int(f.read().strip()) <= 0:
+                return False
+    except (OSError, ValueError):
+        pass
+
+    return True
+
+
 def _desktop_linux_sandbox_helper_is_regular_file(packaged_executable: Path) -> bool:
     """Return True when ``chrome-sandbox`` exists as a regular file."""
     if sys.platform != "linux":
@@ -7565,6 +7614,13 @@ def _desktop_linux_sandbox_fixup(packaged_executable: Path) -> bool:
         return False
 
     if sandbox_lstat.st_uid == 0 and stat.S_IMODE(sandbox_lstat.st_mode) == 0o4755:
+        return True
+
+    # The helper is only reachable by Chromium when userns is unavailable.
+    # Where userns works, Electron sandboxes through it and never execs the
+    # helper, so skip the sudo dance entirely — the sandbox stays ON, and the
+    # launcher stops needing a password it has no way to ask for.
+    if _desktop_linux_userns_sandbox_available():
         return True
 
     sudo = shutil.which("sudo")

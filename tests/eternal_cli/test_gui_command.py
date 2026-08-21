@@ -779,3 +779,105 @@ def test_gui_password_store_bridge_is_linux_only(tmp_path, monkeypatch):
     mock_detect.assert_not_called()
     launch_env = mock_run.call_args_list[1].kwargs["env"]
     assert "ETERNAL_DESKTOP_PASSWORD_STORE" not in launch_env
+
+
+# --- Linux sandbox helper: userns makes the setuid fixup unnecessary ---------
+#
+# Regression cover for the launcher dying with no window and no message.
+# Packaging recreates release/linux-unpacked/, which resets chrome-sandbox to a
+# plain user-owned file. The fixup then wanted `sudo`, and a .desktop entry has
+# no terminal to prompt in, so `eternal desktop` exited non-zero on every
+# rebuild. Where the kernel offers the userns sandbox the helper is never
+# execed, so requiring it there was pure cost.
+
+
+def _fake_proc_reader(values: dict[str, str]):
+    """Build an ``open()`` stand-in serving fake /proc/sys knob contents."""
+    real_open = open
+
+    def _open(path, *args, **kwargs):
+        key = str(path)
+        if key in values:
+            import io
+
+            return io.StringIO(values[key])
+        if key.startswith("/proc/sys/"):
+            raise OSError("no such knob")
+        return real_open(path, *args, **kwargs)
+
+    return _open
+
+
+APPARMOR_KNOB = "/proc/sys/kernel/apparmor_restrict_unprivileged_userns"
+CLONE_KNOB = "/proc/sys/kernel/unprivileged_userns_clone"
+MAXNS_KNOB = "/proc/sys/user/max_user_namespaces"
+
+
+@pytest.mark.parametrize(
+    "knobs,expected",
+    [
+        ({}, True),                                   # no knobs present (Arch/CachyOS)
+        ({CLONE_KNOB: "1", MAXNS_KNOB: "28633"}, True),
+        ({APPARMOR_KNOB: "1"}, False),                # Ubuntu 23.10+ hardening
+        ({CLONE_KNOB: "0"}, False),                   # Debian-family toggle off
+        ({MAXNS_KNOB: "0"}, False),                   # userns capped to zero
+        ({MAXNS_KNOB: "garbage"}, True),              # unparseable => not a restriction
+    ],
+)
+def test_userns_sandbox_availability_tracks_kernel_knobs(knobs, expected, monkeypatch):
+    monkeypatch.setattr(cli_main.sys, "platform", "linux")
+    with patch("builtins.open", _fake_proc_reader(knobs)):
+        assert cli_main._desktop_linux_userns_sandbox_available() is expected
+
+
+def test_sandbox_fixup_skips_sudo_when_userns_is_available(tmp_path):
+    """The icon-killing case: helper reset by a rebuild, but userns covers us."""
+    exe = tmp_path / "Eternal"
+    exe.write_text("", encoding="utf-8")
+    sandbox = tmp_path / "chrome-sandbox"
+    sandbox.write_text("", encoding="utf-8")
+    sandbox.chmod(0o755)  # what every packaging run leaves behind
+
+    with patch("eternal_cli.main.sys.platform", "linux"), \
+         patch("eternal_cli.main._desktop_linux_userns_sandbox_available", return_value=True), \
+         patch("eternal_cli.main.subprocess.run") as run, \
+         patch("eternal_cli.main.shutil.which", return_value="/usr/bin/sudo"):
+        assert cli_main._desktop_linux_sandbox_fixup(exe) is True
+
+    run.assert_not_called()  # no sudo, so nothing to prompt for
+
+
+def test_sandbox_fixup_still_uses_sudo_when_userns_is_restricted(tmp_path):
+    """Hosts without userns must still get a properly configured setuid helper."""
+    exe = tmp_path / "Eternal"
+    exe.write_text("", encoding="utf-8")
+    sandbox = tmp_path / "chrome-sandbox"
+    sandbox.write_text("", encoding="utf-8")
+    sandbox.chmod(0o755)
+
+    with patch("eternal_cli.main.sys.platform", "linux"), \
+         patch("eternal_cli.main._desktop_linux_userns_sandbox_available", return_value=False), \
+         patch("eternal_cli.main.shutil.which", return_value="/usr/bin/sudo"), \
+         patch("eternal_cli.main.subprocess.run") as run:
+        run.return_value = subprocess.CompletedProcess([], 0)
+        assert cli_main._desktop_linux_sandbox_fixup(exe) is True
+
+    assert [c.args[0][1] for c in run.call_args_list] == ["chown", "chmod"]
+
+
+def test_sandbox_fixup_short_circuits_on_correct_helper(tmp_path):
+    """An already-root:4755 helper needs neither userns probing nor sudo."""
+    exe = tmp_path / "Eternal"
+    exe.write_text("", encoding="utf-8")
+    sandbox = tmp_path / "chrome-sandbox"
+    sandbox.write_text("", encoding="utf-8")
+
+    fake = type("st", (), {"st_uid": 0, "st_mode": 0o104755})()
+    with patch("eternal_cli.main.sys.platform", "linux"), \
+         patch("pathlib.Path.lstat", return_value=fake), \
+         patch("eternal_cli.main._desktop_linux_userns_sandbox_available") as userns, \
+         patch("eternal_cli.main.subprocess.run") as run:
+        assert cli_main._desktop_linux_sandbox_fixup(exe) is True
+
+    userns.assert_not_called()
+    run.assert_not_called()
