@@ -25,6 +25,7 @@ _ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 _SECTION_HEADING_RE = re.compile(r"(?m)^#{1,6}\s*(?P<number>10|[1-9])\s*[.):-]")
 _LOCK = threading.RLock()
 _MAX_PROMPT_CHARS = 100_000
+ORIGINAL_PROMPT_PROFILE_ID = "original-base-prompt"
 
 
 def _now() -> str:
@@ -191,6 +192,49 @@ def delete_prompt_profile(profile_id: str, home: Optional[Path] = None) -> Path:
         return directory
 
 
+def ensure_original_prompt_profile(
+    identity: str = "", home: Optional[Path] = None
+) -> dict[str, Any]:
+    """Return the guaranteed global fallback, creating it when necessary.
+
+    Environment Profiles must always have one complete Base Prompt available.
+    Keeping that invariant here makes it apply equally to desktop, terminal,
+    gateway, and background execution instead of depending on one UI having
+    opened first.
+    """
+    authored_identity = str(identity or "").strip()
+    desired_prompt = default_full_prompt(authored_identity).strip()
+
+    # A legacy inline prompt is user data. Prefer an existing exact conversion,
+    # and never overwrite a different Original profile merely to migrate it.
+    if authored_identity:
+        for profile in list_prompt_profiles(home):
+            if str(profile.get("prompt") or "").strip() == desired_prompt:
+                return profile
+    else:
+        try:
+            return _read(ORIGINAL_PROMPT_PROFILE_ID, home)
+        except (FileNotFoundError, ValueError):
+            for profile in list_prompt_profiles(home):
+                if profile.get("name") == "Original Base Prompt":
+                    return profile
+
+    with _LOCK:
+        if not authored_identity:
+            try:
+                return _read(ORIGINAL_PROMPT_PROFILE_ID, home)
+            except (FileNotFoundError, ValueError):
+                for profile in list_prompt_profiles(home):
+                    if profile.get("name") == "Original Base Prompt":
+                        return profile
+        return create_prompt_profile(
+            "Original Base Prompt",
+            desired_prompt,
+            description="Eternal's global Base Prompt",
+            home=home,
+        )
+
+
 def resolve_prompt_profile(profile_id: Any, home: Optional[Path] = None) -> str:
     """Return a selected profile's prompt, or empty when stale/invalid."""
     value = str(profile_id or "").strip().lower()
@@ -203,24 +247,29 @@ def resolve_prompt_profile(profile_id: Any, home: Optional[Path] = None) -> str:
 
 
 def resolve_agent_base_prompt(agent_config: Any, home: Optional[Path] = None) -> str:
-    """Resolve file-backed profile first, then the legacy inline field."""
+    """Resolve the selected global Base Prompt with a guaranteed fallback."""
     from eternal_cli.personality import prompt_text
 
     config = agent_config if isinstance(agent_config, dict) else {}
     selected = resolve_prompt_profile(config.get("prompt_profile", ""), home=home)
-    return selected or prompt_text(config.get("base_prompt", ""))
+    if selected:
+        return selected
+    legacy = prompt_text(config.get("base_prompt", ""))
+    return ensure_original_prompt_profile(legacy, home=home)["prompt"]
 
 
 def selected_prompt_has_full_control(agent_config: Any, home: Optional[Path] = None) -> bool:
-    """Whether the selected file-backed profile owns editable sections 1-10."""
+    """Whether the resolved global prompt owns editable sections 1-10."""
     config = agent_config if isinstance(agent_config, dict) else {}
     value = str(config.get("prompt_profile") or "").strip()
-    if not value:
-        return False
-    try:
-        return bool(_read(value, home).get("full_control", False))
-    except (FileNotFoundError, ValueError):
-        return False
+    if value:
+        try:
+            return bool(_read(value, home).get("full_control", False))
+        except (FileNotFoundError, ValueError):
+            pass
+    # A missing/stale selection resolves to the complete Original Base Prompt.
+    ensure_original_prompt_profile(home=home)
+    return True
 
 
 def _default_prompt_sections(identity: str = "") -> list[str]:

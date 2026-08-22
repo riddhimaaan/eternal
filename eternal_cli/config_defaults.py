@@ -49,7 +49,8 @@ DEFAULT_CONFIG = {
         # Empty keeps the shipped behavior (including SOUL.md precedence).
         "base_prompt": "",
         # Reusable behavioral prompt selected from
-        # ETERNAL_HOME/prompt-profiles/<id>/BASE_PROMPT.md.
+        # ETERNAL_HOME/prompt-profiles/<id>/BASE_PROMPT.md. Empty/stale values
+        # are repaired to the guaranteed Original Base Prompt.
         "prompt_profile": "",
         "max_turns": 500,
         # Inactivity timeout for gateway agent execution (seconds).

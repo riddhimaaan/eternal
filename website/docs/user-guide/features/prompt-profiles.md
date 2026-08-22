@@ -19,6 +19,12 @@ instructions sent to the model without changing those underlying resources.
 Examples include Content Strategist, Research Analyst, Coding Partner and Sales
 Assistant. Select one in the desktop sidebar, then start a new chat.
 
+Every Eternal environment has an **Original Base Prompt** as its global
+default. A Project Base Prompt overrides it for that Project; otherwise the
+selected global Prompt Profile always applies. Eternal repairs an empty or
+missing selection automatically, so `SOUL.md` is no longer a runtime identity
+fallback.
+
 ## Files
 
 Each Prompt Profile is intentionally stored as ordinary user-owned files:

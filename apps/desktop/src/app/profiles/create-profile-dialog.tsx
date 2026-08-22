@@ -13,8 +13,7 @@ import {
 import { Field, FieldHint } from '@/components/ui/field'
 import { SanitizedInput } from '@/components/ui/sanitized-input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Textarea } from '@/components/ui/textarea'
-import { createProfile, updateProfileSoul } from '@/eternal'
+import { createProfile } from '@/eternal'
 import { useI18n } from '@/i18n'
 import { AlertTriangle } from '@/lib/icons'
 import { slug } from '@/lib/sanitize'
@@ -26,9 +25,8 @@ export function isValidProfileName(name: string): boolean {
   return PROFILE_NAME_RE.test(name.trim())
 }
 
-// Self-contained create flow (name + clone toggle + optional SOUL.md). Owns the
-// createProfile/updateProfileSoul calls so every caller just refreshes/selects
-// via onCreated. SOUL left blank keeps the cloned/blank persona untouched.
+// Self-contained Environment Profile creation flow. Agent behaviour belongs to
+// Base Prompt Profiles, so this dialog only creates/clones the environment.
 export function CreateProfileDialog({
   onClose,
   onCreated,
@@ -44,7 +42,6 @@ export function CreateProfileDialog({
   const p = t.profiles
   const [name, setName] = useState('')
   const [cloneFrom, setCloneFrom] = useState<null | string>('default')
-  const [soul, setSoul] = useState('')
   const [status, setStatus] = useState<'done' | 'idle' | 'saving'>('idle')
   const [error, setError] = useState<null | string>(null)
 
@@ -55,7 +52,6 @@ export function CreateProfileDialog({
 
     setName('')
     setCloneFrom('default')
-    setSoul('')
     setError(null)
     setStatus('idle')
   }, [open])
@@ -78,10 +74,6 @@ export function CreateProfileDialog({
 
     try {
       await createProfile({ name: trimmed, clone_from: cloneFrom })
-
-      if (soul.trim()) {
-        await updateProfileSoul(trimmed, soul)
-      }
 
       await onCreated?.(trimmed)
       setStatus('done')
@@ -132,16 +124,6 @@ export function CreateProfileDialog({
               </SelectContent>
             </Select>
             <FieldHint>{p.cloneFromDesc}</FieldHint>
-          </Field>
-
-          <Field htmlFor="new-profile-soul" label="SOUL.md" optional optionalLabel={p.soulOptional}>
-            <Textarea
-              className="min-h-28 font-mono text-xs leading-5"
-              id="new-profile-soul"
-              onChange={event => setSoul(event.target.value)}
-              placeholder={p.soulPlaceholder(cloneFrom ? p.soulPlaceholderCloned : p.soulPlaceholderEmpty)}
-              value={soul}
-            />
           </Field>
 
           {error && (

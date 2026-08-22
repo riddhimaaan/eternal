@@ -45,6 +45,7 @@ def _set_active(profile_id: str) -> None:
     from eternal_cli.prompt_profiles import (
         create_prompt_profile,
         default_full_prompt,
+        ensure_original_prompt_profile,
         get_prompt_profile,
         list_prompt_profiles,
     )
@@ -59,8 +60,8 @@ def _set_active(profile_id: str) -> None:
     if not isinstance(agent, dict):
         agent = {}
         config["agent"] = agent
+    legacy = str(agent.get("base_prompt") or "").strip()
     if value:
-        legacy = str(agent.get("base_prompt") or "").strip()
         if legacy:
             # Converting from the legacy inline prompt must never make the
             # user's original agent disappear. Preserve it as a reusable
@@ -78,13 +79,30 @@ def _set_active(profile_id: str) -> None:
                     expanded,
                     description="The Base Prompt that existed before Prompt Profiles",
                 )
-        agent["prompt_profile"] = value
-        # The original now has a durable profile, so the obsolete inline field
-        # can be removed without losing anything or becoming a stale fallback.
-        agent.pop("base_prompt", None)
     else:
-        agent.pop("prompt_profile", None)
+        # Empty, missing, and stale selections all converge on a real global
+        # Base Prompt. This removes SOUL.md as a normal identity fallback.
+        value = ensure_original_prompt_profile(legacy)["id"]
+    agent["prompt_profile"] = value
+    # The original now has a durable profile, so the obsolete inline field can
+    # be removed without losing anything or becoming a competing prompt source.
+    agent.pop("base_prompt", None)
     save_config(config, merge_existing=False)
+
+
+def _ensure_active() -> str:
+    """Return a valid active profile id, repairing empty/stale state."""
+    from eternal_cli.prompt_profiles import get_prompt_profile
+
+    value = _active_id()
+    if value:
+        try:
+            get_prompt_profile(value)
+            return value
+        except (FileNotFoundError, ValueError):
+            pass
+    _set_active("")
+    return _active_id()
 
 
 @router.get("/api/prompt-profiles")
@@ -93,12 +111,12 @@ async def list_prompt_profiles_endpoint(profile: Optional[str] = None):
         from eternal_cli.prompt_profiles import default_full_prompt, list_prompt_profiles
 
         with _profile_scope(profile):
-            legacy = _legacy_prompt()
+            active_id = _ensure_active()
             return {
                 "profiles": list_prompt_profiles(),
-                "active_id": _active_id(),
-                "legacy_prompt": legacy,
-                "legacy_editable_prompt": default_full_prompt(legacy) if legacy else "",
+                "active_id": active_id,
+                "legacy_prompt": "",
+                "legacy_editable_prompt": "",
                 "default_prompt": default_full_prompt(),
             }
 
@@ -174,10 +192,11 @@ async def delete_prompt_profile_endpoint(profile_id: str, profile: Optional[str]
         from eternal_cli.prompt_profiles import delete_prompt_profile
 
         with _profile_scope(profile):
-            if _active_id() == profile_id:
-                _set_active("")
+            was_active = _active_id() == profile_id
             path = delete_prompt_profile(profile_id)
-            return {"ok": True, "path": str(path), "active_id": _active_id()}
+            if was_active:
+                _set_active("")
+            return {"ok": True, "path": str(path), "active_id": _ensure_active()}
 
     try:
         return await asyncio.to_thread(_run)

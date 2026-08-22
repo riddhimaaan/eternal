@@ -10,7 +10,7 @@ import { ProfilesView } from './index'
 
 // These tests pin the invariant this whole area exists to hold: the Manage
 // Profiles page and the sidebar rail share ONE set of profile dialogs, so both
-// "New Profile" entry points render the same modal (SOUL.md included), and
+// "New Profile" entry points render the same environment-only modal, and
 // deleting the profile the gateway is on re-homes to default instead of
 // stranding it on a dead backend. The drift that motivated the fix got in
 // precisely because nothing rendered this view.
@@ -20,18 +20,10 @@ afterEach(cleanup)
 // Real i18n (useI18n falls back to English with no provider), so labels are the
 // actual strings — no brittle key snapshot to maintain here.
 
-// CodeEditor is CodeMirror; the detail pane's SOUL editor doesn't matter to
-// these behaviors, so stub it out of the jsdom render.
-vi.mock('@/components/chat/code-editor', () => ({
-  CodeEditor: () => null
-}))
-
 vi.mock('@/eternal', () => ({
   createProfile: vi.fn(async () => ({ name: 'x', ok: true, path: '/x' })),
   deleteProfile: vi.fn(async () => ({ ok: true, path: '/x' })),
-  getProfileSoul: vi.fn(async () => ({ content: '', exists: true })),
-  renameProfile: vi.fn(async () => ({ name: 'x', ok: true, path: '/x' })),
-  updateProfileSoul: vi.fn(async () => ({ ok: true }))
+  renameProfile: vi.fn(async () => ({ name: 'x', ok: true, path: '/x' }))
 }))
 
 vi.mock('@/store/notifications', () => ({
@@ -112,17 +104,15 @@ async function deleteTheNamedProfile() {
 }
 
 describe('ProfilesView', () => {
-  it('opens the shared create dialog with the SOUL.md field (parity with the rail)', async () => {
+  it('opens the shared environment-only create dialog', async () => {
     vi.mocked(refreshProfiles).mockResolvedValue([])
 
     await renderProfilesView()
 
     realClick(await screen.findByRole('button', { name: 'New profile' }))
 
-    const soul = await screen.findByLabelText(/SOUL\.md/i)
-
-    expect(soul.tagName).toBe('TEXTAREA')
-    expect(soul.getAttribute('id')).toBe('new-profile-soul')
+    expect(await screen.findByLabelText('Name')).toBeTruthy()
+    expect(screen.queryByLabelText(/SOUL\.md/i)).toBeNull()
   })
 
   it('re-homes to default when the active profile is deleted', async () => {

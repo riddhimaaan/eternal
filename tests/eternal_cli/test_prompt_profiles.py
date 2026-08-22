@@ -6,6 +6,7 @@ from eternal_cli.prompt_profiles import (
     create_prompt_profile,
     default_full_prompt,
     delete_prompt_profile,
+    ensure_original_prompt_profile,
     get_prompt_profile,
     list_prompt_profiles,
     prepare_new_prompt,
@@ -104,11 +105,37 @@ def test_later_edit_can_deliberately_remove_operational_sections(tmp_path):
     assert updated["prompt"] == "Only my custom instructions."
 
 
-def test_stale_selection_falls_back_to_inline_prompt(tmp_path):
-    assert resolve_agent_base_prompt(
+def test_stale_selection_becomes_complete_original_profile(tmp_path):
+    resolved = resolve_agent_base_prompt(
         {"prompt_profile": "missing", "base_prompt": ["Fallback", "prompt"]},
         home=tmp_path,
-    ) == "Fallback\nprompt"
+    )
+
+    assert "Fallback\nprompt" in resolved
+    assert "# 10. Interface Behavior" in resolved
+    original = ensure_original_prompt_profile(home=tmp_path)
+    assert original["id"] == "original-base-prompt"
+    assert original["prompt"] == resolved
+
+
+def test_empty_selection_always_resolves_full_control_original(tmp_path):
+    resolved = resolve_agent_base_prompt({}, home=tmp_path)
+
+    assert "# 1. Identity and Purpose" in resolved
+    assert "# 10. Interface Behavior" in resolved
+    assert selected_prompt_has_full_control({}, home=tmp_path) is True
+
+
+def test_legacy_prompt_is_preserved_when_a_different_original_exists(tmp_path):
+    ensure_original_prompt_profile(home=tmp_path)
+
+    resolved = resolve_agent_base_prompt(
+        {"base_prompt": "You are the user's established research agent."},
+        home=tmp_path,
+    )
+
+    assert "established research agent" in resolved
+    assert len(list_prompt_profiles(tmp_path)) == 2
 
 
 def test_rejects_path_traversal_ids(tmp_path):
@@ -235,4 +262,4 @@ def test_prompt_profile_api_round_trip():
 
     deleted = client.delete(f"/api/prompt-profiles/{profile_id}")
     assert deleted.status_code == 200
-    assert deleted.json()["active_id"] == ""
+    assert deleted.json()["active_id"] == "original-base-prompt"

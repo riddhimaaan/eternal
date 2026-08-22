@@ -1,18 +1,16 @@
 import { useStore } from '@nanostores/react'
 import type * as React from 'react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { CodeEditor } from '@/components/chat/code-editor'
 import { PageLoader } from '@/components/page-loader'
 import { Button } from '@/components/ui/button'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
-import { getProfileSoul, type ProfileInfo, updateProfileSoul } from '@/eternal'
+import type { ProfileInfo } from '@/eternal'
 import { useI18n } from '@/i18n'
 import { displayPath } from '@/lib/display-path'
-import { AlertTriangle, Save } from '@/lib/icons'
 import { resolveProfileColor } from '@/lib/profile-color'
 import { normalize } from '@/lib/text'
-import { notify, notifyError } from '@/store/notifications'
+import { notifyError } from '@/store/notifications'
 import { $profileColors, refreshProfiles } from '@/store/profile'
 
 import { useRefreshHotkey } from '../hooks/use-refresh-hotkey'
@@ -27,8 +25,7 @@ import {
   PanelListRow,
   type PanelMenuItem,
   PanelMeta,
-  PanelPill,
-  PanelSectionLabel
+  PanelPill
 } from '../overlays/panel'
 
 import { CreateProfileDialog } from './create-profile-dialog'
@@ -91,9 +88,8 @@ export function ProfilesView({ onClose }: ProfilesViewProps) {
     )
   }, [profiles, query])
 
-  // The shared Create/Rename dialogs own the createProfile / renameProfile /
-  // updateProfileSoul calls; the panel just selects the resulting profile and
-  // re-pulls the list.
+  // The shared Create/Rename dialogs own their mutations; the panel just
+  // selects the resulting profile and re-pulls the list.
   const selectAndRefresh = useCallback(
     async (name: string) => {
       setSelectedName(name)
@@ -258,105 +254,6 @@ function ProfileDetail({ profile }: { profile: ProfileInfo }) {
           ]}
         />
       </header>
-
-      <SoulEditor profileName={profile.name} />
     </PanelDetail>
-  )
-}
-
-function SoulEditor({ profileName }: { profileName: string }) {
-  const { t } = useI18n()
-  const p = t.profiles
-  const [content, setContent] = useState('')
-  const [original, setOriginal] = useState('')
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState<null | string>(null)
-  const requestRef = useRef<string>(profileName)
-
-  // eslint-disable-next-line no-restricted-syntax -- legitimate non-atom ref write (see eslint rule comment)
-  useEffect(() => {
-    requestRef.current = profileName
-    setLoading(true)
-    setError(null)
-    setContent('')
-    setOriginal('')
-
-    void (async () => {
-      try {
-        const soul = await getProfileSoul(profileName)
-
-        if (requestRef.current === profileName) {
-          setContent(soul.content)
-          setOriginal(soul.content)
-        }
-      } catch (err) {
-        if (requestRef.current === profileName) {
-          setError(err instanceof Error ? err.message : p.failedLoadSoul)
-        }
-      } finally {
-        if (requestRef.current === profileName) {
-          setLoading(false)
-        }
-      }
-    })()
-  }, [p, profileName])
-
-  const dirty = content !== original
-
-  async function handleSave() {
-    setSaving(true)
-    setError(null)
-
-    try {
-      await updateProfileSoul(profileName, content)
-      setOriginal(content)
-      notify({ kind: 'success', title: p.soulSaved, message: profileName })
-    } catch (err) {
-      setError(err instanceof Error ? err.message : p.failedSaveSoul)
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <section className="space-y-2">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <PanelSectionLabel className="text-[0.7rem] tracking-[0.14em]">SOUL.md</PanelSectionLabel>
-          <p className="text-xs text-muted-foreground">{p.soulDesc}</p>
-        </div>
-        {dirty && <span className="text-[0.65rem] text-muted-foreground">{p.unsavedChanges}</span>}
-      </div>
-
-      {loading ? (
-        <PageLoader className="min-h-44" label={p.loadingSoul} />
-      ) : (
-        <div className="min-h-48">
-          <CodeEditor
-            filePath="SOUL.md"
-            framed
-            initialValue={content}
-            key={profileName}
-            onChange={setContent}
-            onSave={() => void handleSave()}
-          />
-        </div>
-      )}
-
-      {error && (
-        <div className="flex items-start gap-2 rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">
-          <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
-          <span>{error}</span>
-        </div>
-      )}
-
-      <div className="flex justify-end">
-        <Button disabled={!dirty || saving || loading} onClick={() => void handleSave()} size="sm">
-          <Save />
-          {saving ? p.saving : p.saveSoul}
-        </Button>
-      </div>
-    </section>
   )
 }
