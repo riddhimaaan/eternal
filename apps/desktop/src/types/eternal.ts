@@ -991,6 +991,39 @@ export interface ProfilesResponse {
   profiles: ProfileInfo[]
 }
 
+export interface PromptProfile {
+  id: string
+  name: string
+  description: string
+  icon: string
+  created_at: string
+  updated_at: string
+  full_control: boolean
+  prompt: string
+  path: string
+}
+
+export interface PromptProfilesResponse {
+  profiles: PromptProfile[]
+  active_id: string
+  legacy_prompt: string
+  legacy_editable_prompt: string
+  default_prompt: string
+}
+
+export interface PromptDesignerMessage {
+  role: 'assistant' | 'user'
+  content: string
+}
+
+export interface PromptDesignerResponse {
+  reply: string
+  draft: string
+  suggested_name: string
+  description: string
+  ready: boolean
+}
+
 export interface SkillInfo {
   category: string
   description: string

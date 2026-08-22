@@ -43,6 +43,14 @@ DEFAULT_CONFIG = {
         "terminal_continue": True,
     },
     "agent": {
+        # User-owned operating brief. When set, this replaces Eternal's
+        # general-purpose identity and automatic coding-role brief while the
+        # protected tool, skill, safety, memory, and runtime layers remain.
+        # Empty keeps the shipped behavior (including SOUL.md precedence).
+        "base_prompt": "",
+        # Reusable behavioral prompt selected from
+        # ETERNAL_HOME/prompt-profiles/<id>/BASE_PROMPT.md.
+        "prompt_profile": "",
         "max_turns": 500,
         # Inactivity timeout for gateway agent execution (seconds).
         # The agent can run indefinitely as long as it's actively calling
@@ -1086,6 +1094,16 @@ DEFAULT_CONFIG = {
             "timeout": 60,
             "extra_body": {},
             "reasoning_effort": "",  # per-task thinking level: none|minimal|low|medium|high|xhigh|max|ultra (empty = provider default)
+        },
+        # Conversational Base Prompt authoring in the desktop Agent Designer.
+        "prompt_designer": {
+            "provider": "auto",
+            "model": "",
+            "base_url": "",
+            "api_key": "",
+            "timeout": 120,
+            "extra_body": {},
+            "reasoning_effort": "",
         },
         # Goal judge — evaluates whether a /goal run's latest response
         # satisfies the goal/contract, and drafts goal contracts. Short

@@ -295,6 +295,7 @@ export const ja = defineLocale({
       completionSoundPreview: '試聴'
     },
     sections: {
+      behavior: 'エージェントを作成',
       model: 'モデル',
       chat: 'チャット',
       appearance: '外観',

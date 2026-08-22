@@ -941,6 +941,16 @@ skills:
 # Agent Behavior
 # =============================================================================
 agent:
+  # Legacy inline behavioral prompt. Prompt Profiles created in the desktop app
+  # instead expose editable sections 1-10. Eternal still appends live skills,
+  # memory, workspace, model, provider, platform, and date context. New sessions only.
+  # base_prompt: |
+  #   You are a research agent. Prioritize primary sources, state uncertainty,
+  #   and separate verified facts from inference.
+  # The desktop Agent Designer stores the editable sections as BASE_PROMPT.md
+  # files under prompt-profiles/. It writes this selector automatically:
+  # prompt_profile: research-agent
+
   # Maximum tool-calling iterations per conversation (default: 500)
   # Higher = more room for complex tasks, but costs more tokens
   # Recommended: 20-30 for focused tasks, 50-100 for open exploration

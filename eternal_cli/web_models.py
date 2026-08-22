@@ -631,6 +631,35 @@ class ProfileDescribeAuto(BaseModel):
     overwrite: bool = False
 
 
+class PromptProfileCreate(BaseModel):
+    name: str
+    prompt: str
+    description: str = ""
+    icon: str = "sparkles"
+    activate: bool = True
+
+
+class PromptProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    prompt: Optional[str] = None
+    description: Optional[str] = None
+    icon: Optional[str] = None
+
+
+class PromptProfileActivate(BaseModel):
+    profile_id: str = ""
+
+
+class PromptDesignerMessage(BaseModel):
+    role: str
+    content: str
+
+
+class PromptDesignerRequest(BaseModel):
+    messages: List[PromptDesignerMessage] = []
+    current_prompt: str = ""
+
+
 # --- from web_server.py (originally lines 15831-15834) ---
 
 class SkillToggle(BaseModel):
@@ -738,4 +767,3 @@ class _PluginProvidersPutBody(BaseModel):
 
 class _PluginVisibilityBody(BaseModel):
     hidden: bool
-

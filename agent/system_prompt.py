@@ -372,11 +372,23 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     # ── Stable tier ────────────────────────────────────────────────
     stable_parts: List[str] = []
 
+    # A user-authored base prompt owns the agent's role and operating method.
+    # A file-backed full-control Prompt Profile also owns editable sections
+    # 4-10; Eternal then appends only live catalogs/context. The legacy inline
+    # base_prompt remains behavioral-only. With neither, retain the historical
+    # SOUL-or-default behavior exactly.
+    _base_prompt = str(getattr(agent, "_base_prompt", "") or "").strip()
+    _full_prompt_control = bool(
+        _base_prompt and getattr(agent, "_prompt_profile_full_control", False)
+    )
+    if _base_prompt:
+        stable_parts.append(_base_prompt)
+
     # Try SOUL.md as primary identity unless the caller explicitly skipped it.
     # Some execution modes (cron) still want ETERNAL_HOME persona while keeping
     # cwd project instructions disabled.
     _soul_loaded = False
-    if agent.load_soul_identity or not agent.skip_context_files:
+    if not _base_prompt and (agent.load_soul_identity or not agent.skip_context_files):
         # Scope the SOUL.md read to the agent's OWN home (see _agent_home) —
         # ambient resolution on a thread that lost the ETERNAL_HOME ContextVar
         # reads the launch profile's SOUL.md instead (#50233).
@@ -385,12 +397,13 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
             stable_parts.append(_soul_content)
             _soul_loaded = True
 
-    if not _soul_loaded:
+    if not _base_prompt and not _soul_loaded:
         # Fallback to hardcoded identity
         stable_parts.append(DEFAULT_AGENT_IDENTITY)
 
     # Pointer to the eternal-agent skill + docs for user questions about Eternal itself.
-    stable_parts.append(ETERNAL_AGENT_HELP_GUIDANCE)
+    if not _full_prompt_control:
+        stable_parts.append(ETERNAL_AGENT_HELP_GUIDANCE)
 
     # Universal task-completion / no-fabrication guidance.  Applied to ALL
     # models regardless of tool_use_enforcement gating — the failure modes
@@ -398,7 +411,7 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     # path is blocked) are not model-family specific.  Gated only by
     # config.yaml ``agent.task_completion_guidance`` (default True) so
     # users who want a leaner prompt can turn it off.
-    if getattr(agent, "_task_completion_guidance", True) and agent.valid_tool_names:
+    if not _full_prompt_control and getattr(agent, "_task_completion_guidance", True) and agent.valid_tool_names:
         stable_parts.append(TASK_COMPLETION_GUIDANCE)
 
     # Universal parallel-tool-call guidance.  Tells the model to batch
@@ -409,16 +422,16 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     # round-trips and the resent-context cost that compounds over a long
     # conversation.  Gated by config.yaml ``agent.parallel_tool_call_guidance``
     # (default True) and only injected when tools are actually loaded.
-    if getattr(agent, "_parallel_tool_call_guidance", True) and agent.valid_tool_names:
+    if not _full_prompt_control and getattr(agent, "_parallel_tool_call_guidance", True) and agent.valid_tool_names:
         stable_parts.append(PARALLEL_TOOL_CALL_GUIDANCE)
 
     # Tool-aware behavioral guidance: only inject when the tools are loaded
     tool_guidance = []
-    if "memory" in agent.valid_tool_names:
+    if not _full_prompt_control and "memory" in agent.valid_tool_names:
         tool_guidance.append(MEMORY_GUIDANCE)
-    if "session_search" in agent.valid_tool_names:
+    if not _full_prompt_control and "session_search" in agent.valid_tool_names:
         tool_guidance.append(SESSION_SEARCH_GUIDANCE)
-    if "skill_manage" in agent.valid_tool_names:
+    if not _full_prompt_control and "skill_manage" in agent.valid_tool_names:
         tool_guidance.append(SKILLS_GUIDANCE)
     # Kanban worker/orchestrator lifecycle — only present when the
     # dispatcher spawned this process (kanban_show check_fn gates on
@@ -435,14 +448,14 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
 
     # Steering only lands inside tool results, so it's only reachable when the
     # agent has tools. Static text → byte-stable prompt (no cache hit).
-    if agent.valid_tool_names:
+    if agent.valid_tool_names and not _full_prompt_control:
         stable_parts.append(STEER_CHANNEL_NOTE)
 
     # Computer-use — goes in as its own block rather than being merged into
     # tool_guidance because the content is multi-paragraph. The guidance is
     # rendered for the host platform so Windows/Linux hosts don't see
     # macOS-only wording (Mac, Space, cmd+s).
-    if "computer_use" in agent.valid_tool_names:
+    if "computer_use" in agent.valid_tool_names and not _full_prompt_control:
         from agent.prompt_builder import computer_use_guidance
         stable_parts.append(computer_use_guidance())
 
@@ -453,7 +466,7 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     #   true  — always inject (all models)
     #   false — never inject
     #   list  — custom model-name substrings to match
-    if agent.valid_tool_names:
+    if agent.valid_tool_names and not _full_prompt_control:
         _enforce = agent._tool_use_enforcement
         _inject = False
         if _enforce is True or (isinstance(_enforce, str) and _enforce.lower() in {"true", "always", "yes", "on"}):
@@ -510,6 +523,15 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
             compact_categories=_compact_cats or None,
             skills_dir_override=_agent_skills_dir(agent),
         )
+        if _full_prompt_control and skills_prompt:
+            # A full Prompt Profile owns the skills instructions, while the
+            # actual installed-skill catalog remains live and read-only.
+            _catalog = re.search(
+                r"<available_skills>.*?</available_skills>",
+                skills_prompt,
+                flags=re.DOTALL,
+            )
+            skills_prompt = _catalog.group(0) if _catalog else ""
     else:
         skills_prompt = ""
 
@@ -549,6 +571,7 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
                 platform=agent.platform,
                 cwd=resolve_context_cwd(),
                 model=agent.model,
+                include_operating_brief=not bool(_base_prompt),
             )
             stable_parts.extend(coding_prefix_parts)
         except Exception:
@@ -615,7 +638,12 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
         _root_str = str(get_default_eternal_root())
     else:
         _home_str = _root_str = str(get_eternal_home())
-    if active_profile == "default":
+    if _full_prompt_control:
+        # Supply only the changing fact. The user's section 9 owns the policy.
+        post_workspace_parts.append(
+            f"Active Eternal profile: {active_profile}. Profile home: {_home_str}."
+        )
+    elif active_profile == "default":
         post_workspace_parts.append(
             "Active Eternal profile: default. Other profiles (if any) live "
             "under " + _root_str + "/profiles/<name>/. Each profile has its own "
@@ -687,7 +715,7 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
     _effective_hint = _resolve_platform_hint(agent, platform_key, _default_hint)
     if platform_key == "tui" and _effective_hint:
         _effective_hint = _tui_embedded_pane_clarifier(_effective_hint)
-    if _effective_hint:
+    if _effective_hint and not _full_prompt_control:
         post_workspace_parts.append(_effective_hint)
 
     # ── Context tier (cwd-dependent, may change between sessions) ─
@@ -715,7 +743,10 @@ def build_system_prompt_parts(agent: Any, system_message: Optional[str] = None) 
         # gateway daemons) self-spawns into the install tree, where the
         # fallback would inject this repo's contributor AGENTS.md (#64590).
         context_files_prompt = _r.build_context_files_prompt(
-            cwd=resolve_context_cwd(), skip_soul=_soul_loaded,
+            # A custom Base Prompt replaces SOUL.md completely. Without this
+            # second guard, context discovery can re-inject SOUL later under
+            # "Project Context" even though it was skipped as the identity.
+            cwd=resolve_context_cwd(), skip_soul=_soul_loaded or bool(_base_prompt),
             context_length=_ctx_len,
             allow_install_tree_fallback=agent.platform in ("cli", "tui"),
             home_override=_agent_home(agent))

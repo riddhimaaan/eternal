@@ -113,6 +113,116 @@ class TestCodingContextBlock:
         assert "coding agent" not in _stable_prompt(agent)
 
 
+class TestUserBasePrompt:
+    def test_replaces_default_identity_but_keeps_eternal_guidance(self, monkeypatch):
+        import agent.system_prompt as system_prompt
+
+        monkeypatch.setattr(system_prompt, "DEFAULT_AGENT_IDENTITY", "SHIPPED IDENTITY")
+        monkeypatch.setattr(system_prompt, "ETERNAL_AGENT_HELP_GUIDANCE", "PROTECTED HELP")
+
+        with (
+            patch("run_agent.load_soul_md", return_value="OLD SOUL IDENTITY"),
+            patch("run_agent.build_environment_hints", return_value=""),
+            patch("run_agent.build_context_files_prompt", return_value=""),
+        ):
+            stable = build_system_prompt_parts(
+                _make_agent(_base_prompt="You are a rigorous content strategy agent.")
+            )["stable"]
+
+        assert stable.startswith("You are a rigorous content strategy agent.")
+        assert "SHIPPED IDENTITY" not in stable
+        assert "OLD SOUL IDENTITY" not in stable
+        assert "PROTECTED HELP" in stable
+
+    def test_prevents_soul_from_returning_through_project_context(self):
+        captured = {}
+
+        def fake_context_files(**kwargs):
+            captured["skip_soul"] = kwargs["skip_soul"]
+            return "PROJECT CONTEXT WITHOUT SOUL"
+
+        with (
+            patch("run_agent.load_soul_md", return_value="OLD SOUL IDENTITY"),
+            patch("run_agent.build_environment_hints", return_value=""),
+            patch("run_agent.build_context_files_prompt", side_effect=fake_context_files),
+        ):
+            parts = build_system_prompt_parts(
+                _make_agent(_base_prompt="You are a content agent.")
+            )
+
+        assert captured["skip_soul"] is True
+        assert "OLD SOUL IDENTITY" not in "\n\n".join(parts.values())
+
+    def test_replaces_automatic_coding_role_but_keeps_workspace_context(
+        self, monkeypatch, tmp_path
+    ):
+        _init_code_repo(tmp_path)
+        monkeypatch.setenv("TERMINAL_CWD", str(tmp_path))
+
+        parts = _prompt_parts(
+            _make_agent(
+                _base_prompt="You are a research agent. Prioritize source quality.",
+                valid_tool_names=["read_file"],
+                platform="cli",
+            )
+        )
+
+        assert "You are a research agent" in parts["stable"]
+        assert "coding agent" not in parts["stable"]
+        assert "Workspace" in parts["context"]
+
+    def test_full_control_profile_replaces_sections_but_keeps_live_skill_catalog(
+        self, monkeypatch
+    ):
+        import agent.system_prompt as system_prompt
+
+        monkeypatch.setattr(system_prompt, "ETERNAL_AGENT_HELP_GUIDANCE", "DEFAULT HELP")
+        monkeypatch.setattr(system_prompt, "TASK_COMPLETION_GUIDANCE", "DEFAULT COMPLETION")
+        monkeypatch.setattr(system_prompt, "PARALLEL_TOOL_CALL_GUIDANCE", "DEFAULT PARALLEL")
+        monkeypatch.setattr(system_prompt, "MEMORY_GUIDANCE", "DEFAULT MEMORY")
+        monkeypatch.setattr(system_prompt, "SESSION_SEARCH_GUIDANCE", "DEFAULT SEARCH")
+        monkeypatch.setattr(system_prompt, "SKILLS_GUIDANCE", "DEFAULT SKILLS")
+        monkeypatch.setattr(system_prompt, "STEER_CHANNEL_NOTE", "DEFAULT STEERING")
+        monkeypatch.setattr(system_prompt, "TOOL_USE_ENFORCEMENT_GUIDANCE", "DEFAULT ENFORCEMENT")
+
+        agent = _make_agent(
+            _base_prompt="# 1. My identity\n\n# 10. My interface rules",
+            _prompt_profile_full_control=True,
+            _task_completion_guidance=True,
+            _parallel_tool_call_guidance=True,
+            _tool_use_enforcement=True,
+            valid_tool_names=["memory", "session_search", "skill_manage", "skill_view"],
+            platform="desktop",
+        )
+
+        with patch(
+            "run_agent.build_skills_system_prompt",
+            return_value=(
+                "## Skills (mandatory)\nDEFAULT INDEX RULES\n"
+                "<available_skills>\n  writing:\n    - editor: Edit text\n</available_skills>\n"
+                "Only proceed without loading a skill if none apply."
+            ),
+        ):
+            parts = _prompt_parts(agent)
+
+        prompt = "\n\n".join(parts.values())
+        assert prompt.startswith("# 1. My identity")
+        for shipped in (
+            "DEFAULT HELP",
+            "DEFAULT COMPLETION",
+            "DEFAULT PARALLEL",
+            "DEFAULT MEMORY",
+            "DEFAULT SEARCH",
+            "DEFAULT SKILLS",
+            "DEFAULT STEERING",
+            "DEFAULT ENFORCEMENT",
+            "DEFAULT INDEX RULES",
+        ):
+            assert shipped not in prompt
+        assert "<available_skills>" in parts["volatile"]
+        assert "editor: Edit text" in parts["volatile"]
+
+
 class TestNamedProfileHintIntegration:
     """The same defect through the REAL resolution chain (#72894).
 

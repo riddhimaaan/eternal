@@ -380,6 +380,7 @@ export const FIELD_LABELS: Record<string, string> = defineFieldCopy({
     repoScanExcludePaths: 'Excluded Repository Paths'
   },
   agent: {
+    basePrompt: 'Base Prompt',
     maxTurns: 'Max Agent Steps',
     imageInputMode: 'Image Attachments',
     apiMaxRetries: 'API Retries',
@@ -547,6 +548,8 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
   },
   timezone: 'IANA timezone identifier. Blank uses the system timezone.',
   agent: {
+    basePrompt:
+      "Define this agent's role, priorities, decision style, and working method. Eternal keeps its tool, skill, MCP, safety, memory, and runtime instructions intact. Changes apply to new chats; clear this field to restore Eternal's default behavior.",
     imageInputMode: 'Controls how image attachments are sent to the model.',
     maxTurns: 'Upper bound for tool-calling turns before Eternal stops a run.'
   },
@@ -615,6 +618,12 @@ export const FIELD_DESCRIPTIONS: Record<string, string> = defineFieldCopy({
 
 // Curated desktop config surface: only fields a user might tune from the app.
 export const SECTIONS: DesktopConfigSection[] = [
+  {
+    id: 'behavior',
+    label: 'Create Your Agent',
+    icon: Brain,
+    keys: ['agent.base_prompt']
+  },
   {
     id: 'model',
     label: 'Model',

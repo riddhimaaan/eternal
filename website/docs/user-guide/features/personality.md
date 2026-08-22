@@ -8,10 +8,11 @@ description: "Customize Eternal Agent's personality with a global SOUL.md, built
 
 Eternal Agent's personality is fully customizable. `SOUL.md` is the **primary identity** — it's the first thing in the system prompt and defines who the agent is.
 
+- **Agent Designer and Prompt Profiles** — create reusable Base Prompts conversationally or edit their `BASE_PROMPT.md` files directly. Prompt Profiles expose sections 1–10, including the operational instructions for tools, memory, skills, profiles, and the interface. Eternal still supplies live catalogs and runtime facts.
 - `SOUL.md` — a durable persona file that lives in `ETERNAL_HOME` and serves as the agent's identity (slot #1 in the system prompt)
 - built-in or custom `/personality` presets — session-level system-prompt overlays
 
-If you want to change who Eternal is — or replace it with an entirely different agent persona — edit `SOUL.md`.
+If **Base Prompt** has content, it replaces both Eternal's shipped identity and `SOUL.md`. Clear it to return to the existing `SOUL.md` behavior. Changes apply to new chats.
 
 ## How SOUL.md works now
 

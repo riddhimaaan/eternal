@@ -17,6 +17,18 @@ import {
 } from './helpers'
 
 describe('settings helpers', () => {
+  it('puts the behavioral base prompt first with direct user-facing copy', () => {
+    expect(SECTIONS[0]).toMatchObject({
+      id: 'behavior',
+      label: 'Create Your Agent',
+      keys: ['agent.base_prompt']
+    })
+    expect(fieldCopyForSchemaKey(FIELD_LABELS, 'agent.base_prompt')).toBe('Base Prompt')
+    expect(fieldCopyForSchemaKey(FIELD_DESCRIPTIONS, 'agent.base_prompt')).toContain(
+      'role, priorities, decision style, and working method'
+    )
+  })
+
   it('surfaces repository discovery config in Workspace with user-facing copy', () => {
     const workspace = SECTIONS.find(section => section.id === 'workspace')
 

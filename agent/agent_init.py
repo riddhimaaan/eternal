@@ -1869,6 +1869,28 @@ def init_agent(
     _agent_section = _agent_cfg.get("agent", {})
     if not isinstance(_agent_section, dict):
         _agent_section = {}
+
+    # User-owned prompt base. Resolved once at agent creation so the
+    # system prompt remains byte-stable for this session and provider prompt
+    # caches stay warm. File-backed Prompt Profiles own editable sections
+    # 1-10; Eternal appends live catalogs and runtime context separately. The
+    # legacy inline base_prompt remains behavioral-only for compatibility.
+    try:
+        from eternal_cli.prompt_profiles import (
+            resolve_agent_base_prompt,
+            selected_prompt_has_full_control,
+        )
+
+        agent._base_prompt = resolve_agent_base_prompt(
+            _agent_section, home=eternal_home
+        )
+        agent._prompt_profile_full_control = selected_prompt_has_full_control(
+            _agent_section, home=eternal_home
+        )
+    except Exception:
+        agent._base_prompt = str(_agent_section.get("base_prompt", "") or "").strip()
+        agent._prompt_profile_full_control = False
+
     agent._tool_use_enforcement = _agent_section.get("tool_use_enforcement", "auto")
 
     # Intent-ack continuation config: "auto" (default — codex_responses only,

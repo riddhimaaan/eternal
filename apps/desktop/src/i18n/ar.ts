@@ -367,6 +367,7 @@ export const ar = defineLocale({
       completionSoundPreview: 'معاينة'
     },
     sections: {
+      behavior: 'أنشئ وكيلك',
       model: 'النموذج',
       chat: 'المحادثة',
       appearance: 'المظهر',

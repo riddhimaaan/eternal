@@ -53,6 +53,10 @@ import type {
   ProfileSetupCommand,
   ProfileSoul,
   ProfilesResponse,
+  PromptDesignerMessage,
+  PromptDesignerResponse,
+  PromptProfile,
+  PromptProfilesResponse,
   SessionInfo,
   SessionMessage,
   SessionMessagesResponse,
@@ -167,9 +171,9 @@ export type {
   ElevenLabsVoice,
   ElevenLabsVoicesResponse,
   EnvVarInfo,
-  GatewayReadyPayload,
   EternalConfig,
   EternalConfigRecord,
+  GatewayReadyPayload,
   LogsResponse,
   McpCatalogEntry,
   McpCatalogResponse,
@@ -1699,6 +1703,69 @@ export function updateProfileSoul(name: string, content: string): Promise<{ ok: 
     path: `/api/profiles/${encodeURIComponent(name)}/soul`,
     method: 'PUT',
     body: { content }
+  })
+}
+
+export function getPromptProfiles(): Promise<PromptProfilesResponse> {
+  return window.eternalDesktop.api<PromptProfilesResponse>({
+    ...profileScoped(),
+    path: '/api/prompt-profiles'
+  })
+}
+
+export function createPromptProfile(body: {
+  name: string
+  prompt: string
+  description?: string
+  activate?: boolean
+}): Promise<{ ok: boolean; profile: PromptProfile; active_id: string }> {
+  return window.eternalDesktop.api<{ ok: boolean; profile: PromptProfile; active_id: string }>({
+    ...profileScoped(),
+    path: '/api/prompt-profiles',
+    method: 'POST',
+    body
+  })
+}
+
+export function updatePromptProfile(
+  id: string,
+  body: Partial<Pick<PromptProfile, 'description' | 'icon' | 'name' | 'prompt'>>
+): Promise<{ ok: boolean; profile: PromptProfile; active_id: string }> {
+  return window.eternalDesktop.api<{ ok: boolean; profile: PromptProfile; active_id: string }>({
+    ...profileScoped(),
+    path: `/api/prompt-profiles/${encodeURIComponent(id)}`,
+    method: 'PUT',
+    body
+  })
+}
+
+export function deletePromptProfile(id: string): Promise<{ ok: boolean; active_id: string }> {
+  return window.eternalDesktop.api<{ ok: boolean; active_id: string }>({
+    ...profileScoped(),
+    path: `/api/prompt-profiles/${encodeURIComponent(id)}`,
+    method: 'DELETE'
+  })
+}
+
+export function activatePromptProfile(profileId: string): Promise<{ ok: boolean; active_id: string }> {
+  return window.eternalDesktop.api<{ ok: boolean; active_id: string }>({
+    ...profileScoped(),
+    path: '/api/prompt-profiles/active/select',
+    method: 'POST',
+    body: { profile_id: profileId }
+  })
+}
+
+export function sendPromptDesignerMessage(
+  messages: PromptDesignerMessage[],
+  currentPrompt = ''
+): Promise<PromptDesignerResponse> {
+  return window.eternalDesktop.api<PromptDesignerResponse>({
+    ...profileScoped(),
+    path: '/api/prompt-profiles/designer/message',
+    method: 'POST',
+    body: { messages, current_prompt: currentPrompt },
+    timeoutMs: 120_000
   })
 }
 

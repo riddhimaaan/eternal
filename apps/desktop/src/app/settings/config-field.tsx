@@ -213,11 +213,12 @@ export function ConfigField({
   }
 
   const isLong = schema.type === 'text' || String(value ?? '').length > 100
+  const isBasePrompt = schemaKey === 'agent.base_prompt'
 
   return row(
     isLong ? (
       <Textarea
-        className={cn('min-h-24 resize-y bg-background', CONTROL_TEXT)}
+        className={cn(isBasePrompt ? 'min-h-72' : 'min-h-24', 'resize-y bg-background', CONTROL_TEXT)}
         onChange={e => onChange(e.target.value)}
         placeholder={c.notSet}
         value={String(value ?? '')}

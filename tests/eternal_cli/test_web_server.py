@@ -2311,6 +2311,12 @@ class TestConfigRoundTrip:
                 mismatches.append(f"{key}: expected list, got {type(val).__name__}")
         assert not mismatches, "Type mismatches:\n" + "\n".join(mismatches)
 
+    def test_base_prompt_schema_is_a_multiline_agent_field(self):
+        schema = self.client.get("/api/config/schema").json()["fields"]
+
+        assert schema["agent.base_prompt"]["type"] == "text"
+        assert schema["agent.base_prompt"]["category"] == "agent"
+
     def test_desktop_terminal_font_round_trip_preserves_terminal_config(self):
         """The Appearance picker persists a font without replacing sibling settings."""
         from eternal_cli.config import load_config

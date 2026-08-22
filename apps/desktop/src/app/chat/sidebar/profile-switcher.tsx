@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useStore } from '@nanostores/react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router'
 
 import { CodeEditor } from '@/components/chat/code-editor'
@@ -32,9 +32,10 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { ProfileGlyph } from '@/components/ui/profile-glyph'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tip, Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { getProfileSoul, updateProfileSoul } from '@/eternal'
+import { activatePromptProfile, getProfileSoul, getPromptProfiles, updateProfileSoul } from '@/eternal'
 import { useI18n } from '@/i18n'
 import { triggerHaptic } from '@/lib/haptics'
+import { Brain } from '@/lib/icons'
 import { PROFILE_SWATCHES, profileColorSoft, resolveProfileColor } from '@/lib/profile-color'
 import {
   REORDER_DRAG_TRANSITION_CSS,
@@ -62,6 +63,7 @@ import {
 } from '@/store/profile'
 import { runExportProfileFlow, runImportProfileFlow } from '@/store/profile-share'
 import type { ProfileInfo } from '@/types/eternal'
+import type { PromptProfile } from '@/types/eternal'
 
 import { CreateProfileDialog } from '../../profiles/create-profile-dialog'
 import { DeleteProfileDialog } from '../../profiles/delete-profile-dialog'
@@ -76,6 +78,77 @@ const RAIL_GAP = 4 // px — matches gap-1 between squares.
 // drag targets, endless horizontal scroll), so the rail collapses to a compact
 // select. Drag-reorder and long-press-recolor live only on the squares path.
 const PROFILE_DROPDOWN_THRESHOLD = 13
+
+export function PromptProfilePicker() {
+  const [profiles, setProfiles] = useState<PromptProfile[]>([])
+  const [activeId, setActiveId] = useState('')
+  const navigate = useNavigate()
+  const gatewayProfile = useStore($activeGatewayProfile)
+
+  const refresh = useCallback(async () => {
+    try {
+      const result = await getPromptProfiles()
+      setProfiles(result.profiles)
+      setActiveId(result.active_id)
+    } catch {
+      setProfiles([])
+    }
+  }, [])
+
+  useEffect(() => {
+    void refresh()
+  }, [gatewayProfile, refresh])
+
+  useEffect(() => {
+    const onChanged = () => void refresh()
+    window.addEventListener('eternal:prompt-profiles-changed', onChanged)
+
+    return () => window.removeEventListener('eternal:prompt-profiles-changed', onChanged)
+  }, [refresh])
+
+  if (profiles.length === 0) {
+    return null
+  }
+
+  return (
+    <div className="mb-1 flex items-center gap-1 rounded-lg border border-border/55 bg-card/35 p-1">
+      <Brain className="ml-1 size-3.5 shrink-0 text-primary" />
+      <Select
+        onValueChange={async value => {
+          try {
+            const result = await activatePromptProfile(value)
+            setActiveId(result.active_id)
+            triggerHaptic('selection')
+            notify({ kind: 'success', title: 'Agent selected', message: 'Applies to new chats.' })
+          } catch (error) {
+            notifyError(error, 'Could not select agent')
+          }
+        }}
+        value={activeId || undefined}
+      >
+        <SelectTrigger className="h-7 min-w-0 flex-1 border-0 bg-transparent px-2 text-xs shadow-none">
+          <SelectValue placeholder="Choose an agent" />
+        </SelectTrigger>
+        <SelectContent>
+          {profiles.map(profile => (
+            <SelectItem key={profile.id} value={profile.id}>
+              {profile.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Button
+        aria-label="Manage agents"
+        className="size-7 shrink-0"
+        onClick={() => navigate(`${SETTINGS_ROUTE}?tab=config%3Abehavior`)}
+        size="icon"
+        variant="ghost"
+      >
+        <Codicon name="settings-gear" />
+      </Button>
+    </div>
+  )
+}
 
 // Neighbors reflow on RAIL_TRANSITION; the dragged square glides between
 // snapped cells on the snappier DRAG_TRANSITION. Both come from the SHARED

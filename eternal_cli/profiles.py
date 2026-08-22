@@ -50,6 +50,7 @@ _PROFILE_DIRS = [
     "plans",
     "workspace",
     "cron",
+    "prompt-profiles",
     # Back-compat/Docker HOME for tool subprocesses. Host subprocesses keep
     # the user's real HOME by default so normal CLI credentials remain visible;
     # containers still use this directory for persistent HOME state.
@@ -248,6 +249,7 @@ _DEFAULT_EXPORT_INCLUDE_ROOT = frozenset({
     "skills", "cron", "scripts", "sessions",
     # Plugin / memory surfaces (per-profile overrides live here)
     "plugins", "memories", "knowledge", "preferences",
+    "prompt-profiles",
 })
 
 # Names that cannot be used as profile aliases
@@ -1138,6 +1140,18 @@ def create_profile(
             source_skills = source_dir / "skills"
             if source_skills.is_dir():
                 shutil.copytree(source_skills, profile_dir / "skills", symlinks=True, dirs_exist_ok=True)
+
+            # Behavioral Prompt Profiles are user-owned profile artifacts, just
+            # like SOUL.md. Preserve the reusable agent library on a normal
+            # config clone without copying runtime/session state.
+            source_prompts = source_dir / "prompt-profiles"
+            if source_prompts.is_dir():
+                shutil.copytree(
+                    source_prompts,
+                    profile_dir / "prompt-profiles",
+                    symlinks=False,
+                    dirs_exist_ok=True,
+                )
 
             # Clone memory and other subdirectory files
             for relpath in _CLONE_SUBDIR_FILES:

@@ -288,6 +288,7 @@ export const zhHant = defineLocale({
       completionSoundPreview: '預覽'
     },
     sections: {
+      behavior: '建立你的代理',
       model: '模型',
       chat: '聊天',
       appearance: '外觀',

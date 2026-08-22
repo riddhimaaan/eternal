@@ -520,7 +520,9 @@ class RuntimeMode:
             return None
         return [self.profile.toolset, *_enabled_mcp_servers(config)]
 
-    def system_prompt_parts(self) -> tuple[list[str], list[str], list[str]]:
+    def system_prompt_parts(
+        self, *, include_operating_brief: bool = True
+    ) -> tuple[list[str], list[str], list[str]]:
         """Return prefix, workspace, and trailing posture blocks separately.
 
         The operating brief carries a model-family edit-format nudge appended
@@ -537,7 +539,7 @@ class RuntimeMode:
         prefix: list[str] = []
         workspace_parts: list[str] = []
         trailing: list[str] = []
-        if self.profile.guidance:
+        if include_operating_brief and self.profile.guidance:
             brief = self.profile.guidance
             edit_line = _edit_format_line(self.model)
             if edit_line:
@@ -666,11 +668,18 @@ def coding_system_prompt_parts(
     cwd: Optional[str | Path] = None,
     config: Optional[dict[str, Any]] = None,
     model: Optional[str] = None,
+    include_operating_brief: bool = True,
 ) -> tuple[list[str], list[str], list[str]]:
-    """Return coding prefix, workspace snapshot, and trailing guidance."""
+    """Return coding prefix, workspace snapshot, and trailing guidance.
+
+    ``include_operating_brief=False`` is used when the user supplied
+    ``agent.base_prompt``. The live workspace snapshot and explicit
+    ``agent.coding_instructions`` remain useful context, but the shipped
+    senior-engineer posture must not compete with the user's chosen role.
+    """
     return resolve_runtime_mode(
         platform=platform, cwd=cwd, config=config, model=model
-    ).system_prompt_parts()
+    ).system_prompt_parts(include_operating_brief=include_operating_brief)
 
 
 def coding_compact_skill_categories(

@@ -428,6 +428,7 @@ export const zh: Translations = {
       completionSoundPreview: '预览'
     },
     sections: {
+      behavior: '创建你的智能体',
       model: '模型',
       chat: '对话',
       appearance: '外观',

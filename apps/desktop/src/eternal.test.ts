@@ -1,21 +1,24 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  activatePromptProfile,
   AUDIO_SPEAK_MAX_REQUEST_TIMEOUT_MS,
   AUDIO_SPEAK_MIN_REQUEST_TIMEOUT_MS,
   AUDIO_TRANSCRIBE_MAX_REQUEST_TIMEOUT_MS,
   AUDIO_TRANSCRIBE_MIN_REQUEST_TIMEOUT_MS,
   audioSpeakRequestTimeoutMs,
   audioTranscribeRequestTimeoutMs,
+  createPromptProfile,
   getAllSessionMessages,
   getCronJobs,
-  getGlobalModelInfo,
-  getGlobalModelOptions,
   getEternalConfig,
   getEternalConfigDefaults,
+  getGlobalModelInfo,
+  getGlobalModelOptions,
   getLatestSessionMessages,
   getOlderSessionMessages,
   getProfiles,
+  getPromptProfiles,
   getSessionMessages,
   getStatus,
   LATEST_SESSION_MESSAGES_LIMIT,
@@ -24,10 +27,12 @@ import {
   listSidebarSessions,
   pluginSocket,
   resetSidebarBatchCapability,
+  sendPromptDesignerMessage,
   setApiRequestProfile,
   speakText,
   transcribeAudio,
-  triggerCronJob
+  triggerCronJob,
+  updatePromptProfile
 } from './eternal'
 import { refreshActiveProfile } from './store/profile'
 import { $transcriptTailBySessionId, transcriptTailState } from './store/transcript-tail'
@@ -298,6 +303,31 @@ describe('Eternal REST helpers', () => {
         path: '/api/profiles',
         timeoutMs: 60_000
       })
+    )
+  })
+
+  it('routes Prompt Profile management through the profile-scoped API', async () => {
+    setApiRequestProfile('work')
+
+    await getPromptProfiles()
+    await createPromptProfile({ name: 'Writer', prompt: 'Write clearly.' })
+    await updatePromptProfile('writer', { prompt: 'Write concisely.' })
+    await activatePromptProfile('writer')
+    await sendPromptDesignerMessage([{ role: 'user', content: 'Build a writing agent' }])
+
+    expect(api.mock.calls.map(call => call[0])).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: '/api/prompt-profiles', profile: 'work' }),
+        expect.objectContaining({ method: 'POST', path: '/api/prompt-profiles', profile: 'work' }),
+        expect.objectContaining({ method: 'PUT', path: '/api/prompt-profiles/writer', profile: 'work' }),
+        expect.objectContaining({ method: 'POST', path: '/api/prompt-profiles/active/select', profile: 'work' }),
+        expect.objectContaining({
+          method: 'POST',
+          path: '/api/prompt-profiles/designer/message',
+          profile: 'work',
+          timeoutMs: 120_000
+        })
+      ])
     )
   })
 

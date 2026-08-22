@@ -1020,6 +1020,15 @@ def _timezone_options() -> List[str]:
 
 
 _SCHEMA_OVERRIDES: Dict[str, Dict[str, Any]] = {
+    "agent.base_prompt": {
+        "type": "text",
+        "description": (
+            "Defines the agent's role, priorities, and operating behavior. "
+            "Eternal keeps tool, skill, MCP, safety, memory, and runtime instructions intact. "
+            "Applies to new chats. Leave blank to use Eternal's default behavior."
+        ),
+        "category": "agent",
+    },
     "timezone": {
         "type": "select",
         "description": "IANA timezone (e.g. America/New_York). Blank uses the system timezone.",
@@ -13984,6 +13993,10 @@ from eternal_cli.web_routers.profiles import (  # noqa: E402,F401 — legacy re-
     update_profile_model_endpoint,
     describe_profile_auto_endpoint,
 )
+
+from eternal_cli.web_routers import prompt_profiles as _prompt_profile_routes  # noqa: E402
+
+app.include_router(_prompt_profile_routes.router)
 
 
 
