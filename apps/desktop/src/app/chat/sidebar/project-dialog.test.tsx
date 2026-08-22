@@ -1,6 +1,8 @@
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type * as Nanostores from 'nanostores'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+import { createProject, openProjectAgent } from '@/store/projects'
 
 import { ProjectDialog } from './project-dialog'
 
@@ -54,6 +56,7 @@ vi.mock('@/store/projects', () => ({
   closeProjectDialog: vi.fn(),
   createProject: vi.fn(),
   generateProjectIdea: vi.fn(),
+  openProjectAgent: vi.fn(),
   pickProjectFolder: vi.fn(async () => '/Users/test/my-folder'),
   renameProject: vi.fn()
 }))
@@ -83,5 +86,20 @@ describe('ProjectDialog', () => {
 
     const button = await screen.findByRole('button', { name: 'Remove folder' })
     expect(tipTrigger(button)).toBeTruthy()
+  })
+
+  it('creates a folderless project', async () => {
+    vi.mocked(createProject).mockResolvedValueOnce({ id: 'p-writing', name: 'Writing' } as never)
+    render(<ProjectDialog />)
+
+    fireEvent.change(screen.getByPlaceholderText('Project name'), { target: { value: 'Writing' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    await waitFor(() =>
+      expect(createProject).toHaveBeenCalledWith(
+        expect.objectContaining({ folders: [], name: 'Writing', use: true })
+      )
+    )
+    await waitFor(() => expect(openProjectAgent).toHaveBeenCalledWith({ id: 'p-writing', name: 'Writing' }))
   })
 })

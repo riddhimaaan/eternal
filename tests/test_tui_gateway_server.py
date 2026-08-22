@@ -3812,6 +3812,14 @@ def test_stored_session_runtime_overrides_restores_explicit_normal_tier():
     assert overrides["service_tier_override"] == ""
 
 
+def test_stored_session_runtime_overrides_restores_project_base_prompt():
+    overrides = server._stored_session_runtime_overrides(
+        {"model_config": {"project_base_prompt": "PROJECT PROMPT V1"}}
+    )
+
+    assert overrides["base_prompt_override"] == "PROJECT PROMPT V1"
+
+
 def test_openrouter_session_resume_restores_provider():
     """OpenRouter is a fully routable provider — sessions that used OpenRouter must
     restore the "openrouter" provider override on resume, not fall through to whatever
@@ -3907,6 +3915,33 @@ def test_persist_live_session_runtime_preserves_explicit_normal_tier():
     )
 
     assert updates["config"]["service_tier"] == "normal"
+
+
+def test_persist_live_session_runtime_snapshots_project_base_prompt():
+    updates = {}
+
+    class FakeDB:
+        def get_session(self, _session_id):
+            return {"model_config": "{}"}
+
+        def update_session_meta(self, _session_id, model_config_json, model=None):
+            updates["config"] = json.loads(model_config_json)
+
+    agent = types.SimpleNamespace(
+        model="gpt-5.4",
+        provider="openai-codex",
+        base_url=None,
+        api_mode=None,
+        reasoning_config=None,
+        service_tier=None,
+        _project_id="p-content",
+        _base_prompt="PROJECT PROMPT V1",
+        _session_db=FakeDB(),
+    )
+
+    server._persist_live_session_runtime({"agent": agent, "session_key": "stored-session"})
+
+    assert updates["config"]["project_base_prompt"] == "PROJECT PROMPT V1"
 
 
 def test_status_callback_emits_kind_and_text():
@@ -4282,10 +4317,11 @@ def test_make_agent_passes_configured_fallback_chain(monkeypatch):
     monkeypatch.setattr(server, "_load_enabled_toolsets", lambda *_a, **_kw: ["file"])
     monkeypatch.setattr(server, "_get_db", lambda: None)
 
-    agent = server._make_agent("sid", "session-key")
+    agent = server._make_agent("sid", "session-key", base_prompt_override="PROJECT PROMPT V1")
 
     assert agent.model == "gpt-5.5"
     assert captured["fallback_model"] == fallback_chain
+    assert captured["base_prompt_override"] == "PROJECT PROMPT V1"
     assert captured["platform"] == "tui"
 
 
@@ -19830,3 +19866,55 @@ def test_workspace_move_rehomes_running_session(monkeypatch, tmp_path):
     assert captured["row_update"] == (target, str(new_cwd))
     assert live["cwd"] == str(new_cwd)
     assert live.get("explicit_cwd") is True
+
+
+def test_workspace_move_assigns_folderless_project_without_changing_cwd(monkeypatch, tmp_path):
+    """A folderless Project owns the chat explicitly while its tool cwd stays put."""
+    target = "stored-folderless-session"
+    original_cwd = tmp_path / "existing-workspace"
+    original_cwd.mkdir()
+    captured = {}
+
+    class FakeDB:
+        def get_session(self, session_id):
+            return {"id": session_id}
+
+        def update_session_project(self, session_id, project_id):
+            captured["project_update"] = (session_id, project_id)
+
+        def close(self):
+            pass
+
+    import contextlib
+
+    @contextlib.contextmanager
+    def _fake_db(_params):
+        yield FakeDB()
+
+    monkeypatch.setattr(server, "_profile_db", _fake_db)
+    monkeypatch.setattr(
+        server,
+        "_project_info_for_id",
+        lambda project_id: {"id": project_id, "name": "Folderless"},
+    )
+    monkeypatch.setattr("eternal_cli.project_storage.initialize_project", lambda _project_id: {})
+    monkeypatch.setattr(
+        "eternal_cli.project_storage.export_session",
+        lambda project_id, _db, session_id: captured.setdefault(
+            "export", (project_id, session_id)
+        ),
+    )
+
+    live = {"session_key": target, "running": False, "cwd": str(original_cwd)}
+    server._sessions["folderless-live"] = live
+
+    res = server._methods["session.workspace.move"](
+        "rid",
+        {"session_key": target, "project_id": "p_folderless"},
+    )
+
+    assert "error" not in res, res
+    assert captured["project_update"] == (target, "p_folderless")
+    assert captured["export"] == ("p_folderless", target)
+    assert live["cwd"] == str(original_cwd)
+    assert live["project_id"] == "p_folderless"

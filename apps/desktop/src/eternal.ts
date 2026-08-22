@@ -53,6 +53,8 @@ import type {
   ProfileSetupCommand,
   ProfileSoul,
   ProfilesResponse,
+  ProjectAgentPrompt,
+  ProjectAgentScanResponse,
   PromptDesignerMessage,
   PromptDesignerResponse,
   PromptProfile,
@@ -1765,6 +1767,49 @@ export function sendPromptDesignerMessage(
     path: '/api/prompt-profiles/designer/message',
     method: 'POST',
     body: { messages, current_prompt: currentPrompt },
+    timeoutMs: 120_000
+  })
+}
+
+export function getProjectAgent(projectId: string): Promise<{ agent: ProjectAgentPrompt }> {
+  return window.eternalDesktop.api<{ agent: ProjectAgentPrompt }>({
+    ...profileScoped(),
+    path: `/api/project-agents/${encodeURIComponent(projectId)}`
+  })
+}
+
+export function updateProjectAgent(
+  projectId: string,
+  prompt: string,
+  source = 'manual'
+): Promise<{ agent: ProjectAgentPrompt; ok: boolean }> {
+  return window.eternalDesktop.api<{ agent: ProjectAgentPrompt; ok: boolean }>({
+    ...profileScoped(),
+    path: `/api/project-agents/${encodeURIComponent(projectId)}`,
+    method: 'PUT',
+    body: { prompt, source }
+  })
+}
+
+export function sendProjectAgentDesignerMessage(
+  projectId: string,
+  messages: PromptDesignerMessage[],
+  currentPrompt = ''
+): Promise<PromptDesignerResponse> {
+  return window.eternalDesktop.api<PromptDesignerResponse>({
+    ...profileScoped(),
+    path: `/api/project-agents/${encodeURIComponent(projectId)}/designer/message`,
+    method: 'POST',
+    body: { messages, current_prompt: currentPrompt },
+    timeoutMs: 120_000
+  })
+}
+
+export function scanProjectAgent(projectId: string): Promise<ProjectAgentScanResponse> {
+  return window.eternalDesktop.api<ProjectAgentScanResponse>({
+    ...profileScoped(),
+    path: `/api/project-agents/${encodeURIComponent(projectId)}/scan`,
+    method: 'POST',
     timeoutMs: 120_000
   })
 }

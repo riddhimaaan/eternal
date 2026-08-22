@@ -600,7 +600,18 @@ describe('createBackendSessionForSend profile routing', () => {
       $currentCwd.set('')
     })
 
-    expect(params).toMatchObject({ cwd: '/repo/app' })
+    expect(params).toMatchObject({ cwd: '/repo/app', project_id: 'p_app' })
+  })
+
+  it('keeps a folderless project as the explicit owner of a new chat', async () => {
+    const params = await createWith(() => {
+      $projectTree.set([{ id: 'p_writing', label: 'Writing', path: '', repos: [], sessionCount: 0 }])
+      $projectScope.set('p_writing')
+      $currentCwd.set('')
+    })
+
+    expect(params).toMatchObject({ project_id: 'p_writing' })
+    expect(params).not.toHaveProperty('cwd')
   })
 })
 

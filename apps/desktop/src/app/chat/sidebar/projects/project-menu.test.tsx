@@ -33,11 +33,14 @@ vi.mock('@/i18n', () => ({
           menuAddFolder: 'Add folder',
           menuAppearance: 'Appearance',
           menuDelete: 'Delete',
+          menuProjectAgent: 'Project Agent',
           menuRename: 'Rename',
           menuSetActive: 'Set active',
+          menuSyncStorage: 'Sync project data',
           noColor: 'No color',
           removeFromSidebar: 'Remove from sidebar',
-          reveal: 'Reveal in file manager'
+          reveal: 'Reveal in file manager',
+          syncFailed: 'Could not sync project data.'
         }
       }
     }
@@ -58,13 +61,24 @@ vi.mock('@/store/layout', () => ({
 }))
 
 vi.mock('@/store/projects', () => ({
+  $projects: {
+    get: () => [],
+    listen: () => () => {},
+    subscribe: (fn: (value: unknown[]) => void) => {
+      fn([])
+
+      return () => {}
+    }
+  },
   copyPath: vi.fn(),
   deleteProject: vi.fn(),
   openProjectAddFolder: vi.fn(),
+  openProjectAgent: vi.fn(),
   openProjectRename: vi.fn(),
   revealPath: vi.fn(),
   setActiveProject: vi.fn(),
-  setProjectAppearance: vi.fn().mockResolvedValue(false)
+  setProjectAppearance: vi.fn().mockResolvedValue(false),
+  syncProjectStorage: vi.fn()
 }))
 
 const project = {

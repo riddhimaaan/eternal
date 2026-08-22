@@ -509,6 +509,7 @@ class AIAgent:
         checkpoint_max_file_size_mb: int = 10,
         pass_session_id: bool = False,
         requested_provider: str = None,
+        base_prompt_override: str = None,
     ):
         """Forwarder — see ``agent.agent_init.init_agent``."""
         if tool_delay is not None:
@@ -525,6 +526,7 @@ class AIAgent:
             api_key=api_key,
             provider=provider,
             requested_provider=requested_provider,
+            base_prompt_override=base_prompt_override,
             api_mode=api_mode,
             acp_command=acp_command,
             acp_args=acp_args,
@@ -1951,6 +1953,28 @@ class AIAgent:
             # the in-flight API call's delta. Cheap no-op when nothing queued.
             if self._session_db is not None:
                 self._session_db.flush_token_counts()
+                # Desktop exports asynchronously in its backend. Terminal and
+                # non-desktop surfaces have no such coordinator, so persist
+                # their complete Project snapshot after the canonical DB write.
+                try:
+                    session = self._session_db.get_session(self.session_id)
+                    if (
+                        session
+                        and session.get("project_id")
+                        and session.get("source") != "desktop"
+                    ):
+                        from eternal_cli.project_storage import export_session
+
+                        export_session(
+                            session["project_id"],
+                            self._session_db,
+                            self.session_id,
+                        )
+                except Exception:
+                    logger.warning(
+                        "Could not update the Project-owned session snapshot",
+                        exc_info=True,
+                    )
             note_turn_persisted(self)
 
         if persist_lock is None:

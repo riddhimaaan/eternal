@@ -5,8 +5,8 @@ import {
   NO_PROJECT_ID,
   type SidebarProjectTree
 } from '@/app/chat/sidebar/projects/workspace-groups'
+import { type EternalGateway, getEternalConfig } from '@/eternal'
 import type { EternalGitBaseBranch, EternalGitBranch } from '@/global'
-import { getEternalConfig, type EternalGateway } from '@/eternal'
 import { translateNow } from '@/i18n'
 import { desktopDefaultCwd, isDesktopFsRemoteMode, selectDesktopPaths, writeDesktopFileText } from '@/lib/desktop-fs'
 import { desktopGit } from '@/lib/desktop-git'
@@ -24,7 +24,7 @@ import {
   setSessions,
   workspaceCwdForNewSession
 } from '@/store/session'
-import type { ProjectInfo, ProjectsPayload } from '@/types/eternal'
+import type { ProjectInfo, ProjectsPayload, ProjectStorageStatus } from '@/types/eternal'
 
 // First-class, per-profile Projects (named, multi-folder workspaces). State is
 // served by the live gateway's `projects.*` JSON-RPC methods, which wrap the
@@ -516,6 +516,7 @@ interface WorkspaceMovePayload {
   branch?: null | string
   cwd?: string
   git_repo_root?: null | string
+  project_id?: null | string
 }
 
 // Re-home a stored session into another project's root folder — the fix for a
@@ -530,21 +531,24 @@ export async function moveSessionToProject(
 ): Promise<void> {
   const cwd = projectRootCwd($projectTree.get().find(node => node.id === projectId))
 
-  if (!cwd) {
-    throw new Error(translateNow('sidebar.projects.moveNoFolder'))
-  }
-
   const res = await gatewayRequest<WorkspaceMovePayload>('session.workspace.move', {
-    cwd,
+    ...(cwd ? { cwd } : {}),
+    project_id: projectId,
     session_key: sessionId,
     ...(profile ? { profile } : {})
   })
 
-  const moved = res.cwd || cwd
+  const moved = res.cwd || cwd || undefined
   setSessions(prev =>
     prev.map(s =>
       sessionMatchesStoredId(s, sessionId)
-        ? { ...s, cwd: moved, git_branch: res.branch ?? null, git_repo_root: res.git_repo_root ?? null }
+        ? {
+            ...s,
+            ...(moved ? { cwd: moved } : {}),
+            git_branch: res.branch ?? s.git_branch ?? null,
+            git_repo_root: res.git_repo_root ?? s.git_repo_root ?? null,
+            project_id: res.project_id || projectId
+          }
         : s
     )
   )
@@ -1006,6 +1010,14 @@ export async function setActiveProject(id: null | string): Promise<void> {
   $activeProjectId.set(res.active_id ?? null)
 }
 
+export async function syncProjectStorage(id: string): Promise<ProjectStorageStatus> {
+  const res = await gatewayRequest<{ storage: ProjectStorageStatus }>('projects.sync_storage', { id })
+
+  $projects.set($projects.get().map(project => (project.id === id ? { ...project, storage: res.storage } : project)))
+
+  return res.storage
+}
+
 // ── Project management dialog ────────────────────────────────────────────────
 // A single dialog mounted in the sidebar reads this atom, so a project node's
 // menu can open create / rename / add-folder flows without prop threading
@@ -1017,6 +1029,13 @@ export interface ProjectDialogState {
 }
 
 export const $projectDialog = atom<null | ProjectDialogState>(null)
+
+export interface ProjectAgentDialogState {
+  projectId: string
+  name: string
+}
+
+export const $projectAgentDialog = atom<null | ProjectAgentDialogState>(null)
 
 export function openProjectCreate(): void {
   if ($projectsRpcAvailable.get() === false) {
@@ -1041,6 +1060,14 @@ export function openProjectAddFolder(project: { id: string; name: string }): voi
 
 export function closeProjectDialog(): void {
   $projectDialog.set(null)
+}
+
+export function openProjectAgent(project: { id: string; name: string }): void {
+  $projectAgentDialog.set({ projectId: project.id, name: project.name })
+}
+
+export function closeProjectAgent(): void {
+  $projectAgentDialog.set(null)
 }
 
 // ── Git-driven worktrees ("Start work") ─────────────────────────────────────

@@ -2378,6 +2378,12 @@ def _start_agent_build(sid: str, session: dict) -> None:
             # Session DB row deferred to first run_conversation() call.
             # pending_title applied post-first-message (see cli.exec handler).
             current["agent"] = agent
+            # Persist the project-owned Base Prompt snapshot as soon as the
+            # deferred agent exists. The desktop pre-creates a session row with
+            # model metadata, so AIAgent's later COALESCE-only create cannot add
+            # this field by itself. Resumes use this base while rebuilding live
+            # skills, memory, model and date context around it.
+            _persist_live_session_runtime(current)
             # Baseline for the per-turn config sync; the profile home
             # override is still active here.
             current["config_model_seen"] = _config_model_target()
@@ -2987,18 +2993,20 @@ def _ensure_session_db_row(session: dict) -> None:
     if parent_session_id:
         model_config["_branched_from"] = parent_session_id
     try:
-        db.create_session(
-            key,
-            source=_session_source(session),
-            model=row_model,
-            model_config=model_config or None,
-            parent_session_id=parent_session_id,
-            cwd=_persisted_session_cwd(session),
+        create_kwargs = {
+            "source": _session_source(session),
+            "model": row_model,
+            "model_config": model_config or None,
+            "parent_session_id": parent_session_id,
+            "cwd": _persisted_session_cwd(session),
             # Self-describing rows: aggregators that merge multiple profile DBs
             # into one list can't rely on which file a row came from alone. NULL
             # means the launch/default profile (matches run_agent's convention).
-            profile_name=Path(profile_home).name if profile_home else None,
-        )
+            "profile_name": Path(profile_home).name if profile_home else None,
+        }
+        if project_id := session.get("project_id"):
+            create_kwargs["project_id"] = project_id
+        db.create_session(key, **create_kwargs)
         # A session can be born hidden (session.create hidden=true, or a
         # session.set_hidden that arrived before the row existed): apply the
         # deferred intent now that the row exists, mirroring pending_title.
@@ -3193,6 +3201,41 @@ def _persist_session_cwd_and_schedule_git_meta(
         return None
     _persist_session_git_meta(session, cwd, generation)
     return generation
+
+
+def _schedule_project_session_sync(session: dict) -> None:
+    """Replicate a completed conversation snapshot without delaying the UI."""
+    project_id = str(session.get("project_id") or "").strip()
+    session_id = str(
+        getattr(session.get("agent"), "session_id", None)
+        or session.get("session_key")
+        or ""
+    )
+    if not project_id or not session_id:
+        return
+    profile_home = str(session.get("profile_home") or "").strip()
+
+    def _run() -> None:
+        home_token = set_eternal_home_override(profile_home) if profile_home else None
+        try:
+            from eternal_cli.project_storage import export_session
+
+            with _session_db(session) as db:
+                if db is not None:
+                    export_session(project_id, db, session_id)
+        except Exception:
+            logger.warning(
+                "project conversation replication failed for %s", session_id, exc_info=True
+            )
+        finally:
+            if home_token is not None:
+                reset_eternal_home_override(home_token)
+
+    threading.Thread(
+        target=_run,
+        name=f"project-sync-{session_id[:8]}",
+        daemon=True,
+    ).start()
 
 
 def _set_session_cwd(session: dict, cwd: str) -> str:
@@ -3396,6 +3439,7 @@ def _set_session_context(
     cwd: str | None = None,
     *,
     ui_session_id: str = "",
+    project_id: str | None = None,
 ) -> list:
     try:
         from gateway.session_context import set_session_vars
@@ -3424,11 +3468,19 @@ def _set_session_context(
                         getattr(sess.get("agent"), "session_id", None) or session_key
                     )
                     break
+        resolved_project_id = str(project_id or "")
+        if project_id is None:
+            with _sessions_lock:
+                for sess in list(_sessions.values()):
+                    if sess.get("session_key") == session_key:
+                        resolved_project_id = str(sess.get("project_id") or "")
+                        break
         return set_session_vars(
             session_key=session_key,
             session_id=session_id,
             source=source,
             cwd=resolved,
+            project_id=resolved_project_id,
             ui_session_id=ui_session_id,
             cron_session="",
         )
@@ -3995,6 +4047,7 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
     api_mode = str(model_config.get("api_mode") or "").strip()
     reasoning_config = model_config.get("reasoning_config")
     service_tier = str(model_config.get("service_tier") or "").strip()
+    project_base_prompt = str(model_config.get("project_base_prompt") or "").strip()
 
     # Heal a bare ``"custom"`` provider stored by an older build (or any leak
     # site that bypassed _runtime_model_config's normalization). Bare custom is
@@ -4043,6 +4096,8 @@ def _stored_session_runtime_overrides(row: dict | None) -> dict:
         overrides["service_tier_override"] = ""
     elif service_tier:
         overrides["service_tier_override"] = service_tier
+    if project_base_prompt:
+        overrides["base_prompt_override"] = project_base_prompt
 
     return overrides
 
@@ -4055,6 +4110,11 @@ def _runtime_model_config(agent, existing: dict | None = None) -> dict:
     api_mode = str(getattr(agent, "api_mode", "") or "").strip()
     reasoning_config = getattr(agent, "reasoning_config", None)
     service_tier = getattr(agent, "service_tier", None)
+    project_base_prompt = (
+        str(getattr(agent, "_base_prompt", "") or "").strip()
+        if getattr(agent, "_project_id", "")
+        else ""
+    )
 
     if model:
         config["model"] = model
@@ -4104,6 +4164,8 @@ def _runtime_model_config(agent, existing: dict | None = None) -> dict:
         config["service_tier"] = service_tier
     else:
         config.pop("service_tier", None)
+    if project_base_prompt:
+        config["project_base_prompt"] = project_base_prompt
 
     return config
 
@@ -5435,6 +5497,29 @@ def _project_info_for_cwd(cwd: str) -> dict | None:
         return None
 
 
+def _project_info_for_id(project_id: str) -> dict | None:
+    """Resolve an explicit Project independently of its folders."""
+    project_id = str(project_id or "").strip()
+    if not project_id:
+        return None
+    try:
+        from eternal_cli import projects_db as pdb
+
+        with pdb.connect_closing() as conn:
+            project = pdb.get_project(conn, project_id)
+        if project is None or project.archived:
+            return None
+        return {
+            "id": project.id,
+            "slug": project.slug,
+            "name": project.name,
+            "primary_path": project.primary_path,
+        }
+    except Exception:
+        logger.debug("failed to resolve explicit project %s", project_id, exc_info=True)
+        return None
+
+
 def _session_info(agent, session: dict | None = None) -> dict:
     if session is None:
         for candidate in _sessions.values():
@@ -5509,7 +5594,9 @@ def _session_info(agent, session: dict | None = None) -> dict:
         "skills": dict(mirror.get("skills") or {}) if isinstance(mirror.get("skills"), dict) else {},
         "cwd": cwd,
         "branch": _git_branch_for_cwd(cwd),
-        "project": _project_info_for_cwd(cwd),
+        "project_id": str((session or {}).get("project_id") or "") or None,
+        "project": _project_info_for_id((session or {}).get("project_id", ""))
+        or _project_info_for_cwd(cwd),
         "terminal_backend": _effective_terminal_backend(),
         "personality": str(personality or ""),
         "running": bool((session or {}).get("running")),
@@ -6769,6 +6856,7 @@ def _make_agent(
     reasoning_config_override: dict | None = None,
     service_tier_override: str | None = None,
     platform_override: str | None = None,
+    base_prompt_override: str | None = None,
 ):
     # AC-4 test seam: dead unless explicitly armed by the isolated certify
     # harness. Both inline and compute-host paths construct through _make_agent,
@@ -6938,6 +7026,7 @@ def _make_agent(
         session_id=session_id or key,
         session_db=session_db if session_db is not None else _get_db(),
         ephemeral_system_prompt=system_prompt or None,
+        base_prompt_override=base_prompt_override,
         checkpoints_enabled=is_truthy_value(os.environ.get("ETERNAL_TUI_CHECKPOINTS")),
         pass_session_id=is_truthy_value(os.environ.get("ETERNAL_TUI_PASS_SESSION_ID")),
         skip_context_files=is_truthy_value(os.environ.get("ETERNAL_IGNORE_RULES")),
@@ -6957,6 +7046,7 @@ def _init_session(
     session_db=None,
     source: str | None = None,
     profile_home: str | None = None,
+    project_id: str = "",
 ):
     now = time.time()
     with _sessions_lock:
@@ -6984,6 +7074,7 @@ def _init_session(
             # launch profile. SessionBranch copies the parent's value so the
             # child stays on the same state.db.
             "profile_home": profile_home,
+            "project_id": project_id,
             # Per-session model override set by an in-session /model switch.
             # Honored on rebuild (/new, resume) so a switch in THIS session
             # never leaks into siblings via process-global env vars.
@@ -7030,6 +7121,7 @@ def _init_session(
             except Exception:
                 pass
     _register_session_cwd(_sessions[sid])
+    _persist_live_session_runtime(_sessions[sid])
     # No eager slash-worker pre-warm — the session dict already carries
     # slash_worker=None and slash.exec builds one on demand. See the
     # deferred-build path in _start_agent_build for the full rationale
@@ -8285,13 +8377,15 @@ def _lazy_resume_info(
     model: str = "",
     provider: str = "",
     profile: str | None = None,
+    project_id: str = "",
 ) -> dict:
     """session.info for a not-yet-built session (the shape session.create
     returns). tools/skills land later when the deferred build emits session.info."""
     info = {
         "cwd": cwd,
         "branch": _git_branch_for_cwd(cwd),
-        "project": _project_info_for_cwd(cwd),
+        "project_id": project_id or None,
+        "project": _project_info_for_id(project_id) or _project_info_for_cwd(cwd),
         "model": model or _resolve_model(),
         "tools": {},
         "skills": {},
@@ -8318,6 +8412,7 @@ def _deferred_session_record(
     lazy: bool = False,
     model_override=None,
     resume_runtime_overrides: dict | None = None,
+    project_id: str = "",
 ) -> dict:
     """A live-session record whose AIAgent is built later (lazy watch / cold
     resume) — _init_session's shape minus the agent."""
@@ -8345,6 +8440,7 @@ def _deferred_session_record(
         "model_override": model_override,
         "pending_title": None,
         "profile_home": str(profile_home) if profile_home is not None else None,
+        "project_id": project_id,
         "resume_runtime_overrides": resume_runtime_overrides,
         "resume_session_id": session_key,
         "running": False,
@@ -11098,6 +11194,8 @@ def _run_prompt_submit(
                     # Transient DB failure — keep pending_title for retry.
                     pass
 
+            _schedule_project_session_sync(session)
+
             # Voice TTS fallback: when the streaming pipeline couldn't start
             # (no provider / missing deps probed at turn start), speak the
             # final text whole (cli.py:_voice_speak_response parity). The
@@ -12361,11 +12459,23 @@ class _NoProject(Exception):
 
 def _projects_payload(conn) -> dict:
     from eternal_cli import projects_db as pdb
+    from eternal_cli.project_storage import storage_status
 
     return {
-        "projects": [p.to_dict() for p in pdb.list_projects(conn, include_archived=True)],
+        "projects": [
+            {**p.to_dict(), "storage": storage_status(p.id)}
+            for p in pdb.list_projects(conn, include_archived=True)
+        ],
         "active_id": pdb.get_active_id(conn),
     }
+
+
+def _project_payload(project) -> dict | None:
+    if project is None:
+        return None
+    from eternal_cli.project_storage import storage_status
+
+    return {**project.to_dict(), "storage": storage_status(project.id)}
 
 
 def _projects_method(name: str):
@@ -12411,7 +12521,7 @@ def _(rid, params, pdb, conn) -> dict:
 
 @_projects_method("projects.get")
 def _(rid, params, pdb, conn) -> dict:
-    return _ok(rid, {"project": _require_project(pdb, conn, params).to_dict()})
+    return _ok(rid, {"project": _project_payload(_require_project(pdb, conn, params))})
 
 
 @_projects_method("projects.create")
@@ -12430,7 +12540,10 @@ def _(rid, params, pdb, conn) -> dict:
     if params.get("use"):
         pdb.set_active(conn, pid)
     proj = pdb.get_project(conn, pid)
-    return _ok(rid, {"project": proj.to_dict() if proj else None})
+    from eternal_cli.project_storage import initialize_project
+
+    initialize_project(pid)
+    return _ok(rid, {"project": _project_payload(proj)})
 
 
 @_projects_method("projects.update")
@@ -12445,7 +12558,7 @@ def _(rid, params, pdb, conn) -> dict:
         color=params.get("color"),
         board_slug=params.get("board_slug"),
     )
-    return _ok(rid, {"project": pdb.get_project(conn, proj.id).to_dict()})
+    return _ok(rid, {"project": _project_payload(pdb.get_project(conn, proj.id))})
 
 
 @_projects_method("projects.add_folder")
@@ -12458,21 +12571,43 @@ def _(rid, params, pdb, conn) -> dict:
         label=params.get("label"),
         is_primary=bool(params.get("is_primary")),
     )
-    return _ok(rid, {"project": pdb.get_project(conn, proj.id).to_dict()})
+    from eternal_cli.project_storage import initialize_project
+
+    initialize_project(proj.id)
+    return _ok(rid, {"project": _project_payload(pdb.get_project(conn, proj.id))})
 
 
 @_projects_method("projects.remove_folder")
 def _(rid, params, pdb, conn) -> dict:
     proj = _require_project(pdb, conn, params)
     pdb.remove_folder(conn, proj.id, str(params.get("path") or ""))
-    return _ok(rid, {"project": pdb.get_project(conn, proj.id).to_dict()})
+    return _ok(rid, {"project": _project_payload(pdb.get_project(conn, proj.id))})
 
 
 @_projects_method("projects.set_primary")
 def _(rid, params, pdb, conn) -> dict:
     proj = _require_project(pdb, conn, params)
     pdb.set_primary(conn, proj.id, str(params.get("path") or ""))
-    return _ok(rid, {"project": pdb.get_project(conn, proj.id).to_dict()})
+    from eternal_cli.project_storage import initialize_project
+
+    initialize_project(proj.id)
+    return _ok(rid, {"project": _project_payload(pdb.get_project(conn, proj.id))})
+
+
+@_projects_method("projects.storage_status")
+def _(rid, params, pdb, conn) -> dict:
+    proj = _require_project(pdb, conn, params)
+    from eternal_cli.project_storage import storage_status
+
+    return _ok(rid, {"storage": storage_status(proj.id)})
+
+
+@_projects_method("projects.sync_storage")
+def _(rid, params, pdb, conn) -> dict:
+    proj = _require_project(pdb, conn, params)
+    from eternal_cli.project_storage import initialize_project
+
+    return _ok(rid, {"storage": initialize_project(proj.id)})
 
 
 @_projects_method("projects.archive")

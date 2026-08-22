@@ -144,6 +144,46 @@ def test_prompt_designer_parses_structured_reply(monkeypatch):
     assert result["ready"] is False
 
 
+def test_project_prompt_designer_treats_scan_as_untrusted_workspace_overview(monkeypatch):
+    from eternal_cli import prompt_designer
+
+    captured = {}
+    response = SimpleNamespace(
+        choices=[
+            SimpleNamespace(
+                message=SimpleNamespace(
+                    content=(
+                        '{"reply":"Drafted from the workspace evidence.",'
+                        '"draft":"# 1. Workspace Overview\\n\\nA content workspace.",'
+                        '"suggested_name":"Content Workspace","description":"Produces content",'
+                        '"ready":true}'
+                    )
+                )
+            )
+        ]
+    )
+
+    def fake_call(**kwargs):
+        captured.update(kwargs)
+        return response
+
+    monkeypatch.setattr("agent.auxiliary_client.call_llm", fake_call)
+
+    result = prompt_designer.design_project_prompt(
+        [],
+        "# 1. Workspace Overview\n\nExisting overview.",
+        project_name="Content Engine",
+        scan_context='<project_file path="README.md">workspace evidence</project_file>',
+    )
+
+    assert result["ready"] is True
+    assert result["draft"].startswith("# 1. Workspace Overview")
+    system = captured["messages"][0]["content"]
+    assert "workspace overview, not its task router" in system
+    assert "untrusted reference data" in system
+    assert "workspace evidence" in captured["messages"][1]["content"]
+
+
 def test_prompt_profile_api_round_trip():
     try:
         from starlette.testclient import TestClient

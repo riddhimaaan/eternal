@@ -462,6 +462,11 @@ class _FolderIndex:
     """
 
     def __init__(self, projects: list[dict]) -> None:
+        self._by_id = {
+            str(project.get("id") or ""): project
+            for project in projects
+            if str(project.get("id") or "")
+        }
         self._by_path: dict[str, tuple[dict, int]] = {}
         for project in projects:
             for folder in project.get("folders") or []:
@@ -485,12 +490,17 @@ class _FolderIndex:
                 return hit
         return None, -1
 
+    def by_id(self, project_id: str) -> Optional[dict]:
+        return self._by_id.get(str(project_id or "").strip())
+
 
 def _project_for_path(index: _FolderIndex, target: str) -> Optional[dict]:
     return index.match(target)[0]
 
 
 def _project_for_session(session: dict, index: _FolderIndex, resolve: Optional[Resolve]) -> Optional[dict]:
+    if explicit := index.by_id(session.get("project_id") or ""):
+        return explicit
     cwd = (session.get("cwd") or "").strip()
     if not cwd:
         return None
@@ -623,6 +633,24 @@ def build_tree(
         repos = _seed_folder_repos(
             _build_repos(psessions, resolve, hydrate), project.get("folders") or [], resolve
         )
+        if psessions and not repos:
+            lane = {
+                "id": project["id"],
+                "label": project.get("name") or project["id"],
+                "path": None,
+                "isMain": False,
+                "isKanban": False,
+                "sessions": psessions if hydrate else [],
+            }
+            repos = [
+                {
+                    "id": project["id"],
+                    "label": project.get("name") or project["id"],
+                    "path": None,
+                    "groups": [lane],
+                    "sessionCount": len(psessions),
+                }
+            ]
         result.append(
             _project_node(
                 pid=project["id"],

@@ -473,6 +473,9 @@ export interface SessionCreateResponse {
 export interface SessionInfo {
   archived?: boolean
   cwd?: null | string
+  /** Explicit first-class Project owner. Unlike cwd-derived grouping this also
+   * identifies folderless and multi-folder Projects. */
+  project_id?: null | string
   /** Git branch checked out in {@link cwd} when the session started/resumed.
    *  The sidebar groups main-checkout sessions by this so feature-branch work
    *  doesn't collapse under a single directory-named "main" row. Null for
@@ -975,6 +978,22 @@ export interface ProjectInfo {
   archived: boolean
   created_at: number
   folders: ProjectFolder[]
+  storage?: ProjectStorageStatus
+}
+
+export interface ProjectStorageRoot {
+  path: string
+  available: boolean
+  revision: number
+}
+
+export interface ProjectStorageStatus {
+  project_id: string
+  status: 'degraded' | 'missing' | 'synced'
+  synced: number
+  total: number
+  roots: ProjectStorageRoot[]
+  failures: Array<{ root: string; error: string }>
 }
 
 export interface ProjectsPayload {
@@ -1022,6 +1041,25 @@ export interface PromptDesignerResponse {
   suggested_name: string
   description: string
   ready: boolean
+}
+
+export interface ProjectAgentPrompt {
+  project_id: string
+  project_name: string
+  root_folder: null | string
+  prompt: string
+  default_prompt: string
+  exists: boolean
+  path: string
+  updated_at: number
+  source: string
+  replication_failures?: string[]
+}
+
+export interface ProjectAgentScanResponse extends PromptDesignerResponse {
+  files_discovered: number
+  files_read: number
+  warnings: string[]
 }
 
 export interface SkillInfo {

@@ -41,6 +41,11 @@ def _(rid, params: dict) -> dict:
     # and each turn re-bind ETERNAL_HOME. None/own profile → launch (unchanged).
     profile = (params.get("profile") or "").strip() or None
     profile_home = _profile_home(profile)
+    requested_project_id = str(params.get("project_id") or "").strip()
+    project_info = _project_info_for_id(requested_project_id) if requested_project_id else None
+    if requested_project_id and project_info is None:
+        return _err(rid, 5062, "no such active project")
+    project_id = str((project_info or {}).get("id") or "")
 
     # The desktop composer owns its model/effort/fast as plain UI state and ships
     # it on every session.create. Honor each as a PER-SESSION override (built into
@@ -100,6 +105,7 @@ def _(rid, params: dict) -> dict:
             "pending_title": title or None,
             "pending_hidden": is_truthy_value(params.get("hidden", False)),
             "profile_home": str(profile_home) if profile_home is not None else None,
+            "project_id": project_id,
             "running": False,
             "session_key": key,
             "show_reasoning": _load_show_reasoning(),
@@ -110,6 +116,14 @@ def _(rid, params: dict) -> dict:
             "transport": current_transport() or _stdio_transport,
         }
         _register_session_cwd(_sessions[sid])
+
+    if project_id:
+        try:
+            from eternal_cli.project_storage import initialize_project
+
+            initialize_project(project_id)
+        except Exception:
+            logger.warning("project storage initialization failed", exc_info=True)
 
     # NOTE: we intentionally do NOT persist a DB row here. Every TUI/desktop
     # launch (and every "New agent" / draft) opens a session here just to paint
@@ -151,7 +165,8 @@ def _(rid, params: dict) -> dict:
                 "skills": {},
                 "cwd": _sessions[sid]["cwd"],
                 "branch": _git_branch_for_cwd(_sessions[sid]["cwd"]),
-                "project": _project_info_for_cwd(_sessions[sid]["cwd"]),
+                "project_id": project_id or None,
+                "project": project_info or _project_info_for_cwd(_sessions[sid]["cwd"]),
                 "lazy": True,
                 "desktop_contract": DESKTOP_BACKEND_CONTRACT,
                 "profile_name": _response_profile_name(profile),
@@ -482,6 +497,7 @@ def _(rid, params: dict) -> dict:
                 close_on_disconnect=is_truthy_value(params.get("close_on_disconnect", False)),
                 profile_home=profile_home,
                 lazy=True,
+                project_id=str(found.get("project_id") or ""),
             )
             if (live := _claim_or_reuse_live(sid, target, record, lease)) is not None:
                 return _ok(rid, _reuse_live_payload(*live))
@@ -510,7 +526,11 @@ def _(rid, params: dict) -> dict:
                     "message_count": len(display_history) if omit_messages else len(messages),
                     "messages": messages,
                     "messages_omitted": omit_messages,
-                    "info": _lazy_resume_info(cwd, profile=profile),
+                    "info": _lazy_resume_info(
+                        cwd,
+                        profile=profile,
+                        project_id=str(found.get("project_id") or ""),
+                    ),
                     "inflight": None,
                     "running": child_running,
                     "session_key": target,
@@ -550,6 +570,7 @@ def _(rid, params: dict) -> dict:
                 profile_home=profile_home,
                 model_override=overrides.get("model_override"),
                 resume_runtime_overrides=overrides or None,
+                project_id=str(found.get("project_id") or ""),
             )
             record["resume_history_ready"] = threading.Event()
             record["resume_hydrating"] = True
@@ -576,6 +597,7 @@ def _(rid, params: dict) -> dict:
                         model=model_override.get("model") or "",
                         provider=overrides.get("provider_override") or "",
                         profile=profile,
+                        project_id=str(found.get("project_id") or ""),
                     ),
                     "inflight": None,
                     "running": False,
@@ -646,6 +668,7 @@ def _(rid, params: dict) -> dict:
                 profile_home=profile_home,
                 model_override=overrides.get("model_override"),
                 resume_runtime_overrides=overrides or None,
+                project_id=str(found.get("project_id") or ""),
             )
             if (live := _claim_or_reuse_live(sid, target, record, lease)) is not None:
                 return _ok(rid, _reuse_live_payload(*live))
@@ -666,6 +689,7 @@ def _(rid, params: dict) -> dict:
                     model=model_override.get("model") or "",
                     provider=overrides.get("provider_override") or "",
                     profile=profile,
+                    project_id=str(found.get("project_id") or ""),
                 ),
                 "inflight": None,
                 "running": False,
@@ -717,7 +741,12 @@ def _(rid, params: dict) -> dict:
             )
             history = sanitize_replay_history(raw_history)
             messages = [] if omit_messages else _history_to_messages(display_history)
-            tokens = _set_session_context(target)
+            found_project_id = str(found.get("project_id") or "")
+            tokens = (
+                _set_session_context(target, project_id=found_project_id)
+                if found_project_id
+                else _set_session_context(target)
+            )
             try:
                 # Pass the profile's db so the agent persists turns to the right
                 # state.db; home override is active here so config/skills/model
@@ -790,6 +819,8 @@ def _(rid, params: dict) -> dict:
                         cwd=profile_resume_cwd,
                         session_db=db,
                         source=source,
+                        profile_home=str(profile_home) if profile_home is not None else None,
+                        project_id=str(found.get("project_id") or ""),
                     )
                     # Ownership TRANSFER — the registered session's agent now
                     # holds this handle for its whole life, and _init_session
@@ -910,7 +941,7 @@ def _(rid, params: dict) -> dict:
 
 @method("session.workspace.move")
 def _(rid, params: dict) -> dict:
-    """Re-home a STORED session's workspace into another folder/project.
+    """Assign a STORED session to a Project and optionally move its workspace.
 
     Unlike ``session.cwd.set`` (which acts on a live runtime session by its UI
     id), this targets a persisted row by ``session_key`` so the desktop can fix
@@ -929,13 +960,21 @@ def _(rid, params: dict) -> dict:
     target = str(params.get("session_key") or "").strip()
     if not target:
         return _err(rid, 4007, "session_key required")
+    project_id = str(params.get("project_id") or "").strip()
+    project_info = _project_info_for_id(project_id) if project_id else None
+    if project_id and project_info is None:
+        return _err(rid, 5062, "no such active project")
     raw = str(params.get("cwd", "") or "").strip()
-    if not raw:
+    if not raw and not project_id:
         return _err(rid, 4016, "cwd required")
     from eternal_constants import translate_cwd_for_wsl_backend
 
-    resolved = os.path.abspath(os.path.expanduser(translate_cwd_for_wsl_backend(raw)))
-    if not os.path.isdir(resolved):
+    resolved = (
+        os.path.abspath(os.path.expanduser(translate_cwd_for_wsl_backend(raw)))
+        if raw
+        else ""
+    )
+    if resolved and not os.path.isdir(resolved):
         return _err(rid, 4017, f"working directory does not exist: {raw}")
 
     # Snapshot under the lock — concurrent RPCs mutate _sessions (same pattern
@@ -948,8 +987,8 @@ def _(rid, params: dict) -> dict:
                 live, live_sid = sess, sid
                 break
 
-    branch = _git_branch_for_cwd(resolved)
-    root = _git_common_repo_root_for_cwd(resolved)
+    branch = _git_branch_for_cwd(resolved) if resolved else None
+    root = _git_common_repo_root_for_cwd(resolved) if resolved else None
     with _profile_db(params) as db:
         if db is None:
             return _db_unavailable_error(rid, code=5007)
@@ -960,27 +999,45 @@ def _(rid, params: dict) -> dict:
             return _err(rid, 4007, "session not found")
         if row_exists:
             try:
-                db.update_session_cwd(
-                    target, resolved, branch, root, replace_git_meta=True
-                )
+                if resolved:
+                    db.update_session_cwd(
+                        target, resolved, branch, root, replace_git_meta=True
+                    )
+                if project_id:
+                    db.update_session_project(target, project_id)
+                    from eternal_cli.project_storage import export_session, initialize_project
+
+                    initialize_project(project_id)
+                    export_session(project_id, db, target)
             except Exception as e:
                 return _err(rid, 5007, f"move failed: {e}")
 
     if live is not None:
-        try:
-            _set_session_cwd(live, resolved)
-        except ValueError as e:
-            return _err(rid, 4017, str(e))
+        if resolved:
+            try:
+                _set_session_cwd(live, resolved)
+            except ValueError as e:
+                return _err(rid, 4017, str(e))
+        if project_id:
+            live["project_id"] = project_id
         agent = live.get("agent")
         info = _session_info(agent, live) if agent is not None else {
-            "cwd": resolved,
+            "cwd": resolved or str(live.get("cwd") or ""),
             "branch": branch,
-            "project": _project_info_for_cwd(resolved),
+            "project": project_info or _project_info_for_cwd(resolved),
             "lazy": True,
         }
         _emit("session.info", live_sid, info)
 
-    return _ok(rid, {"cwd": resolved, "branch": branch, "git_repo_root": root})
+    return _ok(
+        rid,
+        {
+            "cwd": resolved or str((live or {}).get("cwd") or ""),
+            "branch": branch,
+            "git_repo_root": root,
+            "project_id": project_id or None,
+        },
+    )
 
 
 @method("session.active_list")
@@ -3040,7 +3097,12 @@ def _(rid, params: dict) -> dict:
             else None
         )
         try:
-            tokens = _set_session_context(new_key)
+            branch_project_id = str(session.get("project_id") or "")
+            tokens = (
+                _set_session_context(new_key, project_id=branch_project_id)
+                if branch_project_id
+                else _set_session_context(new_key)
+            )
             try:
                 agent = _make_agent(
                     new_sid,
@@ -3061,6 +3123,7 @@ def _(rid, params: dict) -> dict:
                 session_db=branch_db,
                 source=source,
                 profile_home=parent_home,
+                project_id=str(session.get("project_id") or ""),
             )
             # Ownership TRANSFER — the branched session's agent holds this
             # handle for its whole life and closes it on teardown. Drop is

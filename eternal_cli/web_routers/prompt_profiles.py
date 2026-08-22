@@ -10,6 +10,8 @@ from fastapi import APIRouter, HTTPException
 
 from eternal_cli.web_deps import late
 from eternal_cli.web_models import (
+    ProjectAgentDesignerRequest,
+    ProjectAgentUpdate,
     PromptDesignerRequest,
     PromptProfileActivate,
     PromptProfileCreate,
@@ -220,3 +222,101 @@ async def prompt_designer_message_endpoint(
     except Exception as exc:
         _log.exception("POST /api/prompt-profiles/designer/message failed")
         raise HTTPException(status_code=502, detail=f"Agent Designer could not reach the model: {exc}")
+
+
+@router.get("/api/project-agents/{project_id}")
+async def get_project_agent_endpoint(project_id: str, profile: Optional[str] = None):
+    def _run():
+        from eternal_cli.project_prompt import get_project_prompt
+
+        with _profile_scope(profile):
+            return {"agent": get_project_prompt(project_id)}
+
+    try:
+        return await asyncio.to_thread(_run)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.put("/api/project-agents/{project_id}")
+async def update_project_agent_endpoint(
+    project_id: str, body: ProjectAgentUpdate, profile: Optional[str] = None
+):
+    def _run():
+        from eternal_cli.project_prompt import save_project_prompt
+
+        with _profile_scope(profile):
+            return {
+                "ok": True,
+                "agent": save_project_prompt(project_id, body.prompt, source=body.source),
+            }
+
+    try:
+        return await asyncio.to_thread(_run)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/api/project-agents/{project_id}/designer/message")
+async def project_agent_designer_endpoint(
+    project_id: str,
+    body: ProjectAgentDesignerRequest,
+    profile: Optional[str] = None,
+):
+    def _run():
+        from eternal_cli.project_prompt import get_project_prompt
+        from eternal_cli.prompt_designer import design_project_prompt
+
+        with _profile_scope(profile):
+            agent = get_project_prompt(project_id)
+            current = body.current_prompt or agent["prompt"] or agent["default_prompt"]
+            return design_project_prompt(
+                [message.model_dump() for message in body.messages],
+                current_prompt=current,
+                project_name=agent["project_name"],
+            )
+
+    try:
+        return await asyncio.to_thread(_run)
+    except (FileNotFoundError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        _log.exception("POST project Agent Designer failed")
+        raise HTTPException(status_code=502, detail=f"Project Agent Designer could not reach the model: {exc}")
+
+
+@router.post("/api/project-agents/{project_id}/scan")
+async def scan_project_agent_endpoint(project_id: str, profile: Optional[str] = None):
+    def _run():
+        from eternal_cli.project_prompt import get_project_prompt, scan_project_workspace
+        from eternal_cli.prompt_designer import design_project_prompt
+
+        with _profile_scope(profile):
+            agent = get_project_prompt(project_id)
+            scan = scan_project_workspace(project_id)
+            designed = design_project_prompt(
+                [],
+                current_prompt=agent["prompt"] or agent["default_prompt"],
+                project_name=agent["project_name"],
+                scan_context=scan["context"],
+            )
+            return {
+                **designed,
+                "files_discovered": scan["files_discovered"],
+                "files_read": scan["files_read"],
+                "warnings": scan["warnings"],
+            }
+
+    try:
+        return await asyncio.to_thread(_run)
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        _log.exception("POST project workspace scan failed")
+        raise HTTPException(status_code=502, detail=f"Project scan could not reach the model: {exc}")

@@ -81,6 +81,33 @@ def _real_project_ids(tree):
 # ---------------------------------------------------------------------------
 
 
+def test_explicit_project_id_owns_folderless_session():
+    project = _project("p_writing", "Writing", [])
+    session = _session("", project_id="p_writing")
+
+    tree = pt.build_tree([project], [session], [], hydrate=True)
+    node = next(item for item in tree["projects"] if item["id"] == "p_writing")
+
+    assert node["sessionCount"] == 1
+    assert [item["id"] for item in _sessions_of(node)] == [session["id"]]
+    assert _home(tree) is None
+
+
+def test_explicit_project_id_wins_over_folder_inference():
+    projects = [
+        _project("p_a", "A", ["/work/a"]),
+        _project("p_b", "B", ["/work/b"]),
+    ]
+    session = _session("/work/a", project_id="p_b")
+
+    tree = pt.build_tree(projects, [session], [], hydrate=True)
+
+    assert _sessions_of(next(item for item in tree["projects"] if item["id"] == "p_a")) == []
+    assert [item["id"] for item in _sessions_of(next(item for item in tree["projects"] if item["id"] == "p_b"))] == [
+        session["id"]
+    ]
+
+
 def test_main_checkout_groups_by_recorded_branch_with_stable_lane_ids():
     resolve = _resolver({"/repo": ("/repo", "/repo")})
     sessions = [

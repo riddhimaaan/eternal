@@ -660,6 +660,16 @@ class PromptDesignerRequest(BaseModel):
     current_prompt: str = ""
 
 
+class ProjectAgentUpdate(BaseModel):
+    prompt: str
+    source: str = "manual"
+
+
+class ProjectAgentDesignerRequest(BaseModel):
+    messages: List[PromptDesignerMessage] = []
+    current_prompt: str = ""
+
+
 # --- from web_server.py (originally lines 15831-15834) ---
 
 class SkillToggle(BaseModel):

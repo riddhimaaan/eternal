@@ -148,6 +148,7 @@ import { SidebarLoadMoreRow } from './load-more-row'
 import { orderByIds, reconcileOrderIds, resolveManualSessionOrderIds, sameIds } from './order'
 import { filterSessionsByProfileScope } from './profile-scope'
 import { ProfileRail, PromptProfilePicker } from './profile-switcher'
+import { ProjectAgentDialog } from './project-agent-dialog'
 import { ProjectDialog } from './project-dialog'
 import {
   excludeProjectSessions,
@@ -1869,6 +1870,7 @@ export function ChatSidebar({
           <ProfileRail />
         </div>
       </SidebarContent>
+      <ProjectAgentDialog />
       <ProjectDialog />
       {/* One mount for the whole app. The header of WorktreeDialog tells why. */}
       <WorktreeDialog />

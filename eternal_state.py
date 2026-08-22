@@ -4501,6 +4501,7 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
         parent_session_id: str = None,
         cwd: str = None,
         profile_name: str = None,
+        project_id: str = None,
         git_repo_root: str = None,
         origin_json: str = None,
         display_name: str = None,
@@ -4540,16 +4541,30 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
         crash before the gateway re-records the peer can't strand the child
         without a recoverable routing mapping (#59527).
         """
+        if project_id is None and cwd:
+            try:
+                from eternal_cli import projects_db as pdb
+
+                with pdb.connect_closing() as projects_conn:
+                    project = pdb.project_for_path(projects_conn, cwd)
+                project_id = project.id if project is not None else None
+            except Exception:
+                logger.debug(
+                    "Could not infer Project ownership for session %s",
+                    session_id,
+                    exc_info=True,
+                )
+
         def _do(conn):
             system_prompt_hash = self._store_system_prompt(conn, system_prompt)
             conn.execute(
                 """INSERT INTO sessions (
                    id, source, user_id, session_key, chat_id, chat_type, thread_id,
                    model, model_config, system_prompt, system_prompt_hash,
-                   parent_session_id, cwd, profile_name, git_repo_root,
+                   parent_session_id, cwd, profile_name, project_id, git_repo_root,
                    origin_json, display_name, started_at
                 )
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                    ON CONFLICT(id) DO UPDATE SET
                        model = COALESCE(sessions.model, excluded.model),
                        model_config = CASE
@@ -4588,6 +4603,7 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
                        parent_session_id = COALESCE(sessions.parent_session_id, excluded.parent_session_id),
                        cwd = COALESCE(sessions.cwd, excluded.cwd),
                        profile_name = COALESCE(sessions.profile_name, excluded.profile_name),
+                       project_id = COALESCE(sessions.project_id, excluded.project_id),
                        git_repo_root = COALESCE(sessions.git_repo_root, excluded.git_repo_root),
                        origin_json = COALESCE(sessions.origin_json, excluded.origin_json),
                        display_name = COALESCE(sessions.display_name, excluded.display_name)""",
@@ -4605,6 +4621,7 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
                     parent_session_id,
                     cwd,
                     profile_name,
+                    project_id,
                     git_repo_root,
                     origin_json,
                     display_name,
@@ -4627,7 +4644,10 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
                                           WHERE p.id = sessions.parent_session_id)),
                            profile_name = COALESCE(sessions.profile_name,
                                           (SELECT p.profile_name FROM sessions p
-                                            WHERE p.id = sessions.parent_session_id))
+                                            WHERE p.id = sessions.parent_session_id)),
+                           project_id = COALESCE(sessions.project_id,
+                                        (SELECT p.project_id FROM sessions p
+                                          WHERE p.id = sessions.parent_session_id))
                      WHERE id = ? AND parent_session_id IS NOT NULL""",
                     (session_id,),
                 )
@@ -5932,6 +5952,21 @@ class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)
             return int(value)
 
         return self._execute_write(_do)
+
+    def update_session_project(self, session_id: str, project_id: str) -> bool:
+        """Assign a persisted conversation to an explicit first-class Project."""
+        project_id = str(project_id or "").strip()
+        if not session_id or not project_id:
+            return False
+
+        def _do(conn):
+            cursor = conn.execute(
+                "UPDATE sessions SET project_id = ? WHERE id = ?",
+                (project_id, session_id),
+            )
+            return cursor.rowcount
+
+        return bool(self._execute_write(_do))
 
     def publish_session_git_metadata(
         self,

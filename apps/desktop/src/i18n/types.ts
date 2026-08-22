@@ -1691,10 +1691,13 @@ export interface Translations {
       create: string
       menu: string
       menuRename: string
+      menuProjectAgent: string
       menuAppearance: string
       noColor: string
       menuAddFolder: string
       menuSetActive: string
+      menuSyncStorage: string
+      syncFailed: string
       menuDelete: string
       moveToProject: string
       movedTo: (name: string) => string
@@ -1738,6 +1741,32 @@ export interface Translations {
       reorder: (label: string) => string
       toggle: (label: string, open: boolean) => string
       back: string
+      agentTitle: string
+      agentDescription: string
+      agentLoadFailed: string
+      agentScan: string
+      agentScanning: string
+      agentScanFailed: string
+      agentScanNotice: string
+      agentBuildWithAi: string
+      agentEditManually: string
+      agentThinking: string
+      agentChatPlaceholder: string
+      agentLiveDraft: string
+      agentReviewDraft: string
+      agentDraftPlaceholder: string
+      agentCurrentPrompt: string
+      agentProposedPrompt: string
+      agentRejectDraft: string
+      agentUseDraft: string
+      agentBasePrompt: string
+      agentAdvancedWarning: string
+      agentAppliesToNewChats: string
+      agentSaved: string
+      agentSaveFailed: string
+      agentDesignerFailed: string
+      agentSave: string
+      agentSaving: string
     }
     newSessionIn: (label: string) => string
     showMoreIn: (count: number, label: string) => string

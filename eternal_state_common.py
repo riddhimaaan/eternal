@@ -216,7 +216,7 @@ def _sql_session_last_active_by_id(session_id_expr: str) -> str:
     )
 
 
-SCHEMA_VERSION = 26
+SCHEMA_VERSION = 27
 
 
 # FTS storage-layout version, tracked INDEPENDENTLY of SCHEMA_VERSION in the
@@ -308,6 +308,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     compression_fallback_streak INTEGER NOT NULL DEFAULT 0,
     compression_ineffective_count INTEGER NOT NULL DEFAULT 0,
     profile_name TEXT,
+    project_id TEXT,
     rewind_count INTEGER NOT NULL DEFAULT 0,
     archived INTEGER NOT NULL DEFAULT 0,
     pinned INTEGER NOT NULL DEFAULT 0,

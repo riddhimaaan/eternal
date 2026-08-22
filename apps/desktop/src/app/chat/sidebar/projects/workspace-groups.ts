@@ -1,5 +1,5 @@
-import type { EternalGitWorktree } from '@/global'
 import type { ProjectInfo, SessionInfo } from '@/eternal'
+import type { EternalGitWorktree } from '@/global'
 import { normalize } from '@/lib/text'
 
 import { rankSessions } from '../order'
@@ -381,6 +381,12 @@ function isPathUnder(folder: string, target: string): boolean {
  * only the repo-root AUTO-project fallback needs cwd-under-root confidence.
  */
 export function liveSessionProjectId(session: SessionInfo, explicitProjects: ProjectInfo[]): null | string {
+  const explicitId = (session.project_id || '').trim()
+
+  if (explicitId && explicitProjects.some(project => project.id === explicitId && !project.archived)) {
+    return explicitId
+  }
+
   const cwd = (session.cwd || '').trim()
   // A session may carry only a git_repo_root and no cwd — older/imported rows,
   // or ones captured before cwd tracking. The backend still groups those by repo

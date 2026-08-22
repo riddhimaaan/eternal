@@ -102,6 +102,10 @@ _SESSION_UI_SESSION_ID: ContextVar = ContextVar("ETERNAL_UI_SESSION_ID", default
 _SESSION_MESSAGE_ID: ContextVar = ContextVar("ETERNAL_SESSION_MESSAGE_ID", default=_UNSET)
 
 _SESSION_PROFILE: ContextVar = ContextVar("ETERNAL_SESSION_PROFILE", default=_UNSET)
+# Explicit first-class Project identity. This is separate from cwd because a
+# Project may have no folders or several folders, and concurrent desktop chats
+# can belong to different Projects inside the same profile.
+_SESSION_PROJECT_ID: ContextVar = ContextVar("ETERNAL_PROJECT_ID", default=_UNSET)
 
 # Per-session cron marker. Unlike the process-global legacy env var, this is
 # scoped to one cron job / inbound session. _UNSET preserves the legacy env
@@ -151,6 +155,7 @@ _VAR_MAP = {
     "ETERNAL_UI_SESSION_ID": _SESSION_UI_SESSION_ID,
     "ETERNAL_SESSION_MESSAGE_ID": _SESSION_MESSAGE_ID,
     "ETERNAL_SESSION_PROFILE": _SESSION_PROFILE,
+    "ETERNAL_PROJECT_ID": _SESSION_PROJECT_ID,
     "ETERNAL_CRON_SESSION": _CRON_SESSION,
     "ETERNAL_CRON_AUTO_DELIVER_PLATFORM": _CRON_AUTO_DELIVER_PLATFORM,
     "ETERNAL_CRON_AUTO_DELIVER_CHAT_ID": _CRON_AUTO_DELIVER_CHAT_ID,
@@ -228,6 +233,7 @@ def set_session_vars(
     session_id: str = "",
     message_id: str = "",
     profile: str = "",
+    project_id: str = "",
     cwd: str = "",
     async_delivery: bool = True,
     ui_session_id: str = "",
@@ -273,6 +279,7 @@ def set_session_vars(
         _SESSION_UI_SESSION_ID.set(ui_session_id),
         _SESSION_MESSAGE_ID.set(message_id),
         _SESSION_PROFILE.set(profile),
+        _SESSION_PROJECT_ID.set(project_id),
         _CRON_SESSION.set(cron_session),
         _SESSION_ASYNC_DELIVERY.set(bool(async_delivery)),
     ]
@@ -312,6 +319,7 @@ def clear_session_vars(tokens: list) -> None:
         _SESSION_UI_SESSION_ID,
         _SESSION_MESSAGE_ID,
         _SESSION_PROFILE,
+        _SESSION_PROJECT_ID,
         _CRON_SESSION,
     ):
         var.set("")

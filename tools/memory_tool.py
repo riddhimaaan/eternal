@@ -46,12 +46,47 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+def _current_project_id() -> str:
+    """Resolve explicit desktop ownership or infer terminal ownership by cwd."""
+    try:
+        from gateway.session_context import get_session_env
+
+        project_id = get_session_env("ETERNAL_PROJECT_ID", "").strip()
+        if not project_id:
+            # The desktop binds an explicit Project ID. A terminal session has
+            # no project picker, so infer ownership from its working folder.
+            from agent.runtime_cwd import resolve_agent_cwd
+            from eternal_cli import projects_db as pdb
+
+            with pdb.connect_closing() as conn:
+                project = pdb.project_for_path(conn, str(resolve_agent_cwd()))
+            project_id = project.id if project is not None else ""
+        return project_id
+    except Exception:
+        logger.debug("project memory resolution failed", exc_info=True)
+        return ""
+
+
 # Where memory files live — resolved dynamically so profile overrides
 # (ETERNAL_HOME env var changes) are always respected.  The old module-level
 # constant was cached at import time and could go stale if a profile switch
 # happened after the first import.
 def get_memory_dir() -> Path:
-    """Return the profile-scoped memories directory."""
+    """Return the Project-scoped memory dir, falling back to the profile.
+
+    Project identity is task-local, so simultaneous chats in different
+    Projects never share MEMORY.md or USER.md. Terminal sessions infer their
+    Project from the working folder; unmatched sessions retain the existing
+    profile-scoped behavior.
+    """
+    try:
+        from eternal_cli.project_storage import memory_dir
+
+        project_id = _current_project_id()
+        if project_id and (project_memory := memory_dir(project_id)) is not None:
+            return project_memory
+    except Exception:
+        logger.debug("project memory path resolution failed", exc_info=True)
     return get_eternal_home() / "memories"
 
 # Stable header prefixes for the system-prompt memory blocks rendered by
@@ -364,6 +399,16 @@ class MemoryStore:
         """Persist entries to the appropriate file. Called after every mutation."""
         get_memory_dir().mkdir(parents=True, exist_ok=True)
         self._write_file(self._path_for(target), self._entries_for(target))
+        try:
+            from eternal_cli.project_storage import sync_memory
+
+            project_id = _current_project_id()
+            if project_id:
+                sync_memory(project_id)
+        except Exception:
+            # The primary write already succeeded. An unavailable replica is a
+            # degraded sync state, never a reason to report that memory was lost.
+            logger.warning("project memory replication failed", exc_info=True)
 
     def _entries_for(self, target: str) -> List[str]:
         if target == "user":
@@ -1261,7 +1306,4 @@ registry.register(
     check_fn=check_memory_requirements,
     emoji="🧠",
 )
-
-
-
 

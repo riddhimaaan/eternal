@@ -519,6 +519,7 @@ def init_agent(
     provider_data_collection: str = None,
     openrouter_min_coding_score: Optional[float] = None,
     session_id: str = None,
+    base_prompt_override: str = None,
     tool_progress_callback: callable = None,
     tool_start_callback: callable = None,
     tool_complete_callback: callable = None,
@@ -1876,20 +1877,33 @@ def init_agent(
     # 1-10; Eternal appends live catalogs and runtime context separately. The
     # legacy inline base_prompt remains behavioral-only for compatibility.
     try:
+        from eternal_cli.project_prompt import current_project_id, resolve_project_prompt
         from eternal_cli.prompt_profiles import (
             resolve_agent_base_prompt,
             selected_prompt_has_full_control,
         )
 
-        agent._base_prompt = resolve_agent_base_prompt(
-            _agent_section, home=eternal_home
-        )
-        agent._prompt_profile_full_control = selected_prompt_has_full_control(
-            _agent_section, home=eternal_home
-        )
+        agent._project_id = current_project_id()
+        project_prompt = str(base_prompt_override or "").strip()
+        if not project_prompt:
+            project_prompt = resolve_project_prompt(agent._project_id)
+        if project_prompt:
+            agent._base_prompt = project_prompt
+            agent._prompt_profile_full_control = True
+        else:
+            agent._base_prompt = resolve_agent_base_prompt(
+                _agent_section, home=eternal_home
+            )
+            agent._prompt_profile_full_control = selected_prompt_has_full_control(
+                _agent_section, home=eternal_home
+            )
     except Exception:
         agent._base_prompt = str(_agent_section.get("base_prompt", "") or "").strip()
         agent._prompt_profile_full_control = False
+        agent._project_id = ""
+
+    if agent._project_id and agent._base_prompt:
+        agent._session_init_model_config["project_base_prompt"] = agent._base_prompt
 
     agent._tool_use_enforcement = _agent_section.get("tool_use_enforcement", "auto")
 

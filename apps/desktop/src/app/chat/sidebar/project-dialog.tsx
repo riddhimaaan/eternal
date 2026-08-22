@@ -25,6 +25,7 @@ import {
   closeProjectDialog,
   createProject,
   generateProjectIdea,
+  openProjectAgent,
   pickProjectFolder,
   renameProject
 } from '@/store/projects'
@@ -121,10 +122,27 @@ export function ProjectDialog() {
       return
     }
 
-    // A project owns sessions by folder (cwd-prefix), so creation requires at
-    // least one — a folder-less project couldn't hold a session anyway.
-    if (mode === 'create' && trimmed && folders.length) {
-      await runSubmit(() => createProject({ folders, idea: idea.trim() || undefined, name: trimmed, use: true }))
+    // Folderless Projects are valid: their chats and memory live in the
+    // Project's isolated profile storage until folders are attached later.
+    if (mode === 'create' && trimmed) {
+      if (submitting) {
+        return
+      }
+
+      setSubmitting(true)
+
+      try {
+        const created = await createProject({ folders, idea: idea.trim() || undefined, name: trimmed, use: true })
+        closeProjectDialog()
+
+        if (created) {
+          window.setTimeout(() => openProjectAgent({ id: created.id, name: created.name }), 0)
+        }
+      } catch (err) {
+        notifyError(err, p.createFailed)
+      } finally {
+        setSubmitting(false)
+      }
     }
   }
 
@@ -291,7 +309,7 @@ export function ProjectDialog() {
               {t.common.cancel}
             </Button>
             <Button
-              disabled={submitting || !name.trim() || (mode === 'create' && folders.length === 0)}
+              disabled={submitting || !name.trim()}
               onClick={() => void submit()}
               type="button"
             >

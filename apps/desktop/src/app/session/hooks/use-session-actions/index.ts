@@ -17,6 +17,8 @@ import { $pinnedSessionIds } from '@/store/layout'
 import { clearNotifications, notify, notifyError } from '@/store/notifications'
 import { $activeGatewayProfile, $newChatProfile, ensureGatewayProfile, normalizeProfileKey } from '@/store/profile'
 import {
+  $projectScope,
+  ALL_PROJECTS,
   beginSessionMutation,
   endSessionMutation,
   resolveNewSessionCwd,
@@ -196,6 +198,9 @@ async function desktopSessionCreateParams(cwd: string): Promise<Record<string, u
     cols: 96,
     source: 'desktop',
     ...(cwd && { cwd }),
+    ...($projectScope.get() !== ALL_PROJECTS && $projectScope.get().startsWith('p_')
+      ? { project_id: $projectScope.get() }
+      : {}),
     ...(profile ? { profile } : {}),
     ...(selection.model
       ? { model: selection.model, ...(selection.provider ? { provider: selection.provider } : {}) }

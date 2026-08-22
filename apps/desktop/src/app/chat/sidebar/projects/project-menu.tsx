@@ -22,14 +22,18 @@ import { Popover, PopoverAnchor, PopoverContent } from '@/components/ui/popover'
 import { useI18n } from '@/i18n'
 import { cn } from '@/lib/utils'
 import { $panesFlipped, dismissAutoProject } from '@/store/layout'
+import { notifyError } from '@/store/notifications'
 import {
+  $projects,
   copyPath,
   deleteProject,
   openProjectAddFolder,
+  openProjectAgent,
   openProjectRename,
   revealPath,
   setActiveProject,
-  setProjectAppearance
+  setProjectAppearance,
+  syncProjectStorage
 } from '@/store/projects'
 
 import { ProjectAppearancePicker } from './project-appearance'
@@ -54,8 +58,10 @@ function useProjectActions({
 }) {
   const { t } = useI18n()
   const p = t.sidebar.projects
+  const projects = useStore($projects)
   const target = { id: project.id, name: project.label }
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
+  const storage = projects.find(item => item.id === project.id)?.storage
 
   const removeAuto = () => {
     dismissAutoProject(project.id)
@@ -79,6 +85,12 @@ function useProjectActions({
   const identityItems: ActionItemSpec[] = project.isAuto
     ? []
     : [
+        {
+          icon: 'hubot',
+          key: 'project-agent',
+          label: p.menuProjectAgent,
+          onSelect: () => openProjectAgent(target)
+        },
         { icon: 'edit', key: 'rename', label: p.menuRename, onSelect: () => openProjectRename(target) },
         {
           icon: 'new-folder',
@@ -92,6 +104,12 @@ function useProjectActions({
           key: 'set-active',
           label: p.menuSetActive,
           onSelect: () => void setActiveProject(project.id)
+        },
+        {
+          icon: 'sync',
+          key: 'sync-storage',
+          label: `${p.menuSyncStorage}${storage ? ` (${storage.synced}/${storage.total})` : ''}`,
+          onSelect: () => void syncProjectStorage(project.id).catch(error => notifyError(error, p.syncFailed))
         }
       ]
 
@@ -242,9 +260,9 @@ export function ProjectMenu({
             )
           ) : (
             <>
-              {identityItems.slice(0, 1).map(item => renderActionItem(DROPDOWN_KIT, item))}
+              {identityItems.slice(0, 2).map(item => renderActionItem(DROPDOWN_KIT, item))}
               {appearanceItem}
-              {identityItems.slice(1).map(item => renderActionItem(DROPDOWN_KIT, item))}
+              {identityItems.slice(2).map(item => renderActionItem(DROPDOWN_KIT, item))}
               <DropdownMenuSeparator />
             </>
           )}
