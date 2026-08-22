@@ -14634,15 +14634,18 @@ ipcMain.handle('eternal:deep-link-ready', () => {
   return { ok: true }
 })
 
-function registerDeepLinkProtocol() {
+function registerDevelopmentDeepLinkProtocol() {
+  // Packaged installers register `eternal://` from package.json's `protocols`
+  // declaration. Re-registering it here is redundant and, on Linux, can block
+  // the main process for several seconds before the first window is created.
+  // Development launches have no installer, so keep the explicit registration
+  // for them and include the entry script Electron needs to relaunch the app.
+  if (!process.defaultApp || process.argv.length < 2) {
+    return
+  }
+
   try {
-    if (process.defaultApp && process.argv.length >= 2) {
-      // Dev: register with the electron exec path + entry script so the OS can
-      // relaunch us with the URL.
-      app.setAsDefaultProtocolClient(ETERNAL_PROTOCOL, process.execPath, [path.resolve(process.argv[1])])
-    } else {
-      app.setAsDefaultProtocolClient(ETERNAL_PROTOCOL)
-    }
+    app.setAsDefaultProtocolClient(ETERNAL_PROTOCOL, process.execPath, [path.resolve(process.argv[1])])
   } catch (err) {
     rememberLog(`[deeplink] protocol registration failed: ${err.message}`)
   }
@@ -14724,7 +14727,7 @@ app.whenReady().then(() => {
   installDownloadHandling()
   registerMediaProtocol()
   installEmbedReferer()
-  registerDeepLinkProtocol()
+  registerDevelopmentDeepLinkProtocol()
   ensureWslWindowsFonts()
   configureSpellChecker()
   registerPowerResumeListeners()
