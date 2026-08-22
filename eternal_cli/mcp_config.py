@@ -1143,7 +1143,7 @@ def mcp_command(args):
         run_picker()
         print(color("  Commands:", Colors.CYAN))
         _info("eternal mcp                                    Open the catalog picker (default)")
-        _info("eternal mcp catalog                            List Nous-approved MCPs")
+        _info("eternal mcp catalog                            List curated MCPs")
         _info("eternal mcp install <name>                     Install a catalog MCP")
         _info("eternal mcp serve                              Run as MCP server")
         _info("eternal mcp add <name> --url <endpoint>        Add a custom MCP server")

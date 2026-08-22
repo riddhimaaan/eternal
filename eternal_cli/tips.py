@@ -227,8 +227,8 @@ TIPS = [
     "browser_vision with annotate=true overlays numbered labels on interactive elements.",
 
     # --- MCP ---
-    "eternal mcp opens an interactive picker of Nous-approved MCPs you can install in one keystroke.",
-    "eternal mcp catalog lists Nous-approved MCP servers shipped with the repo.",
+    "eternal mcp opens an interactive picker of curated MCPs you can install in one keystroke.",
+    "eternal mcp catalog lists curated MCP servers shipped with the repo.",
     "eternal mcp install <name> installs a catalog entry, prompts for credentials, and lets you pick which of its tools to enable.",
     "MCP servers are configured in config.yaml — both stdio and HTTP transports supported.",
     "Per-server tool filtering: tools.include whitelists and tools.exclude blacklists specific tools.",

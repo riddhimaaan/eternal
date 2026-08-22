@@ -1,4 +1,4 @@
-"""MCP catalog — curated, Nous-approved MCP servers shipped with the repo.
+"""MCP catalog — curated MCP servers shipped with the repo.
 
 Mirrors the optional-skills/ pattern: each catalog entry lives under
 ``optional-mcps/<name>/manifest.yaml`` and ships disabled. Users discover
