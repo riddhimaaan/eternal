@@ -47,6 +47,7 @@ const resolveMode = (mode: ThemeMode, systemDark = matchesQuery('(prefers-color-
 
 const normalizeSkin = (name: string | null): string => {
   const canonical = name ? (LEGACY_SKIN_ALIASES[name] ?? name) : null
+
   return canonical && resolveTheme(canonical) && !RETIRED_SKINS.has(canonical) ? canonical : DEFAULT_SKIN_NAME
 }
 
@@ -356,6 +357,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setThemeNameState(skinPref.resolve(profileKey))
     setModeState(modePref.resolve(profileKey))
   }, [profileKey])
+
+  // A custom Eternal skin may be restored from the backend after React's first
+  // paint. Re-resolve the saved choice when any theme registry changes so a
+  // boot-time fallback does not become the session's permanent theme. The
+  // backend cache normally makes the palette available before this point; this
+  // effect also repairs the first launch after upgrading from older versions.
+  useEffect(() => {
+    const persisted = skinPref.resolve(profileKey)
+
+    if (persisted !== themeName) {
+      setThemeNameState(persisted)
+    }
+  }, [backendThemes, profileKey, registryVersion, themeName, userThemes])
 
   // Appearance is per-profile localStorage, and every desktop window is another
   // renderer on the same origin — so a switch made in the HUD (or any peer

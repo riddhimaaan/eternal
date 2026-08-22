@@ -19,12 +19,40 @@
 import type { EternalSkin } from '@eternal/shared/skin'
 import { atom } from 'nanostores'
 
+import { readJson, writeJson } from '@/lib/storage'
+
 import { BUILTIN_THEMES } from './presets'
 import { skinToDesktopTheme } from './skin'
 import type { DesktopTheme } from './types'
 
+const BACKEND_THEMES_KEY = 'eternal-desktop-backend-themes-v1'
+
+function readCachedBackendThemes(): Record<string, DesktopTheme> {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+
+  const cached = readJson<Record<string, DesktopTheme>>(BACKEND_THEMES_KEY)
+
+  if (!cached || Array.isArray(cached)) {
+    return {}
+  }
+
+  return Object.fromEntries(
+    Object.entries(cached).filter(
+      ([name, theme]) =>
+        !BUILTIN_THEMES[name] &&
+        theme?.name === name &&
+        typeof theme.label === 'string' &&
+        typeof theme.colors?.background === 'string' &&
+        typeof theme.colors?.foreground === 'string' &&
+        typeof theme.colors?.primary === 'string'
+    )
+  )
+}
+
 /** Skins pushed by the backend, keyed by name. Merged by `listAllThemes`. */
-export const $backendThemes = atom<Record<string, DesktopTheme>>({})
+export const $backendThemes = atom<Record<string, DesktopTheme>>(readCachedBackendThemes())
 
 /** One-shot skin name the ThemeProvider should switch to (it clears this). */
 export const $pendingSkinApply = atom<string | null>(null)
@@ -42,6 +70,7 @@ export function __resetBackendSkinSync(): void {
   lastSynced = null
   $backendThemes.set({})
   $pendingSkinApply.set(null)
+  writeJson(BACKEND_THEMES_KEY, null)
 }
 
 /**
@@ -73,7 +102,9 @@ export function ingestBackendSkin(skin: EternalSkin | undefined | null, { apply 
     const current = $backendThemes.get()
 
     if (JSON.stringify(current[name]) !== JSON.stringify(theme)) {
-      $backendThemes.set({ ...current, [name]: theme })
+      const next = { ...current, [name]: theme }
+      $backendThemes.set(next)
+      writeJson(BACKEND_THEMES_KEY, next)
     }
   }
 

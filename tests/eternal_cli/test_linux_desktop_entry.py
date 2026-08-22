@@ -52,7 +52,7 @@ def test_install_writes_entry_with_absolute_exec_and_icon(tmp_path, xdg_home, mo
 
     # Exec must be the absolute path of the resolved binary. The launcher
     # runs with a minimal PATH, so a bare `eternal` would not resolve.
-    assert values["Exec"] == f"{eternal_bin} desktop"
+    assert values["Exec"] == f"{eternal_bin} desktop --skip-build"
     assert Path(values["Exec"].split(" ")[0]).is_absolute()
 
     # Icon must be an absolute path to the real icon in the checkout.
@@ -84,7 +84,7 @@ def test_exec_falls_back_to_interpreter_module(tmp_path, xdg_home, monkeypatch):
     entry = lde.install_desktop_entry(root)
     exec_line = _parse(entry.read_text(encoding="utf-8"))["Exec"]
 
-    assert exec_line.endswith("-m eternal_cli.main desktop")
+    assert exec_line.endswith("-m eternal_cli.main desktop --skip-build")
     assert Path(exec_line.split(" ")[0]).is_absolute()
 
 
@@ -202,4 +202,4 @@ def test_exec_arg_quoting_handles_spaces(tmp_path, xdg_home, monkeypatch):
     entry = lde.install_desktop_entry(root)
     exec_line = _parse(entry.read_text(encoding="utf-8"))["Exec"]
 
-    assert exec_line == f'"{spaced}" desktop'
+    assert exec_line == f'"{spaced}" desktop --skip-build'

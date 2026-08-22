@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { $backendThemes, $pendingSkinApply, __resetBackendSkinSync, ingestBackendSkin } from './backend-sync'
 
@@ -15,6 +15,18 @@ describe('ingestBackendSkin', () => {
 
     expect($backendThemes.get().neon?.name).toBe('neon')
     expect($pendingSkinApply.get()).toBeNull()
+    expect(JSON.parse(window.localStorage.getItem('eternal-desktop-backend-themes-v1') ?? '{}').neon?.name).toBe(
+      'neon'
+    )
+  })
+
+  it('restores a backend theme before the backend reconnects on restart', async () => {
+    ingestBackendSkin(skin('eternal-mono'), { apply: false })
+
+    vi.resetModules()
+    const restarted = await import('./backend-sync')
+
+    expect(restarted.$backendThemes.get()['eternal-mono']?.name).toBe('eternal-mono')
   })
 
   it('applies a new skin name once', () => {

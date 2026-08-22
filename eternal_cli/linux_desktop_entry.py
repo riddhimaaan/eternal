@@ -9,7 +9,9 @@ Two values must be absolute for the entry to work:
 
   - ``Exec`` — the launcher runs without shell ``PATH`` customizations, so
     a bare ``eternal desktop`` fails when eternal lives in ``~/.local/bin``
-    or a venv. Resolve the real binary and write its full path.
+    or a venv. Resolve the real binary and write its full path. The desktop
+    entry also passes ``--skip-build``: clicking an installed application must
+    open the last good package immediately, never start a developer rebuild.
   - ``Icon`` — an unqualified icon name needs an indexed icon theme. The
     spec allows an absolute path instead, so point at the app icon in the
     checkout. Do not copy the icon: ``Exec`` already depends on that tree.
@@ -58,19 +60,27 @@ def icon_path(project_root: Path) -> Path:
 
 
 def resolve_exec_command() -> str:
-    """Build the absolute ``Exec=`` command line for ``eternal desktop``.
+    """Build the fast absolute ``Exec=`` command for the desktop launcher.
 
     Prefer the real ``eternal`` executable (argv[0] or PATH). When Eternal
     runs as a module with no launcher installed, use the current
-    interpreter, also absolute.
+    interpreter, also absolute. ``--skip-build`` keeps menu launches separate
+    from source/update builds; those still use bare ``eternal desktop`` or
+    ``eternal desktop --force-build`` explicitly.
     """
     from eternal_cli.relaunch import resolve_eternal_bin
 
     bin_path = resolve_eternal_bin()
     if bin_path:
-        argv = [str(Path(bin_path).resolve()), "desktop"]
+        argv = [str(Path(bin_path).resolve()), "desktop", "--skip-build"]
     else:
-        argv = [str(Path(sys.executable).resolve()), "-m", "eternal_cli.main", "desktop"]
+        argv = [
+            str(Path(sys.executable).resolve()),
+            "-m",
+            "eternal_cli.main",
+            "desktop",
+            "--skip-build",
+        ]
     return " ".join(_quote_exec_arg(a) for a in argv)
 
 
