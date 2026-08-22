@@ -99,13 +99,6 @@ import {
 } from './connection-registry'
 import { describeCrashReason, installCrashForensics } from './crash-forensics'
 import { decideCrashReporting, scrubEvent } from './crash-reporting'
-import { LICENSE_PUBLIC_KEY_PEM, LICENSE_PURCHASE_URL, LICENSE_SERVICE_URL } from './license-config'
-import {
-  activateLicenseKey,
-  confirmLicenseWithService,
-  evaluateStoredLicense,
-  licenseNeedsConfirmation
-} from './license-store'
 import { adoptServedDashboardToken } from './dashboard-token'
 import { loadOrCreateInstallationId, sshOwnershipId } from './desktop-installation'
 import { formatDesktopLogLine } from './desktop-log-line'
@@ -197,6 +190,13 @@ import { snapHudBounds } from './hud-snap'
 import { createHudSnapShortcut } from './hud-snap-shortcut'
 import { buildHudWindowUrl } from './hud-url'
 import { imageContextMenuItems } from './image-context-menu'
+import { LICENSE_PUBLIC_KEY_PEM, LICENSE_PURCHASE_URL, LICENSE_SERVICE_URL } from './license-config'
+import {
+  activateLicenseKey,
+  confirmLicenseWithService,
+  evaluateStoredLicense,
+  licenseNeedsConfirmation
+} from './license-store'
 import { createLinkTitleWindow, guardLinkTitleSession, readLinkTitleWindowTitle } from './link-title-window'
 import { decideLinuxSandbox } from './linux-sandbox'
 import { ensureMainWindow } from './main-window-lifecycle'
@@ -900,6 +900,7 @@ function scheduleLicenseChecks(): void {
   check()
   setInterval(check, LICENSE_CHECK_INTERVAL_MS).unref?.()
 }
+
 const DESKTOP_BACKEND_OWNERSHIP_PATH = path.join(app.getPath('userData'), 'backend-ownership.json')
 // active-profile.json records which Eternal profile the desktop launches its
 // local backend as. When set, startEternal() passes `eternal --profile <name>
