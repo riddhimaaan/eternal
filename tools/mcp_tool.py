@@ -7168,6 +7168,71 @@ def get_mcp_status() -> List[dict]:
     return result
 
 
+def get_live_mcp_probe_result(server_name: str) -> Optional[dict]:
+    """Return probe-shaped data from this process's managed MCP connection.
+
+    The Desktop health checker calls the dashboard ``/test`` endpoint as soon
+    as its gateway opens.  At that point background MCP discovery may already
+    own a live HTTP/OAuth connection.  Starting a second temporary client for
+    the same server makes both clients share the OAuth provider lifecycle and
+    can tear down the real connection while the probe exits.  Reuse the
+    runtime's authoritative state instead.
+
+    ``None`` means this process has never managed the named server, so callers
+    may still perform a standalone probe (the dashboard-only/manual-test path).
+    A managed-but-connecting or failed server returns a non-auth-specific
+    failure and must not be probed concurrently.
+    """
+    with _lock:
+        server = _servers.get(server_name)
+        connecting = server_name in _server_connecting
+        error = _server_connect_errors.get(server_name)
+
+        if server is None:
+            if connecting:
+                return {
+                    "ok": False,
+                    "error": "MCP runtime connection is still starting.",
+                    "tools": [],
+                }
+            if error is not None:
+                return {"ok": False, "error": error, "tools": []}
+            return None
+
+        session = server.session
+        tools = tuple(server._tools)
+
+    if session is None:
+        return {
+            "ok": False,
+            "error": error or "MCP runtime connection is reconnecting.",
+            "tools": [],
+        }
+
+    result_tools = []
+    for tool in tools:
+        description = getattr(tool, "description", "") or ""
+        if len(description) > 80:
+            description = description[:77] + "..."
+        item = {
+            "name": str(getattr(tool, "name", "")),
+            "description": description,
+        }
+        try:
+            item["schema_chars"] = len(
+                json.dumps(
+                    _convert_mcp_schema(server_name, tool),
+                    separators=(",", ":"),
+                    default=str,
+                )
+            )
+        except Exception:
+            pass
+        result_tools.append(item)
+
+    return {"ok": True, "tools": result_tools}
+
+
 def probe_mcp_server_tools() -> Dict[str, List[tuple]]:
     """Temporarily connect to configured MCP servers and list their tools.
 

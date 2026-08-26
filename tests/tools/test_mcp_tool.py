@@ -50,6 +50,75 @@ def _make_mock_server(name, session=None, tools=None):
     return server
 
 
+class TestLiveMCPProbeResult:
+    def test_connected_server_reuses_runtime_tools(self):
+        import tools.mcp_tool as mcp_tool
+
+        server = _make_mock_server(
+            "connect",
+            session=object(),
+            tools=[_make_mcp_tool("search", "Search connected apps")],
+        )
+        with mcp_tool._lock:
+            previous = mcp_tool._servers.get("connect")
+            mcp_tool._servers["connect"] = server
+
+        try:
+            result = mcp_tool.get_live_mcp_probe_result("connect")
+        finally:
+            with mcp_tool._lock:
+                if previous is None:
+                    mcp_tool._servers.pop("connect", None)
+                else:
+                    mcp_tool._servers["connect"] = previous
+
+        assert result is not None
+        assert result["ok"] is True
+        assert result["tools"][0]["name"] == "search"
+        assert result["tools"][0]["description"] == "Search connected apps"
+        assert result["tools"][0]["schema_chars"] > 0
+
+    def test_managed_reconnecting_server_never_requests_second_probe(self):
+        import tools.mcp_tool as mcp_tool
+
+        server = _make_mock_server("connect", session=None)
+        with mcp_tool._lock:
+            previous = mcp_tool._servers.get("connect")
+            mcp_tool._servers["connect"] = server
+
+        try:
+            result = mcp_tool.get_live_mcp_probe_result("connect")
+        finally:
+            with mcp_tool._lock:
+                if previous is None:
+                    mcp_tool._servers.pop("connect", None)
+                else:
+                    mcp_tool._servers["connect"] = previous
+
+        assert result == {
+            "ok": False,
+            "error": "MCP runtime connection is reconnecting.",
+            "tools": [],
+        }
+
+    def test_unmanaged_server_falls_back_to_standalone_probe(self):
+        import tools.mcp_tool as mcp_tool
+
+        with mcp_tool._lock:
+            previous = mcp_tool._servers.pop("unmanaged", None)
+            mcp_tool._server_connecting.discard("unmanaged")
+            old_error = mcp_tool._server_connect_errors.pop("unmanaged", None)
+
+        try:
+            assert mcp_tool.get_live_mcp_probe_result("unmanaged") is None
+        finally:
+            with mcp_tool._lock:
+                if previous is not None:
+                    mcp_tool._servers["unmanaged"] = previous
+                if old_error is not None:
+                    mcp_tool._server_connect_errors["unmanaged"] = old_error
+
+
 class TestFilterMCPChildren:
     def test_filters_gateway_children_by_argv_marker(self, monkeypatch):
         """Non-MCP children start with an interpreter/binary, not the marker."""

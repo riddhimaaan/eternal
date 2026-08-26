@@ -7,6 +7,7 @@ reads/writes land in the REQUESTED profile, the dashboard's own profile
 stays untouched, and the chat PTY env is scoped via ETERNAL_HOME.
 """
 import json
+from types import SimpleNamespace
 
 import pytest
 import yaml
@@ -106,6 +107,60 @@ class TestProfileScopedEnv:
 
 
 class TestProfileScopedMcp:
+
+    def test_default_mcp_health_reuses_runtime_connection(
+        self, client, isolated_profiles, monkeypatch
+    ):
+        """Desktop startup health must not open a second OAuth client while
+        background discovery already owns the live runtime connection."""
+        import eternal_cli.mcp_config as mcp_config
+        import eternal_cli.mcp_startup as mcp_startup
+        import tools.mcp_tool as mcp_tool
+
+        (isolated_profiles["default"] / "config.yaml").write_text(
+            "mcp_servers:\n  connect:\n    url: https://connect.example/mcp\n    auth: oauth\n",
+            encoding="utf-8",
+        )
+        joined = []
+        monkeypatch.setattr(
+            mcp_startup, "join_mcp_discovery", lambda timeout=None: joined.append(timeout) or True
+        )
+        live_server = SimpleNamespace(
+            session=object(),
+            _tools=[
+                SimpleNamespace(
+                    name="search",
+                    description="Search apps",
+                    inputSchema={"type": "object", "properties": {}},
+                )
+            ],
+        )
+        with mcp_tool._lock:
+            previous_server = mcp_tool._servers.get("connect")
+            mcp_tool._servers["connect"] = live_server
+        monkeypatch.setattr(mcp_config, "_oauth_tokens_present", lambda name: True)
+
+        def forbidden_probe(*args, **kwargs):
+            raise AssertionError("startup health opened a duplicate MCP client")
+
+        monkeypatch.setattr(mcp_config, "_probe_single_server", forbidden_probe)
+
+        try:
+            response = client.post("/api/mcp/servers/connect/test")
+        finally:
+            with mcp_tool._lock:
+                if previous_server is None:
+                    mcp_tool._servers.pop("connect", None)
+                else:
+                    mcp_tool._servers["connect"] = previous_server
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["ok"] is True
+        assert body["tools"][0]["name"] == "search"
+        assert body["tools"][0]["description"] == "Search apps"
+        assert body["tools"][0]["schema_chars"] > 0
+        assert joined == [30.0]
 
     def test_mcp_bearer_secret_is_profile_scoped(self, client, isolated_profiles):
         secret = "worker-only-secret"

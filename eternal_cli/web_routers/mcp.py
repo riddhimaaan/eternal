@@ -157,7 +157,13 @@ async def remove_mcp_server(name: str, profile: Optional[str] = None):
 
 @router.post("/api/mcp/servers/{name}/test")
 async def test_mcp_server(name: str, profile: Optional[str] = None):
-    """Connect to the server, list its tools, disconnect.  Returns tool list."""
+    """Return server capabilities, reusing a managed runtime connection.
+
+    Desktop opens this endpoint during its startup health sweep while the
+    backend is already discovering MCP servers.  Wait for that discovery off
+    the web event loop and read its authoritative state; only create a
+    temporary connection when this process has no runtime state for the server.
+    """
     from eternal_cli.mcp_config import (
         _get_mcp_servers,
         _oauth_tokens_present,
@@ -177,6 +183,34 @@ async def test_mcp_server(name: str, profile: Optional[str] = None):
     # with no token — a false green. Require a token on disk for it, matching the
     # /auth verification (some providers don't enforce auth on tools/list).
     needs_oauth_token = servers[name].get("auth") == "oauth"
+
+    # The process-global runtime registry belongs to this backend's launch
+    # profile.  Explicit profile-management requests may target another home,
+    # so they retain the standalone, profile-scoped probe below.
+    if profile is None:
+        try:
+            from eternal_cli.mcp_startup import join_mcp_discovery
+            from tools.mcp_tool import get_live_mcp_probe_result
+
+            # Discovery itself has bounded connect attempts.  Joining here is
+            # off the FastAPI event loop, so other Desktop requests stay live.
+            await asyncio.to_thread(join_mcp_discovery, 30.0)
+            live_result = get_live_mcp_probe_result(name)
+        except Exception:
+            live_result = None
+
+        if live_result is not None:
+            if live_result.get("ok") and needs_oauth_token:
+                token_present = await asyncio.to_thread(
+                    lambda: _oauth_tokens_present(name)
+                )
+                if not token_present:
+                    return {
+                        "ok": False,
+                        "error": "OAuth authentication required — no token found.",
+                        "tools": [],
+                    }
+            return live_result
 
     def _probe_scoped():
         # Home-only scope (contextvar), NOT _profile_scope. A probe blocks for
