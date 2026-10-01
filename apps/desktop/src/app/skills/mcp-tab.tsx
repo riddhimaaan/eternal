@@ -17,12 +17,12 @@ import { Textarea } from '@/components/ui/textarea'
 import { Tip } from '@/components/ui/tooltip'
 import {
   authMcpServer,
+  type EternalGateway,
   getActionStatus,
   getLogs,
   getMcpCatalog,
   getMcpOAuthFlow,
   getUsageAnalytics,
-  type EternalGateway,
   installMcpCatalogEntry,
   type McpCatalogEntry,
   type McpTestResult,
@@ -50,13 +50,14 @@ import { PanelAddButton, PanelEmpty } from '../overlays/panel'
 import { prettyName } from '../settings/helpers'
 import { useDeepLinkHighlight } from '../settings/use-deep-link-highlight'
 
+import { McpServerForm } from './mcp-server-form'
+
 type McpServers = Record<string, Record<string, unknown>>
 
 // The editor always speaks the ecosystem's mcp.json document format — names
 // are the JSON keys, transport is inferred from `command` vs `url` — so any
 // README's "add this to your mcp.json" snippet pastes verbatim. Storage stays
 // the config.yaml `mcp_servers` map (CLI/TUI untouched).
-const STARTER_ENTRY = { command: 'npx', args: ['-y', '@modelcontextprotocol/server-filesystem', '/path/to/dir'] }
 
 const pretty = (value: unknown) => JSON.stringify(value, null, 2)
 const wrapDoc = (entries: McpServers) => pretty({ mcpServers: entries })
@@ -404,6 +405,7 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
   const staleErrorStamp = useRef<null | number>(null)
 
   const [saving, setSaving] = useState(false)
+  const [addingServer, setAddingServer] = useState(false)
   const [probes, setProbes] = useState<Record<string, Probe>>({})
   const probesRef = useRef(probes)
   probesRef.current = probes
@@ -495,9 +497,9 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
 
   // Mirror a list-side mutation into a dirty draft without losing the user's
   // other edits. Unparseable drafts are left alone — save resolves the race.
-  const patchDraft = (mutate: (doc: McpServers) => McpServers) => {
+  const patchDraft = (mutate: (doc: McpServers) => McpServers, source = draft) => {
     try {
-      setDraft(wrapDoc(mutate(parseServersDoc(draft))))
+      setDraft(wrapDoc(mutate(parseServersDoc(source))))
       setDocVersion(version => version + 1)
     } catch {
       // Draft is mid-edit / invalid JSON; the user's text wins until save.
@@ -559,6 +561,7 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
     setToolCalls30d(null)
     setCursor(0)
     setAuthing(null)
+    setAddingServer(false)
     setDirty(false)
     setDraft('')
     setDocVersion(version => version + 1)
@@ -623,7 +626,7 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
   // First-class OAuth: opens the system browser, blocks until the flow lands a
   // token (verified on disk — a friendly tools/list is not proof), then the
   // auth result doubles as the probe (it carries the tool list).
-  const authenticate = async (serverName: string) => {
+  const authenticate = async (serverName: string, context = { servers, draft, dirty }) => {
     const epoch = profileEpoch.current
     setAuthing(serverName)
     setProbes(current => ({ ...current, [serverName]: 'probing' }))
@@ -646,20 +649,23 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
       setProbes(current => ({ ...current, [serverName]: result }))
       // Cache under the POST-auth fingerprint (auth: oauth) on success — that's
       // the config the mount effect will read back, so it hits this entry.
-      const probedConfig = result.ok ? { ...servers[serverName], auth: 'oauth' } : servers[serverName]
+      const probedConfig = result.ok ? { ...context.servers[serverName], auth: 'oauth' } : context.servers[serverName]
       probeCache.set(probeKey(serverName, probedConfig, scopeProfileKey), { at: Date.now(), result })
 
       if (result.ok) {
         // The endpoint persisted `auth: oauth` — mirror it locally.
-        const nextServers = { ...servers, [serverName]: { ...servers[serverName], auth: 'oauth' } }
+        const nextServers = { ...context.servers, [serverName]: { ...context.servers[serverName], auth: 'oauth' } }
         setConfig(current => (current ? { ...current, mcp_servers: nextServers } : current))
 
         // Mirror `auth: oauth` into the editor too. If we only reset a clean
         // draft, a dirty draft keeps the pre-auth text and the next Save would
         // drop the freshly-persisted auth field — so patch the dirty draft in
         // place instead of clobbering the user's other edits.
-        if (dirty) {
-          patchDraft(doc => (doc[serverName] ? { ...doc, [serverName]: { ...doc[serverName], auth: 'oauth' } } : doc))
+        if (context.dirty) {
+          patchDraft(
+            doc => (doc[serverName] ? { ...doc, [serverName]: { ...doc[serverName], auth: 'oauth' } } : doc),
+            context.draft
+          )
         } else {
           resetDraft(nextServers)
         }
@@ -763,7 +769,7 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
     }
 
     setConfig(current => ({ ...current, mcp_servers: nextServers }))
-    void silentReload()
+    await silentReload()
 
     return true
   }
@@ -891,40 +897,69 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
     }
   }
 
-  // "+" seeds a starter entry into the document (unique key) and marks it
-  // dirty — naming happens in the editor, like every other mcp.json.
   const addServer = () => {
-    if (profilePending) {
+    if (!profilePending && !saving) {
+      setAddingServer(true)
+    }
+  }
+
+  const saveFormServer = async (name: string, entry: Record<string, unknown>) => {
+    if (profilePending || saving) {
       return
     }
 
-    let base: McpServers
+    // Merge into both backend truth and the editor draft, preserving unrelated edits.
+    const base = dirty ? parseServersDoc(draft) : servers
+
+    if (name in base || name in servers) {
+      throw new Error(m.duplicateName)
+    }
+
+    const epoch = profileEpoch.current
+    const nextServers = { ...servers, [name]: entry }
+    setSaving(true)
 
     try {
-      base = parseServersDoc(draft)
-    } catch {
-      base = { ...servers }
-    }
+      if (!(await persist(nextServers))) {
+        return
+      }
 
-    let key = 'my-server'
+      const nextDraft = wrapDoc({ ...base, [name]: entry })
+      setDraft(nextDraft)
+      setDocVersion(version => version + 1)
+      setCursor(0)
+      setAddingServer(false)
+      notify({ kind: 'success', title: m.savedTitle, message: m.savedMessage(name) })
 
-    for (let i = 2; key in base; i++) {
-      key = `my-server-${i}`
-    }
+      if (typeof entry.url === 'string') {
+        setProbes(current => ({ ...current, [name]: 'probing' }))
+        let result: McpTestResult
 
-    const nextDraft = wrapDoc({ ...base, [key]: STARTER_ENTRY })
-    setDraft(nextDraft)
-    setDirty(true)
-    setDocVersion(version => version + 1)
+        try {
+          result = await testMcpServer(name, profile ?? undefined)
+        } catch (err) {
+          if (profileEpoch.current !== epoch) {
+            return
+          }
 
-    // Focus the fresh block once the editor remounts with the new doc.
-    const from = nextDraft.indexOf(`"${key}"`)
+          result = { ok: false, error: err instanceof Error ? err.message : String(err), tools: [] }
+          notifyError(err, name)
+        }
 
-    if (from >= 0) {
-      requestAnimationFrame(() => {
-        editorApi.current?.setCursor(from + 1)
-        setCursor(from + 1)
-      })
+        if (profileEpoch.current !== epoch) {
+          return
+        }
+
+        probeCache.set(probeKey(name, entry, scopeProfileKey), { at: Date.now(), result })
+        setProbes(current => ({ ...current, [name]: result }))
+
+        if (!result.ok && !entry.headers && NEEDS_AUTH_RE.test(result.error ?? '')) {
+          // Use the just-saved context: this render's servers/draft omit the new entry.
+          await authenticate(name, { servers: nextServers, draft: nextDraft, dirty })
+        }
+      }
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -1060,6 +1095,9 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
 
   return (
     <div className={cn('grid h-full min-h-0 grid-cols-1', MASTER_DETAIL_WIDE_COLS)}>
+      {addingServer && (
+        <McpServerForm busy={saving || profilePending} onClose={() => setAddingServer(false)} onSave={saveFormServer} />
+      )}
       {/* LEFT: the focused block's server config, or the unified fleet+catalog list. */}
       <aside className="flex min-h-0 flex-col overflow-hidden border-r border-(--ui-stroke-quaternary)">
         {selected && activeEntry ? (

@@ -731,6 +731,29 @@ export interface Translations {
       reloadFailed: string
       savedTitle: string
       savedMessage: (name: string) => string
+      formTitle: string
+      formDescription: string
+      connectionType: string
+      serverUrl: string
+      launchCommand: string
+      arguments: string
+      environment: string
+      passthrough: string
+      workingDirectory: string
+      headers: string
+      environmentHeaders: string
+      bearerVariable: string
+      addValue: string
+      keyLabel: string
+      valueLabel: string
+      variableLabel: string
+      duplicateName: string
+      requiredDetails: string
+      invalidUrl: string
+      incompleteRows: string
+      duplicateKeys: string
+      environmentHint: string
+      advancedConfig: string
       newServer: string
       reload: string
       reloading: string

@@ -284,3 +284,16 @@ def test_post_probe_not_attempted_for_valid_head():
         asyncio.run(task._preflight_content_type(f"{base}/mcp", timeout=5.0))
     assert record == ["HEAD"]
     assert "POST" not in record
+
+
+@pytest.mark.parametrize("post_status", [401, 403])
+def test_html_landing_page_with_post_auth_challenge(post_status):
+    """A protected POST endpoint must reach the handshake, not fail as HTML."""
+    task = _make_task("oauth-discovery")
+    record = []
+    with _serve(_handler(
+        status=200, content_type="text/html", post_status=post_status,
+        record=record,
+    )) as base:
+        asyncio.run(task._preflight_content_type(f"{base}/mcp", timeout=5.0))
+    assert record == ["HEAD", "POST"]

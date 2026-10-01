@@ -96,6 +96,7 @@ Thread safety:
 
 import asyncio
 import contextvars
+from contextlib import contextmanager
 import concurrent.futures
 import errno
 import fnmatch
@@ -150,6 +151,22 @@ _OSV_MALWARE_CHECK_TIMEOUT_S = 12.0
 
 _mcp_stderr_log_fh: Optional[Any] = None
 _mcp_stderr_log_lock = threading.Lock()
+_active_mcp_probes = 0
+
+
+@contextmanager
+def _mcp_probe_lifetime():
+    """Keep the shared loop alive until every temporary probe has finished."""
+    global _active_mcp_probes
+    with _lock:
+        _active_mcp_probes += 1
+    try:
+        yield
+    finally:
+        with _lock:
+            _active_mcp_probes -= 1
+        _stop_mcp_loop_if_idle()
+
 
 
 def _get_mcp_stderr_log() -> Any:
@@ -2939,6 +2956,11 @@ class MCPServerTask:
                             '"version":"0.1"}}}'
                         ),
                     )
+                    # GET/HEAD may be a landing page while the MCP POST
+                    # challenges for OAuth. Let the real handshake report the
+                    # auth challenge rather than rejecting the HTML page.
+                    if post_resp.status_code in (401, 403):
+                        return
                     if 200 <= post_resp.status_code < 300:
                         post_ct = (
                             post_resp.headers.get("content-type", "")
@@ -7258,45 +7280,44 @@ def probe_mcp_server_tools() -> Dict[str, List[tuple]]:
     if not enabled:
         return {}
 
-    _ensure_mcp_loop()
+    with _mcp_probe_lifetime():
+        _ensure_mcp_loop()
 
-    result: Dict[str, List[tuple]] = {}
-    probed_servers: List[MCPServerTask] = []
+        result: Dict[str, List[tuple]] = {}
+        probed_servers: List[MCPServerTask] = []
 
-    async def _probe_all():
-        names = list(enabled.keys())
-        coros = []
-        for name, cfg in enabled.items():
-            ct = cfg.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT)
-            coros.append(asyncio.wait_for(_connect_server(name, cfg), timeout=ct))
+        async def _probe_all():
+            names = list(enabled.keys())
+            coros = []
+            for name, cfg in enabled.items():
+                ct = cfg.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT)
+                coros.append(asyncio.wait_for(_connect_server(name, cfg), timeout=ct))
 
-        outcomes = await asyncio.gather(*coros, return_exceptions=True)
+            outcomes = await asyncio.gather(*coros, return_exceptions=True)
 
-        for name, outcome in zip(names, outcomes):
-            if isinstance(outcome, Exception):
-                logger.debug("Probe: failed to connect to '%s': %s", name, outcome)
-                continue
-            probed_servers.append(outcome)
-            tools = []
-            for t in outcome._tools:
-                desc = getattr(t, "description", "") or ""
-                tools.append((t.name, desc))
-            result[name] = tools
+            for name, outcome in zip(names, outcomes):
+                if isinstance(outcome, Exception):
+                    logger.debug("Probe: failed to connect to '%s': %s", name, outcome)
+                    continue
+                probed_servers.append(outcome)
+                tools = []
+                for t in outcome._tools:
+                    desc = getattr(t, "description", "") or ""
+                    tools.append((t.name, desc))
+                result[name] = tools
 
-        # Shut down all probed connections
-        await asyncio.gather(
-            *(s.shutdown() for s in probed_servers),
-            return_exceptions=True,
-        )
+            # Shut down all probed connections
+            await asyncio.gather(
+                *(s.shutdown() for s in probed_servers),
+                return_exceptions=True,
+            )
 
-    try:
-        _run_on_mcp_loop(_probe_all, timeout=120)
-    except Exception as exc:
-        logger.debug("MCP probe failed: %s", exc)
-    finally:
-        _stop_mcp_loop_if_idle()
+        try:
+            _run_on_mcp_loop(_probe_all, timeout=120)
+        except Exception as exc:
+            logger.debug("MCP probe failed: %s", exc)
 
-    return result
+        return result
 
 
 # Serializes in-place mutation of an agent's tool snapshot.  The reload RPC,
@@ -7790,7 +7811,7 @@ def _stop_mcp_loop(*, only_if_idle: bool = False) -> bool:
     """Stop the background event loop and join its thread."""
     global _mcp_loop, _mcp_thread
     with _lock:
-        if only_if_idle and (_servers or _server_connecting):
+        if only_if_idle and (_servers or _server_connecting or _active_mcp_probes):
             logger.debug("Leaving MCP event loop running; active servers are registered or connecting")
             return False
         loop = _mcp_loop

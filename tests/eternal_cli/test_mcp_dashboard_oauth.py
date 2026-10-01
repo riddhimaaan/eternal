@@ -139,3 +139,46 @@ def test_flow_status_does_not_expose_authorization_code():
     assert body["status"] == "approved"
     assert "secret-code" not in response.text
     assert "secret-state" not in response.text
+
+
+def test_concurrent_connection_checks_keep_shared_loop_alive(monkeypatch):
+    import asyncio
+    import httpx
+    from eternal_cli import web_server
+    from tools import mcp_tool
+
+    monkeypatch.setattr(mcp_tool, "_servers", {})
+    monkeypatch.setattr(mcp_tool, "_server_connecting", set())
+    monkeypatch.setattr(mcp_tool, "get_live_mcp_probe_result", lambda _name: None)
+    monkeypatch.setattr("eternal_cli.mcp_startup.join_mcp_discovery", lambda *_args: None)
+    monkeypatch.setattr("eternal_cli.mcp_config._get_mcp_servers", lambda: {
+        "reports": {"url": "https://mcp.example/mcp"}
+    })
+    calls = 0
+
+    async def connect(_name, _cfg):
+        nonlocal calls
+        calls += 1
+        order = calls
+        while calls < 3:
+            await asyncio.sleep(0.001)
+        await asyncio.sleep(order * 0.05)
+        raise ConnectionError("401 Unauthorized")
+
+    monkeypatch.setattr(mcp_tool, "_connect_server", connect)
+
+    async def requests():
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=web_server.app, raise_app_exceptions=False),
+            base_url="http://127.0.0.1",
+            headers={web_server._SESSION_HEADER_NAME: web_server._SESSION_TOKEN},
+        ) as client:
+            return await asyncio.gather(*(
+                client.post("/api/mcp/servers/reports/test") for _ in range(3)
+            ))
+
+    results = asyncio.run(requests())
+    assert calls == 3
+    assert [response.status_code for response in results] == [200, 200, 200]
+    assert all(response.json()["error"] == "401 Unauthorized" for response in results)
+    assert mcp_tool._active_mcp_probes == 0

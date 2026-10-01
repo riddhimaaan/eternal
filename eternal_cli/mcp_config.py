@@ -295,7 +295,7 @@ def _probe_single_server(
         _ensure_mcp_loop,
         _run_on_mcp_loop,
         _connect_server,
-        _stop_mcp_loop_if_idle,
+        _mcp_probe_lifetime,
         _parse_boolish,
     )
 
@@ -307,98 +307,97 @@ def _probe_single_server(
         except (TypeError, ValueError):
             connect_timeout = 30.0
 
-    _ensure_mcp_loop()
-    tools_found: List[Tuple[str, str]] = []
+    with _mcp_probe_lifetime():
+        _ensure_mcp_loop()
+        tools_found: List[Tuple[str, str]] = []
 
-    async def _probe():
-        server = await asyncio.wait_for(
-            _connect_server(name, config), timeout=connect_timeout
-        )
-        try:
-            for t in server._tools:
-                desc = getattr(t, "description", "") or ""
-                # Truncate long descriptions for display
-                if len(desc) > 80:
-                    desc = desc[:77] + "..."
-                tools_found.append((t.name, desc))
-            if details is not None:
-                # Per-tool registry-schema sizes so the desktop can estimate the
-                # per-call token cost a server adds. Uses the SAME converted
-                # schema the agent registers (name + description + normalized
-                # parameters) — i.e. what actually rides on every model call.
-                # Additive-optional wire field: best-effort, absent on failure.
-                try:
-                    import json as _json
+        async def _probe():
+            server = await asyncio.wait_for(
+                _connect_server(name, config), timeout=connect_timeout
+            )
+            try:
+                for t in server._tools:
+                    desc = getattr(t, "description", "") or ""
+                    # Truncate long descriptions for display
+                    if len(desc) > 80:
+                        desc = desc[:77] + "..."
+                    tools_found.append((t.name, desc))
+                if details is not None:
+                    # Per-tool registry-schema sizes so the desktop can estimate the
+                    # per-call token cost a server adds. Uses the SAME converted
+                    # schema the agent registers (name + description + normalized
+                    # parameters) — i.e. what actually rides on every model call.
+                    # Additive-optional wire field: best-effort, absent on failure.
+                    try:
+                        import json as _json
 
-                    from tools.mcp_tool import _convert_mcp_schema
+                        from tools.mcp_tool import _convert_mcp_schema
 
-                    details["schema_chars"] = {
-                        t.name: len(
-                            _json.dumps(
-                                _convert_mcp_schema(name, t),
-                                separators=(",", ":"),
-                                default=str,
+                        details["schema_chars"] = {
+                            t.name: len(
+                                _json.dumps(
+                                    _convert_mcp_schema(name, t),
+                                    separators=(",", ":"),
+                                    default=str,
+                                )
                             )
-                        )
-                        for t in server._tools
-                    }
-                except Exception:  # pragma: no cover — display-only extra
-                    pass
-            if details is not None:
-                # Gate the capability probes exactly like runtime utility-tool
-                # registration (tools.mcp_tool._select_utility_schemas):
-                #   1. honour the user's tools.prompts / tools.resources config
-                #   2. only call a family the server actually advertises.
-                # Without this the "Test server" probe fired prompts/list and
-                # resources/list at every server unconditionally — so a server
-                # that rejects those methods (e.g. Unreal's MCP server, which
-                # answers "Call to unknown method 'prompts/list'") logged a hard
-                # error, and setting tools.prompts: false did NOT suppress it.
-                tools_filter = config.get("tools") or {}
-                prompts_enabled = _parse_boolish(
-                    tools_filter.get("prompts"), default=True
-                )
-                resources_enabled = _parse_boolish(
-                    tools_filter.get("resources"), default=True
-                )
-                advertised_caps = getattr(
-                    getattr(server, "initialize_result", None),
-                    "capabilities",
-                    None,
-                )
-
-                def _advertises(cap_attr: str) -> bool:
-                    # When no capability info was captured (legacy fixtures /
-                    # older servers) preserve the old always-try behaviour.
-                    if advertised_caps is None:
-                        return True
-                    return getattr(advertised_caps, cap_attr, None) is not None
-
-                # Capability probes are best-effort: servers without the
-                # capability raise, which just means "0".
-                if prompts_enabled and _advertises("prompts"):
-                    try:
-                        result = await server.session.list_prompts()
-                        details["prompts"] = len(result.prompts)
-                    except Exception:
+                            for t in server._tools
+                        }
+                    except Exception:  # pragma: no cover — display-only extra
                         pass
-                if resources_enabled and _advertises("resources"):
-                    try:
-                        result = await server.session.list_resources()
-                        details["resources"] = len(result.resources)
-                    except Exception:
-                        pass
-        finally:
-            await server.shutdown()
+                if details is not None:
+                    # Gate the capability probes exactly like runtime utility-tool
+                    # registration (tools.mcp_tool._select_utility_schemas):
+                    #   1. honour the user's tools.prompts / tools.resources config
+                    #   2. only call a family the server actually advertises.
+                    # Without this the "Test server" probe fired prompts/list and
+                    # resources/list at every server unconditionally — so a server
+                    # that rejects those methods (e.g. Unreal's MCP server, which
+                    # answers "Call to unknown method 'prompts/list'") logged a hard
+                    # error, and setting tools.prompts: false did NOT suppress it.
+                    tools_filter = config.get("tools") or {}
+                    prompts_enabled = _parse_boolish(
+                        tools_filter.get("prompts"), default=True
+                    )
+                    resources_enabled = _parse_boolish(
+                        tools_filter.get("resources"), default=True
+                    )
+                    advertised_caps = getattr(
+                        getattr(server, "initialize_result", None),
+                        "capabilities",
+                        None,
+                    )
 
-    try:
-        _run_on_mcp_loop(_probe(), timeout=connect_timeout + 10)
-    except BaseException as exc:
-        raise _unwrap_exception_group(exc) from None
-    finally:
-        _stop_mcp_loop_if_idle()
+                    def _advertises(cap_attr: str) -> bool:
+                        # When no capability info was captured (legacy fixtures /
+                        # older servers) preserve the old always-try behaviour.
+                        if advertised_caps is None:
+                            return True
+                        return getattr(advertised_caps, cap_attr, None) is not None
 
-    return tools_found
+                    # Capability probes are best-effort: servers without the
+                    # capability raise, which just means "0".
+                    if prompts_enabled and _advertises("prompts"):
+                        try:
+                            result = await server.session.list_prompts()
+                            details["prompts"] = len(result.prompts)
+                        except Exception:
+                            pass
+                    if resources_enabled and _advertises("resources"):
+                        try:
+                            result = await server.session.list_resources()
+                            details["resources"] = len(result.resources)
+                        except Exception:
+                            pass
+            finally:
+                await server.shutdown()
+
+        try:
+            _run_on_mcp_loop(_probe(), timeout=connect_timeout + 10)
+        except BaseException as exc:
+            raise _unwrap_exception_group(exc) from None
+
+        return tools_found
 
 
 def _oauth_tokens_present(name: str) -> bool:
