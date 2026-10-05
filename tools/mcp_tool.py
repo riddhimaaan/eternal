@@ -3458,6 +3458,10 @@ class MCPServerTask:
         self._reconnect_retries = 0
         initial_retries = 0
         backoff = 1.0
+        # True once a transport has returned cleanly, i.e. a session was
+        # established at least once. ``_ready`` is cleared before every
+        # rebuild, so it cannot tell a reconnect from a first connect.
+        had_session = False
 
         while True:
             try:
@@ -3472,6 +3476,7 @@ class MCPServerTask:
                 #    touch the retry counters — this is not a failure.
                 if self._shutdown_event.is_set():
                     break
+                had_session = True
                 if lifecycle_reason == "recycle":
                     logger.info(
                         "MCP server '%s': stdio session recycled after %s; "
@@ -3576,7 +3581,13 @@ class MCPServerTask:
                 # before giving up. A transient DNS/network blip at startup
                 # should not permanently kill the server.
                 # (Ported from Kilo Code's MCP resilience fix.)
-                if not self._ready.is_set():
+                #
+                # A failed rebuild of a server that already had a session is
+                # a reconnect, not a first connect, even though ``_ready`` was
+                # cleared for the rebuild: route it to the reconnect ladder
+                # below instead of the short initial ladder + park, which hid
+                # a briefly restarting remote server's tools for 5 minutes.
+                if not self._ready.is_set() and not had_session:
                     if failure_class == "permanent":
                         # Deterministic failure (bad command, non-MCP URL,
                         # 401/403): every retry hits the same wall. Park
