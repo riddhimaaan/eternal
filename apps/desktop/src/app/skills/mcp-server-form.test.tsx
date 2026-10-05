@@ -33,6 +33,16 @@ describe('custom MCP form', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(close).toHaveBeenCalledOnce()
   })
+  it('rejects a pasted secret in the bearer variable field', async () => {
+    const save = vi.fn()
+    render(<McpServerForm busy={false} onClose={vi.fn()} onSave={save} />)
+    input('Name', 'research')
+    input('Server URL', 'https://example.com/mcp')
+    input('Bearer token environment variable', 'sk-live.abc123')
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+    expect((await screen.findByRole('alert')).textContent).toContain('variable name')
+    expect(save).not.toHaveBeenCalled()
+  })
   it('saves a local command with arguments as separate values', async () => {
     const save = vi.fn().mockResolvedValue(undefined)
     render(<McpServerForm busy={false} onClose={vi.fn()} onSave={save} />)

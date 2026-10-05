@@ -1121,6 +1121,51 @@ def _render_mcp_resource_block(block, server_name: str = "") -> str:
 # ---------------------------------------------------------------------------
 
 
+class MissingMcpSecretError(ValueError):
+    """Raised when a server's headers reference an unset ``${VAR}``.
+
+    Unresolved placeholders are left as literal text by
+    :func:`_interpolate_env_vars`, so the server received e.g.
+    ``Authorization: Bearer ${API_KEY}``, answered 401, and the failure was
+    reported (and offered "Sign in") as if it were an OAuth problem.
+    """
+
+
+def _unset_env_refs(values: Any) -> List[str]:
+    """Names of ``${VAR}`` refs in a mapping's string values that are unset.
+
+    Refs are re-checked against the secret scope, so a config that skipped
+    interpolation is not misreported.
+    """
+    from agent.secret_scope import get_secret as _get_secret
+
+    names: Set[str] = set()
+    if not isinstance(values, dict):
+        return []
+    for value in values.values():
+        if not isinstance(value, str):
+            continue
+        for match in _ENV_VAR_PATTERN.finditer(value):
+            if _context_var_value(match.group(1).strip()) is not None:
+                continue
+            name = _env_ref_name(match.group(1))
+            if name and not _get_secret(name, None):
+                names.add(name)
+    return sorted(names)
+
+
+def _missing_secret_error(server_name: str, names: List[str]) -> MissingMcpSecretError:
+    from eternal_constants import display_eternal_home
+
+    refs = ", ".join("${" + n + "}" for n in names)
+    return MissingMcpSecretError(
+        f"MCP server '{server_name}' uses {refs} in its headers, but "
+        f"{'it is' if len(names) == 1 else 'they are'} not set. Add "
+        f"{'it' if len(names) == 1 else 'them'} to {display_eternal_home()}/.env, "
+        "then reload MCP."
+    )
+
+
 class InvalidMcpUrlError(ValueError):
     """Raised when a remote MCP server's ``url`` cannot be parsed as http(s)://.
 
@@ -1209,7 +1254,7 @@ def _classify_mcp_failure(exc: BaseException) -> str:
     root = _unwrap_exception_group(exc)
     if _is_auth_error(root):
         return "permanent"
-    if isinstance(root, (NonMcpEndpointError, InvalidMcpUrlError)):
+    if isinstance(root, (NonMcpEndpointError, InvalidMcpUrlError, MissingMcpSecretError)):
         return "permanent"
     # Stdio command missing: FileNotFoundError, or an OSError carrying ENOENT.
     if isinstance(root, FileNotFoundError):
@@ -3418,6 +3463,18 @@ class MCPServerTask:
                 self._ready.set()
                 return
 
+            # Fail fast on a header that references an unset ${VAR}: sending
+            # the literal placeholder only earns a 401 that looks like an
+            # OAuth problem. Reload re-reads .env, so fixing it needs no
+            # restart.
+            missing = _unset_env_refs(config.get("headers"))
+            if missing:
+                exc = _missing_secret_error(self.name, missing)
+                logger.warning("%s", exc)
+                self._error = exc
+                self._ready.set()
+                return
+
             # Pre-flight content-type probe (Streamable HTTP only; SSE is
             # exercised by its own client and legitimately serves
             # text/event-stream). A URL pointed at a web-app root returns
@@ -3444,6 +3501,17 @@ class MCPServerTask:
                     self._error = exc
                     self._ready.set()
                     return
+
+        if not self._is_http():
+            missing_env = _unset_env_refs(config.get("env"))
+            if missing_env:
+                # Advisory only: a stdio server may tolerate an optional
+                # variable, so don't block the start.
+                logger.warning(
+                    "MCP server '%s': env references unset variable(s) %s; "
+                    "they are passed through as literal text",
+                    self.name, ", ".join(missing_env),
+                )
 
         self._reconnect_retries = 0
         initial_retries = 0

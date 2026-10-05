@@ -17,6 +17,8 @@ interface Pair {
   value: string
 }
 
+const ENV_VAR_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/
+
 export function McpServerForm({ busy, onClose, onSave }: Props) {
   const { t } = useI18n()
   const m = t.settings.mcp
@@ -104,10 +106,25 @@ export function McpServerForm({ busy, onClose, onSave }: Props) {
         throw new Error(m.requiredDetails)
       }
 
+      // Fields wrapped in ${...} must hold a variable name. A pasted secret
+      // would be saved as "${sk-...}", resolve to nothing, and reach the
+      // server as literal text, which then shows up as an auth failure.
+      const envName = (value: string) => {
+        if (!ENV_VAR_NAME.test(value.trim())) {
+          throw new Error(m.invalidVariableName)
+        }
+
+        return value.trim()
+      }
+
       const pairs = (rows: Pair[], fromEnv = false) => {
         const entries = rows.map(row => {
           if (!row.key.trim() || !row.value.trim()) {
             throw new Error(m.incompleteRows)
+          }
+
+          if (fromEnv) {
+            envName(row.value)
           }
 
           return [row.key.trim(), fromEnv ? '${' + row.value.trim() + '}' : row.value]
@@ -151,7 +168,7 @@ export function McpServerForm({ busy, onClose, onSave }: Props) {
         const headers = {
           ...direct,
           ...indirect,
-          ...(fields.bearer.trim() ? { Authorization: 'Bearer ${' + fields.bearer.trim() + '}' } : {})
+          ...(fields.bearer.trim() ? { Authorization: 'Bearer ${' + envName(fields.bearer) + '}' } : {})
         }
 
         entry = { url: fields.url.trim(), transport: 'http', ...(keys.length ? { headers } : {}) }
@@ -162,7 +179,7 @@ export function McpServerForm({ busy, onClose, onSave }: Props) {
 
         const env = pairs([
           ...groups.env,
-          ...groups.pass.map(row => ({ key: row.value.trim(), value: '${' + row.value.trim() + '}' }))
+          ...groups.pass.map(row => ({ key: envName(row.value), value: '${' + row.value.trim() + '}' }))
         ])
 
         entry = {

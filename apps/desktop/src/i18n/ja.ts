@@ -880,6 +880,7 @@ export const ja = defineLocale({
       requiredDetails: 'サーバー名と接続情報を入力してください。',
       invalidUrl: '有効な HTTP または HTTPS URL を入力してください。',
       incompleteRows: '各行を完成させるか削除してください。',
+      invalidVariableName: 'シークレットそのものではなく、MCP_BEARER_TOKEN のような変数名を入力してください。シークレットはその名前で Eternal の .env に保存してください。',
       duplicateKeys: 'キーは重複できません。',
       environmentHint: 'Eternal が読み取れる環境変数名を使用してください。',
       advancedConfig: '高度な JSON 設定は引き続きエディターで利用できます。',

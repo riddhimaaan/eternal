@@ -854,6 +854,7 @@ export const zhHant = defineLocale({
       requiredDetails: '請輸入伺服器名稱和連接資訊。',
       invalidUrl: '請輸入有效的 HTTP 或 HTTPS URL。',
       incompleteRows: '請填寫完整或刪除空列。',
+      invalidVariableName: '請輸入變數名稱（例如 MCP_BEARER_TOKEN），而不是密鑰本身。請把密鑰以該名稱寫入 Eternal 的 .env。',
       duplicateKeys: '每個鍵必須唯一。',
       environmentHint: '請使用 Eternal 已可讀取的環境變數名稱。',
       advancedConfig: '仍可在編輯器中使用進階 JSON 設定。',

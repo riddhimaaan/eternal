@@ -35,7 +35,7 @@ import { brandFor, brandGlyphStyle } from '@/lib/mcp-brands'
 import { estimateServerTokens, serverUsageCount } from '@/lib/mcp-cost'
 import { completeMcpDesktopOAuth } from '@/lib/mcp-dashboard-oauth'
 import { type McpImportEntry, parseMcpImport } from '@/lib/mcp-import'
-import { NEEDS_AUTH_RE, PROBE_TTL_MS, probeCache, probeKey, serverFingerprint } from '@/lib/mcp-probe-cache'
+import { classifyProbe, PROBE_TTL_MS, probeCache, probeKey, serverFingerprint } from '@/lib/mcp-probe-cache'
 import { countEnabledTools, isToolEnabled, toggleToolInServer } from '@/lib/mcp-tool-filter'
 import { cn } from '@/lib/utils'
 import { notify, notifyError } from '@/store/notifications'
@@ -165,11 +165,7 @@ function statusOf(server: Record<string, unknown>, probe: Probe | undefined): Se
     return 'unknown'
   }
 
-  if (probe.ok) {
-    return 'ok'
-  }
-
-  return NEEDS_AUTH_RE.test(probe.error ?? '') ? 'needs-auth' : 'error'
+  return classifyProbe(probe, server)
 }
 
 const STATUS_DOT: Record<ServerStatus, string> = {
@@ -953,7 +949,7 @@ export function McpTab({ gateway, profile }: { gateway: EternalGateway | null; p
         probeCache.set(probeKey(name, entry, scopeProfileKey), { at: Date.now(), result })
         setProbes(current => ({ ...current, [name]: result }))
 
-        if (!result.ok && !entry.headers && NEEDS_AUTH_RE.test(result.error ?? '')) {
+        if (classifyProbe(result, entry) === 'needs-auth') {
           // Use the just-saved context: this render's servers/draft omit the new entry.
           await authenticate(name, { servers: nextServers, draft: nextDraft, dirty })
         }
