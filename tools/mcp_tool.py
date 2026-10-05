@@ -799,6 +799,62 @@ async def _paginate_full_list(list_method, items_attr: str, server_name: str):
     return items
 
 
+def _version_key(name: str) -> tuple:
+    """Sort key for version directory names like ``v20.11.1``."""
+    parts = re.findall(r"\d+", name)
+    return tuple(int(p) for p in parts)
+
+
+def _user_tool_dirs() -> List[str]:
+    """Per-user tool directories a minimal (GUI / service) PATH misses.
+
+    Ordered roughly by how specific the install is. Only existing
+    directories are returned. Node version managers have no stable "current"
+    directory, so nvm uses its newest installed version and fnm its default
+    alias.
+    """
+    home = os.path.expanduser("~")
+    eternal_home = os.path.expanduser(
+        os.getenv("ETERNAL_HOME", os.path.join(home, ".eternal"))
+    )
+    dirs = [
+        os.path.join(eternal_home, "node", "bin"),
+        os.path.join(home, ".local", "bin"),          # uv / uvx, pipx
+        os.path.join(home, ".cargo", "bin"),
+        os.path.join(home, ".bun", "bin"),
+        os.path.join(home, ".deno", "bin"),
+        os.path.join(home, ".volta", "bin"),
+        os.path.join(home, ".asdf", "shims"),
+        os.path.join(home, ".local", "share", "mise", "shims"),
+    ]
+    nvm_dir = os.getenv("NVM_DIR") or os.path.join(home, ".nvm")
+    versions = os.path.join(nvm_dir, "versions", "node")
+    try:
+        newest = max(os.listdir(versions), key=_version_key)
+        dirs.append(os.path.join(versions, newest, "bin"))
+    except (OSError, ValueError):
+        pass
+    for fnm_dir in (
+        os.getenv("FNM_DIR") or "",
+        os.path.join(home, ".local", "share", "fnm"),
+        os.path.join(home, "Library", "Application Support", "fnm"),
+        os.path.join(home, ".fnm"),
+    ):
+        if fnm_dir:
+            dirs.append(os.path.join(fnm_dir, "aliases", "default", "bin"))
+    dirs += ["/opt/homebrew/bin", "/usr/local/bin"]
+    return [d for d in dirs if os.path.isdir(d)]
+
+
+def _find_in_user_tool_dirs(command: str) -> Optional[str]:
+    """Return the first executable ``command`` in :func:`_user_tool_dirs`."""
+    for directory in _user_tool_dirs():
+        candidate = os.path.join(directory, command)
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
 def _resolve_stdio_command(command: str, env: dict) -> tuple[str, dict]:
     """Resolve a stdio MCP command against the exact subprocess environment.
 
@@ -834,6 +890,15 @@ def _resolve_stdio_command(command: str, env: dict) -> tuple[str, dict]:
                         os.environ["PATHEXT"] = _saved
         if which_hit:
             resolved_command = which_hit
+        elif os.name == "posix" and (
+            user_hit := _find_in_user_tool_dirs(resolved_command)
+        ):
+            # GUI launches (desktop app from Finder/Dock/a launcher) and
+            # service managers inherit a minimal PATH that misses per-user
+            # tool installs, so the same config works in a terminal but not
+            # in the app. The command's directory is prepended to PATH below,
+            # so e.g. npx's ``#!/usr/bin/env node`` finds nvm's node too.
+            resolved_command = user_hit
         elif resolved_command in {"npx", "npm", "node"}:
             eternal_home = os.path.expanduser(
                 os.getenv(
@@ -2758,6 +2823,15 @@ class MCPServerTask:
         # elsewhere, matching existing killpg-based cleanup's platform scope.
         # Applied AFTER the OSV preflight so the check inspects the real
         # package, not the watchdog wrapper.
+        # The watchdog re-execs the real command inside its own child, so a
+        # missing binary would only surface as "connection closed" and be
+        # retried forever. Report it here as a permanent "not found".
+        if os.name == "posix" and not shutil.which(command, path=safe_env.get("PATH")):
+            raise FileNotFoundError(
+                errno.ENOENT,
+                f"MCP server '{self.name}': command not found",
+                command,
+            )
         command, args = _wrap_command_with_watchdog(command, args)
 
         server_params = StdioServerParameters(
