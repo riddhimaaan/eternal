@@ -13,7 +13,7 @@ source: https://developer.paypal.com/tools/mcp-server/
 # exchange, and refresh.
 transport:
   type: http
-  url: https://mcp.paypal.com/sse
+  url: https://mcp.paypal.com/mcp
 
 auth:
   type: oauth

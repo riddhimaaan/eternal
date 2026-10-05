@@ -624,6 +624,31 @@ class TestShippedCatalog:
             assert entry.description
             assert entry.transport.type in ("stdio", "http")
 
+    def test_http_manifests_do_not_point_at_legacy_sse_endpoints(self, monkeypatch):
+        """Contract: an ``http`` catalog transport is installed as Streamable
+        HTTP (``_build_server_config`` never writes ``transport: sse``), and the
+        client has no automatic SSE fallback. A legacy ``/sse`` URL therefore
+        installs a server that can never connect.
+        """
+        monkeypatch.delenv("ETERNAL_OPTIONAL_MCPS", raising=False)
+        from urllib.parse import urlparse
+
+        from eternal_cli.mcp_catalog import _catalog_root, _parse_manifest
+
+        root = _catalog_root()
+        if not root.exists():
+            pytest.skip("optional-mcps/ not present in this checkout")
+
+        offenders = []
+        for m in root.glob("*/manifest.yaml"):
+            entry = _parse_manifest(m)
+            if entry.transport.type != "http":
+                continue
+            path = urlparse(entry.transport.url or "").path.rstrip("/")
+            if path.endswith("/sse"):
+                offenders.append(f"{entry.name}: {entry.transport.url}")
+        assert not offenders, offenders
+
     def test_all_shipped_manifests_are_version_locked(self, monkeypatch):
         """Contract: catalog entries follow the same supply-chain rules as
         pyproject dependencies — everything Eternal fetches/launches is pinned
