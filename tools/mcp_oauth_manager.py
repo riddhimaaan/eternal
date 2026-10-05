@@ -198,27 +198,9 @@ def _make_eternal_provider_class() -> Optional[type]:
             raise OAuthTokenError(f"Token exchange failed ({response.status_code})")
 
         async def _handle_refresh_response(self, response) -> bool:
-            """Accept any 2xx refresh response and avoid logging token bodies."""
-            if not (200 <= response.status_code < 300):
-                logger.warning("Token refresh failed: %s", response.status_code)
-                self.context.clear_tokens()
-                return False
+            from tools.mcp_oauth import handle_refresh_response
 
-            from mcp.shared.auth import OAuthToken
-            from httpx import HTTPError
-            from pydantic import ValidationError
-
-            try:
-                content = await response.aread()
-                token_response = OAuthToken.model_validate_json(content)
-                self.context.current_tokens = token_response
-                self.context.update_token_expiry(token_response)
-                await self.context.storage.set_tokens(token_response)
-                return True
-            except (HTTPError, ValidationError):
-                logger.warning("Invalid refresh response: %s", response.status_code)
-                self.context.clear_tokens()
-                return False
+            return await handle_refresh_response(self, response)
 
         async def _initialize(self) -> None:
             """Load stored tokens + client info AND seed token_expiry_time.
@@ -491,6 +473,7 @@ def _make_eternal_provider_class() -> Optional[type]:
             # contract. Regression from PR #11383 caught by
             # tests/tools/test_mcp_oauth_bidirectional.py.
             inner = super().async_auth_flow(request)
+            tried_refresh = False
             try:
                 outgoing = await inner.__anext__()
                 while True:
@@ -498,12 +481,47 @@ def _make_eternal_provider_class() -> Optional[type]:
                     # Sniff the response for a dead-client-registration signal
                     # before handing it back to the SDK (best-effort, GH#36767).
                     await self._maybe_flag_poisoned_client(incoming)
+
+                    # The SDK answers any 401 on the real request with a full
+                    # browser authorization, even when a refresh token is on
+                    # disk. It only refreshes when its local expiry clock says
+                    # the access token expired, so a token the server ended
+                    # early (revoked, rotated, clock skew, no expires_in) sent
+                    # users back to the browser. Try one refresh first.
+                    if (
+                        not tried_refresh
+                        and outgoing is request
+                        and incoming.status_code == 401
+                        and self.context.can_refresh_token()
+                    ):
+                        tried_refresh = True
+                        await inner.aclose()
+                        async with self.context.lock:
+                            refresh_request = await self._refresh_token()
+                        refresh_response = yield refresh_request
+                        await self._maybe_flag_poisoned_client(refresh_response)
+                        async with self.context.lock:
+                            refreshed = await self._handle_refresh_response(
+                                refresh_response
+                            )
+                        if refreshed:
+                            self._add_auth_header(request)
+                            incoming = yield request
+                            if incoming.status_code != 401:
+                                break
+                        # Refresh was rejected or did not help: hand the
+                        # request to a fresh SDK flow, which runs discovery
+                        # and the full authorization as before.
+                        inner = super().async_auth_flow(request)
+                        outgoing = await inner.__anext__()
+                        continue
+
                     outgoing = await inner.asend(incoming)
             except StopAsyncIteration:
-                # Persist any metadata the SDK discovered lazily during the
-                # 401 branch so a subsequent cold-load skips discovery.
-                self._persist_oauth_metadata_if_changed()
-                return
+                pass
+            # Persist any metadata the SDK discovered lazily during the
+            # 401 branch so a subsequent cold-load skips discovery.
+            self._persist_oauth_metadata_if_changed()
 
     return EternalMCPOAuthProvider
 

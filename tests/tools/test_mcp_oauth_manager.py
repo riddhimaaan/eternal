@@ -443,39 +443,47 @@ async def test_manager_token_read_error_does_not_expose_body(tmp_path, monkeypat
 
 
 @pytest.mark.asyncio
-async def test_manager_malformed_201_refresh_response_clears_tokens(
+async def test_manager_malformed_201_refresh_response_keeps_tokens(
     tmp_path, monkeypatch, caplog
 ):
+    """An unreadable 2xx refresh body is retryable: keep tokens, log no secrets."""
     import logging
+
+    from tools.mcp_oauth import OAuthRefreshTransientError
 
     monkeypatch.setenv("ETERNAL_HOME", str(tmp_path))
     provider = _provider_with_token_endpoint(
         tmp_path, {}, "https://idp.example.com/oauth/token", monkeypatch
     )
-    provider.context.current_tokens = object()
+    sentinel = object()
+    provider.context.current_tokens = sentinel
 
     response = _fake_response(
         201,
         "https://idp.example.com/oauth/token",
         b'{"refresh_token": "refresh-secret"}',
     )
-    with caplog.at_level(logging.WARNING, logger="tools.mcp_oauth_manager"):
-        result = await provider._handle_refresh_response(response)
+    with caplog.at_level(logging.WARNING):
+        with pytest.raises(OAuthRefreshTransientError) as exc_info:
+            await provider._handle_refresh_response(response)
 
-    assert result is False
-    assert provider.context.current_tokens is None
+    assert provider.context.current_tokens is sentinel
     assert "refresh-secret" not in caplog.text
+    assert "refresh-secret" not in str(exc_info.value)
 
 
 @pytest.mark.asyncio
-async def test_manager_refresh_read_error_clears_tokens(tmp_path, monkeypatch):
+async def test_manager_refresh_read_error_keeps_tokens(tmp_path, monkeypatch):
     import httpx
+
+    from tools.mcp_oauth import OAuthRefreshTransientError
 
     monkeypatch.setenv("ETERNAL_HOME", str(tmp_path))
     provider = _provider_with_token_endpoint(
         tmp_path, {}, "https://idp.example.com/oauth/token", monkeypatch
     )
-    provider.context.current_tokens = object()
+    sentinel = object()
+    provider.context.current_tokens = sentinel
 
     class _ReadErrorResponse:
         status_code = 201
@@ -483,7 +491,7 @@ async def test_manager_refresh_read_error_clears_tokens(tmp_path, monkeypatch):
         async def aread(self):
             raise httpx.ReadError("body read failed")
 
-    result = await provider._handle_refresh_response(_ReadErrorResponse())
+    with pytest.raises(OAuthRefreshTransientError):
+        await provider._handle_refresh_response(_ReadErrorResponse())
 
-    assert result is False
-    assert provider.context.current_tokens is None
+    assert provider.context.current_tokens is sentinel

@@ -441,6 +441,10 @@ _DEFAULT_TOOL_TIMEOUT = 300      # seconds for tool calls
 _DEFAULT_CONNECT_TIMEOUT = 60    # seconds for initial connection per server
 _MAX_RECONNECT_RETRIES = 5
 _MAX_INITIAL_CONNECT_RETRIES = 3 # retries for the very first connection attempt
+# A server still starting when discovery's connect budget runs out keeps
+# connecting in the background; its later handshakes get this longer budget.
+_SLOW_START_TIMEOUT_FACTOR = 5
+_SLOW_START_MIN_TIMEOUT = 300   # seconds
 _MAX_BACKOFF_SECONDS = 60
 # While parked (reconnect budget exhausted, tools deregistered) the run task
 # wakes on this cadence and attempts one revival probe. Without it a parked
@@ -2115,6 +2119,7 @@ class MCPServerTask:
         "_idle_timeout_seconds", "_max_lifetime_seconds", "_recycled_reason",
         "initialize_result", "_ping_unsupported",
         "_reconnect_retries", "_session_proven", "_was_parked",
+        "_slow_start",
     )
 
     def __init__(self, name: str):
@@ -2149,6 +2154,13 @@ class MCPServerTask:
         # until the session proves healthy again — used to log the
         # parked→revived transition exactly once.
         self._was_parked: bool = False
+        # Set by discovery when the startup connect budget runs out but the
+        # run task is still making progress. Cancelling ``start()`` then
+        # leaves run() alive (discovery adopts it into ``_servers``) instead
+        # of reaping it, and later handshakes get a longer budget (see
+        # ``_handshake_timeout``) so a server that needs more than
+        # ``connect_timeout`` to start is not killed on every retry.
+        self._slow_start: bool = False
         self._auth_type: str = ""
         self._refresh_lock = asyncio.Lock()
         # MCP stdio sessions are a single JSON-RPC stream. Some servers emit
@@ -2801,9 +2813,7 @@ class MCPServerTask:
                     # until the gateway hits EMFILE. Timing out here converts the
                     # hang into a normal failure, letting the ``finally`` reap the
                     # child. See #59349.
-                    connect_timeout = float(
-                        config.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT)
-                    )
+                    connect_timeout = self._handshake_timeout(config)
                     self.initialize_result = await asyncio.wait_for(
                         session.initialize(), timeout=connect_timeout
                     )
@@ -3065,7 +3075,7 @@ class MCPServerTask:
         # case-insensitive so conventional casing is preserved.
         if not any(key.lower() == "mcp-protocol-version" for key in headers):
             headers["mcp-protocol-version"] = LATEST_PROTOCOL_VERSION
-        connect_timeout = config.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT)
+        connect_timeout = self._handshake_timeout(config)
         ssl_verify = config.get("ssl_verify", True)
         client_cert = _resolve_client_cert(self.name, config)
 
@@ -3448,6 +3458,10 @@ class MCPServerTask:
         self._reconnect_retries = 0
         initial_retries = 0
         backoff = 1.0
+        # True once a transport has returned cleanly, i.e. a session was
+        # established at least once. ``_ready`` is cleared before every
+        # rebuild, so it cannot tell a reconnect from a first connect.
+        had_session = False
 
         while True:
             try:
@@ -3462,6 +3476,7 @@ class MCPServerTask:
                 #    touch the retry counters — this is not a failure.
                 if self._shutdown_event.is_set():
                     break
+                had_session = True
                 if lifecycle_reason == "recycle":
                     logger.info(
                         "MCP server '%s': stdio session recycled after %s; "
@@ -3566,7 +3581,13 @@ class MCPServerTask:
                 # before giving up. A transient DNS/network blip at startup
                 # should not permanently kill the server.
                 # (Ported from Kilo Code's MCP resilience fix.)
-                if not self._ready.is_set():
+                #
+                # A failed rebuild of a server that already had a session is
+                # a reconnect, not a first connect, even though ``_ready`` was
+                # cleared for the rebuild: route it to the reconnect ladder
+                # below instead of the short initial ladder + park, which hid
+                # a briefly restarting remote server's tools for 5 minutes.
+                if not self._ready.is_set() and not had_session:
                     if failure_class == "permanent":
                         # Deterministic failure (bad command, non-MCP URL,
                         # 401/403): every retry hits the same wall. Park
@@ -3767,6 +3788,16 @@ class MCPServerTask:
             finally:
                 self.session = None
 
+    def _handshake_timeout(self, config: dict) -> float:
+        """Seconds allowed for one transport connect + ``initialize``."""
+        try:
+            base = float(config.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT))
+        except (TypeError, ValueError):
+            base = float(_DEFAULT_CONNECT_TIMEOUT)
+        if self._slow_start:
+            return max(base * _SLOW_START_TIMEOUT_FACTOR, _SLOW_START_MIN_TIMEOUT)
+        return base
+
     async def start(self, config: dict):
         """Create the background Task and wait until ready (or failed)."""
         self._task = asyncio.ensure_future(self.run(config))
@@ -3780,7 +3811,11 @@ class MCPServerTask:
             # owner to reap it (#59349). Propagate the cancellation so the
             # transport context managers unwind and their finally blocks
             # release the child process / FDs.
-            if self._task and not self._task.done():
+            if (
+                self._task
+                and not self._task.done()
+                and not self._slow_start
+            ):
                 self._task.cancel()
             raise
         if self._error:
@@ -5279,6 +5314,12 @@ def _ensure_lazy_server_connected(server_name: str) -> bool:
         server = _servers.get(server_name)
         if server is not None and server.session is not None:
             return True
+        if server is not None and server._task is not None and not server._task.done():
+            # A live run task already owns this server (a slow start adopted
+            # by discovery, or a park after a failed first connect) and keeps
+            # retrying on its own. Starting another connect here would leave
+            # two run tasks — two processes or two OAuth sessions — racing.
+            return False
         config = _lazy_server_configs.get(server_name)
         if not config:
             return False
@@ -6741,12 +6782,60 @@ async def _discover_and_register_server(name: str, config: dict) -> List[str]:
         claimed.append(created)
 
     claim_token = _connect_server_claim.set(_claim_server)
+    connect_task = asyncio.ensure_future(_connect_server(name, config))
+
+    async def _cancel_connect() -> None:
+        connect_task.cancel()
+        try:
+            await connect_task
+        except (asyncio.CancelledError, Exception):
+            pass
+
     try:
-        server = await asyncio.wait_for(
-            _connect_server(name, config),
-            timeout=connect_timeout,
-        )
-    except BaseException:
+        try:
+            server = await asyncio.wait_for(
+                asyncio.shield(connect_task),
+                timeout=connect_timeout,
+            )
+        except asyncio.TimeoutError:
+            slow = claimed[0] if claimed else None
+            if (
+                slow is not None
+                and slow._task is not None
+                and not slow._task.done()
+                and not slow._shutdown_event.is_set()
+            ):
+                # Slow start (first ``npx``/``uvx`` run downloading a
+                # package, a cold remote backend). The run task bounds its
+                # own handshake and keeps its retry ladder and parked
+                # self-probe, so adopt it instead of reaping it: once it
+                # connects it publishes its tools through
+                # ``_register_discovered_tools_if_needed``. Previously the
+                # task was cancelled here and nothing retried the server
+                # until a restart or /reload-mcp.
+                slow._slow_start = True
+                await _cancel_connect()
+                with _lock:
+                    _servers[name] = slow
+                logger.warning(
+                    "MCP server '%s' is still connecting after %gs; "
+                    "continuing in the background",
+                    name, connect_timeout,
+                )
+                raise TimeoutError(
+                    f"still connecting after {connect_timeout:g}s; "
+                    "will keep trying in the background"
+                ) from None
+            await _cancel_connect()
+            raise
+        except asyncio.CancelledError:
+            # The shield keeps the connect alive across our own cancellation;
+            # cancel it explicitly so start() reaps the run task.
+            await _cancel_connect()
+            raise
+    except BaseException as exc:
+        if isinstance(exc, TimeoutError) and claimed and claimed[0]._slow_start:
+            raise
         server = claimed[0] if claimed else None
         task = server._task if server is not None else None
         task_cancelling = (
@@ -6946,7 +7035,19 @@ def register_mcp_servers(servers: Dict[str, dict]) -> List[str]:
                     _clear_connect_failure(name)
 
     # Per-server timeouts are handled inside _discover_and_register_server.
-    # The outer timeout is generous: 120s total for parallel discovery.
+    # The outer timeout is generous: at least 120s total for parallel
+    # discovery, and never shorter than the slowest server's own
+    # ``connect_timeout`` (a fixed 120s silently capped larger values).
+    def _connect_timeout_of(cfg: dict) -> float:
+        try:
+            return float(cfg.get("connect_timeout", _DEFAULT_CONNECT_TIMEOUT))
+        except (TypeError, ValueError):
+            return float(_DEFAULT_CONNECT_TIMEOUT)
+
+    discovery_timeout = max(
+        120.0,
+        max(_connect_timeout_of(c) for c in new_servers.values()) + 30.0,
+    )
     #
     # Temporarily clear the interrupt flag on the current thread so that MCP
     # discovery is never cancelled by a stale interrupt from a prior agent
@@ -6956,7 +7057,7 @@ def register_mcp_servers(servers: Dict[str, dict]) -> List[str]:
     if _was_interrupted:
         _set_interrupt(False)
     try:
-        _run_on_mcp_loop(_discover_all, timeout=120)
+        _run_on_mcp_loop(_discover_all, timeout=discovery_timeout)
     except (TimeoutError, InterruptedError) as _e:
         # When the outer timeout fires or the user interrupts,
         # _discover_all's gather may not have finished, leaving

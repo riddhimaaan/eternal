@@ -278,37 +278,44 @@ class TestBuildOAuthAuth:
         assert "refresh-secret" not in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_malformed_201_refresh_response_clears_tokens(
+    async def test_malformed_201_refresh_response_keeps_tokens(
         self, tmp_path, monkeypatch, caplog
     ):
         import logging
         import httpx
 
+        from tools.mcp_oauth import OAuthRefreshTransientError
+
         monkeypatch.setenv("ETERNAL_HOME", str(tmp_path))
         _set_interactive_stdin(monkeypatch)
         provider = build_oauth_auth("supabase", "https://mcp.supabase.com/mcp")
         assert provider is not None
-        provider.context.current_tokens = object()
+        sentinel = object()
+        provider.context.current_tokens = sentinel
 
         response = httpx.Response(
             201, content=b'{"refresh_token": "refresh-secret"}'
         )
         with caplog.at_level(logging.WARNING, logger="tools.mcp_oauth"):
-            result = await provider._handle_refresh_response(response)
+            with pytest.raises(OAuthRefreshTransientError) as exc_info:
+                await provider._handle_refresh_response(response)
 
-        assert result is False
-        assert provider.context.current_tokens is None
+        assert provider.context.current_tokens is sentinel
         assert "refresh-secret" not in caplog.text
+        assert "refresh-secret" not in str(exc_info.value)
 
     @pytest.mark.asyncio
-    async def test_refresh_read_error_clears_tokens(self, tmp_path, monkeypatch):
+    async def test_refresh_read_error_keeps_tokens(self, tmp_path, monkeypatch):
         import httpx
+
+        from tools.mcp_oauth import OAuthRefreshTransientError
 
         monkeypatch.setenv("ETERNAL_HOME", str(tmp_path))
         _set_interactive_stdin(monkeypatch)
         provider = build_oauth_auth("supabase", "https://mcp.supabase.com/mcp")
         assert provider is not None
-        provider.context.current_tokens = object()
+        sentinel = object()
+        provider.context.current_tokens = sentinel
 
         class _ReadErrorResponse:
             status_code = 201
@@ -316,10 +323,10 @@ class TestBuildOAuthAuth:
             async def aread(self):
                 raise httpx.ReadError("body read failed")
 
-        result = await provider._handle_refresh_response(_ReadErrorResponse())
+        with pytest.raises(OAuthRefreshTransientError):
+            await provider._handle_refresh_response(_ReadErrorResponse())
 
-        assert result is False
-        assert provider.context.current_tokens is None
+        assert provider.context.current_tokens is sentinel
 
 
 # ---------------------------------------------------------------------------

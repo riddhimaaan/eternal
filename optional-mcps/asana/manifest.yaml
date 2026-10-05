@@ -13,7 +13,7 @@ source: https://developers.asana.com/docs/using-asanas-mcp-server
 # exchange, and refresh.
 transport:
   type: http
-  url: https://mcp.asana.com/sse
+  url: https://mcp.asana.com/v2/mcp
 
 auth:
   type: oauth
