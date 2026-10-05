@@ -751,6 +751,7 @@ export interface Translations {
       requiredDetails: string
       invalidUrl: string
       incompleteRows: string
+      invalidVariableName: string
       duplicateKeys: string
       environmentHint: string
       advancedConfig: string

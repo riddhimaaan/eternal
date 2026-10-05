@@ -138,7 +138,7 @@ async function sweep(): Promise<void> {
       probeCache.set(key, { at: Date.now(), result })
     }
 
-    recordResult(profileKey, name, classifyProbe(result))
+    recordResult(profileKey, name, classifyProbe(result, server))
   }
 }
 

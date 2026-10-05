@@ -33,11 +33,34 @@ export function freshProbe(key: string, now = Date.now()): McpTestResult | null 
   return cached && now - cached.at < PROBE_TTL_MS ? cached.result : null
 }
 
-/** Classify a finished probe the way the MCP page's status dot does. */
-export function classifyProbe(result: McpTestResult): 'error' | 'needs-auth' | 'ok' {
+/**
+ * Whether "Sign in" (OAuth) can work for this server. Mirrors the backend's
+ * POST /api/mcp/servers/{name}/auth, which refuses stdio servers and servers
+ * that authenticate with their own headers (API key / bearer token).
+ */
+export function canSignIn(server: Record<string, unknown> | undefined): boolean {
+  if (!server || typeof server.url !== 'string' || !server.url) {
+    return false
+  }
+
+  const { headers } = server
+  const hasHeaders = !!headers && typeof headers === 'object' && Object.keys(headers).length > 0
+
+  return server.auth === 'oauth' || !hasHeaders
+}
+
+/**
+ * Classify a finished probe the way the MCP page's status dot does. An auth
+ * rejection is only "needs-auth" when signing in can fix it; for a header /
+ * API-key server it means the key is missing or wrong, so it is an error.
+ */
+export function classifyProbe(
+  result: McpTestResult,
+  server: Record<string, unknown> | undefined
+): 'error' | 'needs-auth' | 'ok' {
   if (result.ok) {
     return 'ok'
   }
 
-  return NEEDS_AUTH_RE.test(result.error ?? '') ? 'needs-auth' : 'error'
+  return NEEDS_AUTH_RE.test(result.error ?? '') && canSignIn(server) ? 'needs-auth' : 'error'
 }

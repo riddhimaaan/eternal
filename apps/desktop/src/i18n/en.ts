@@ -878,6 +878,7 @@ export const en: Translations = {
       requiredDetails: 'Enter a server name and connection details.',
       invalidUrl: 'Enter a valid HTTP or HTTPS URL.',
       incompleteRows: 'Complete each row or remove it.',
+      invalidVariableName: "Enter a variable name like MCP_BEARER_TOKEN, not the secret itself. Put the secret in Eternal's .env under that name.",
       duplicateKeys: 'Each key must be unique.',
       environmentHint: 'Use names of variables already available to Eternal.',
       advancedConfig: 'Advanced JSON remains available in the editor.',

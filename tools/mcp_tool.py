@@ -799,6 +799,62 @@ async def _paginate_full_list(list_method, items_attr: str, server_name: str):
     return items
 
 
+def _version_key(name: str) -> tuple:
+    """Sort key for version directory names like ``v20.11.1``."""
+    parts = re.findall(r"\d+", name)
+    return tuple(int(p) for p in parts)
+
+
+def _user_tool_dirs() -> List[str]:
+    """Per-user tool directories a minimal (GUI / service) PATH misses.
+
+    Ordered roughly by how specific the install is. Only existing
+    directories are returned. Node version managers have no stable "current"
+    directory, so nvm uses its newest installed version and fnm its default
+    alias.
+    """
+    home = os.path.expanduser("~")
+    eternal_home = os.path.expanduser(
+        os.getenv("ETERNAL_HOME", os.path.join(home, ".eternal"))
+    )
+    dirs = [
+        os.path.join(eternal_home, "node", "bin"),
+        os.path.join(home, ".local", "bin"),          # uv / uvx, pipx
+        os.path.join(home, ".cargo", "bin"),
+        os.path.join(home, ".bun", "bin"),
+        os.path.join(home, ".deno", "bin"),
+        os.path.join(home, ".volta", "bin"),
+        os.path.join(home, ".asdf", "shims"),
+        os.path.join(home, ".local", "share", "mise", "shims"),
+    ]
+    nvm_dir = os.getenv("NVM_DIR") or os.path.join(home, ".nvm")
+    versions = os.path.join(nvm_dir, "versions", "node")
+    try:
+        newest = max(os.listdir(versions), key=_version_key)
+        dirs.append(os.path.join(versions, newest, "bin"))
+    except (OSError, ValueError):
+        pass
+    for fnm_dir in (
+        os.getenv("FNM_DIR") or "",
+        os.path.join(home, ".local", "share", "fnm"),
+        os.path.join(home, "Library", "Application Support", "fnm"),
+        os.path.join(home, ".fnm"),
+    ):
+        if fnm_dir:
+            dirs.append(os.path.join(fnm_dir, "aliases", "default", "bin"))
+    dirs += ["/opt/homebrew/bin", "/usr/local/bin"]
+    return [d for d in dirs if os.path.isdir(d)]
+
+
+def _find_in_user_tool_dirs(command: str) -> Optional[str]:
+    """Return the first executable ``command`` in :func:`_user_tool_dirs`."""
+    for directory in _user_tool_dirs():
+        candidate = os.path.join(directory, command)
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
 def _resolve_stdio_command(command: str, env: dict) -> tuple[str, dict]:
     """Resolve a stdio MCP command against the exact subprocess environment.
 
@@ -834,6 +890,15 @@ def _resolve_stdio_command(command: str, env: dict) -> tuple[str, dict]:
                         os.environ["PATHEXT"] = _saved
         if which_hit:
             resolved_command = which_hit
+        elif os.name == "posix" and (
+            user_hit := _find_in_user_tool_dirs(resolved_command)
+        ):
+            # GUI launches (desktop app from Finder/Dock/a launcher) and
+            # service managers inherit a minimal PATH that misses per-user
+            # tool installs, so the same config works in a terminal but not
+            # in the app. The command's directory is prepended to PATH below,
+            # so e.g. npx's ``#!/usr/bin/env node`` finds nvm's node too.
+            resolved_command = user_hit
         elif resolved_command in {"npx", "npm", "node"}:
             eternal_home = os.path.expanduser(
                 os.getenv(
@@ -1121,6 +1186,51 @@ def _render_mcp_resource_block(block, server_name: str = "") -> str:
 # ---------------------------------------------------------------------------
 
 
+class MissingMcpSecretError(ValueError):
+    """Raised when a server's headers reference an unset ``${VAR}``.
+
+    Unresolved placeholders are left as literal text by
+    :func:`_interpolate_env_vars`, so the server received e.g.
+    ``Authorization: Bearer ${API_KEY}``, answered 401, and the failure was
+    reported (and offered "Sign in") as if it were an OAuth problem.
+    """
+
+
+def _unset_env_refs(values: Any) -> List[str]:
+    """Names of ``${VAR}`` refs in a mapping's string values that are unset.
+
+    Refs are re-checked against the secret scope, so a config that skipped
+    interpolation is not misreported.
+    """
+    from agent.secret_scope import get_secret as _get_secret
+
+    names: Set[str] = set()
+    if not isinstance(values, dict):
+        return []
+    for value in values.values():
+        if not isinstance(value, str):
+            continue
+        for match in _ENV_VAR_PATTERN.finditer(value):
+            if _context_var_value(match.group(1).strip()) is not None:
+                continue
+            name = _env_ref_name(match.group(1))
+            if name and not _get_secret(name, None):
+                names.add(name)
+    return sorted(names)
+
+
+def _missing_secret_error(server_name: str, names: List[str]) -> MissingMcpSecretError:
+    from eternal_constants import display_eternal_home
+
+    refs = ", ".join("${" + n + "}" for n in names)
+    return MissingMcpSecretError(
+        f"MCP server '{server_name}' uses {refs} in its headers, but "
+        f"{'it is' if len(names) == 1 else 'they are'} not set. Add "
+        f"{'it' if len(names) == 1 else 'them'} to {display_eternal_home()}/.env, "
+        "then reload MCP."
+    )
+
+
 class InvalidMcpUrlError(ValueError):
     """Raised when a remote MCP server's ``url`` cannot be parsed as http(s)://.
 
@@ -1209,7 +1319,7 @@ def _classify_mcp_failure(exc: BaseException) -> str:
     root = _unwrap_exception_group(exc)
     if _is_auth_error(root):
         return "permanent"
-    if isinstance(root, (NonMcpEndpointError, InvalidMcpUrlError)):
+    if isinstance(root, (NonMcpEndpointError, InvalidMcpUrlError, MissingMcpSecretError)):
         return "permanent"
     # Stdio command missing: FileNotFoundError, or an OSError carrying ENOENT.
     if isinstance(root, FileNotFoundError):
@@ -2713,6 +2823,15 @@ class MCPServerTask:
         # elsewhere, matching existing killpg-based cleanup's platform scope.
         # Applied AFTER the OSV preflight so the check inspects the real
         # package, not the watchdog wrapper.
+        # The watchdog re-execs the real command inside its own child, so a
+        # missing binary would only surface as "connection closed" and be
+        # retried forever. Report it here as a permanent "not found".
+        if os.name == "posix" and not shutil.which(command, path=safe_env.get("PATH")):
+            raise FileNotFoundError(
+                errno.ENOENT,
+                f"MCP server '{self.name}': command not found",
+                command,
+            )
         command, args = _wrap_command_with_watchdog(command, args)
 
         server_params = StdioServerParameters(
@@ -3418,6 +3537,18 @@ class MCPServerTask:
                 self._ready.set()
                 return
 
+            # Fail fast on a header that references an unset ${VAR}: sending
+            # the literal placeholder only earns a 401 that looks like an
+            # OAuth problem. Reload re-reads .env, so fixing it needs no
+            # restart.
+            missing = _unset_env_refs(config.get("headers"))
+            if missing:
+                exc = _missing_secret_error(self.name, missing)
+                logger.warning("%s", exc)
+                self._error = exc
+                self._ready.set()
+                return
+
             # Pre-flight content-type probe (Streamable HTTP only; SSE is
             # exercised by its own client and legitimately serves
             # text/event-stream). A URL pointed at a web-app root returns
@@ -3444,6 +3575,17 @@ class MCPServerTask:
                     self._error = exc
                     self._ready.set()
                     return
+
+        if not self._is_http():
+            missing_env = _unset_env_refs(config.get("env"))
+            if missing_env:
+                # Advisory only: a stdio server may tolerate an optional
+                # variable, so don't block the start.
+                logger.warning(
+                    "MCP server '%s': env references unset variable(s) %s; "
+                    "they are passed through as literal text",
+                    self.name, ", ".join(missing_env),
+                )
 
         self._reconnect_retries = 0
         initial_retries = 0
@@ -7548,13 +7690,24 @@ def _reinject_post_build_tools(agent, tools_list: list, name_set: set) -> set:
     return staged_engine_names
 
 
-def shutdown_mcp_servers():
+def shutdown_mcp_servers(*, for_reload: bool = False):
     """Close all MCP server connections and stop the background loop.
 
     Each server Task is signalled to exit its ``async with`` block so that
     the anyio cancel-scope cleanup happens in the same Task that opened it.
     All servers are shut down in parallel via ``asyncio.gather``.
+
+    ``for_reload=True`` (``/reload-mcp``, desktop save/toggle/install) keeps
+    the loop running while a standalone probe owns it. The dashboard OAuth
+    worker runs as such a probe and waits minutes for the browser callback;
+    stopping the loop drained it, so saving any other server mid sign-in
+    ended with "OAuth flow expired". Process exit leaves the default.
     """
+    def _stop_loop() -> None:
+        if for_reload:
+            _stop_mcp_loop_if_idle()
+        else:
+            _stop_mcp_loop()
     with _lock:
         servers_snapshot = list(_servers.values())
 
@@ -7568,7 +7721,7 @@ def shutdown_mcp_servers():
         with _lock:
             _server_connect_retry_after.clear()
             _server_connect_failures.clear()
-        _stop_mcp_loop()
+        _stop_loop()
         return
 
     async def _shutdown():
@@ -7612,7 +7765,7 @@ def shutdown_mcp_servers():
         _server_connect_retry_after.clear()
         _server_connect_failures.clear()
 
-    _stop_mcp_loop()
+    _stop_loop()
 
 
 def _kill_orphaned_mcp_children(

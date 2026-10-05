@@ -1077,6 +1077,7 @@ export const zh: Translations = {
       requiredDetails: '请输入服务器名称和连接信息。',
       invalidUrl: '请输入有效的 HTTP 或 HTTPS URL。',
       incompleteRows: '请填写完整或删除空行。',
+      invalidVariableName: '请输入变量名（例如 MCP_BEARER_TOKEN），而不是密钥本身。请把密钥以该名称写入 Eternal 的 .env。',
       duplicateKeys: '每个键必须唯一。',
       environmentHint: '请使用 Eternal 已可读取的环境变量名称。',
       advancedConfig: '仍可在编辑器中使用高级 JSON 配置。',

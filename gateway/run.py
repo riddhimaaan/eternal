@@ -22830,7 +22830,9 @@ class GatewayRunner(GatewayAuthorizationMixin, GatewayKanbanWatchersMixin, Gatew
 
             # Read new config before shutting down, so we know what will be added/removed
             # Shutdown existing connections
-            await loop.run_in_executor(None, shutdown_mcp_servers)
+            await loop.run_in_executor(
+                None, lambda: shutdown_mcp_servers(for_reload=True)
+            )
 
             # Reconnect by discovering tools (reads config.yaml fresh)
             new_tools = await loop.run_in_executor(None, discover_mcp_tools)

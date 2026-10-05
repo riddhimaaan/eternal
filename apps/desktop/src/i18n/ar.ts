@@ -780,6 +780,7 @@ export const ar = defineLocale({
       requiredDetails: 'أدخل اسم الخادم وتفاصيل الاتصال.',
       invalidUrl: 'أدخل رابط HTTP أو HTTPS صالحا.',
       incompleteRows: 'أكمل كل صف أو احذفه.',
+      invalidVariableName: 'أدخل اسم متغير مثل MCP_BEARER_TOKEN، وليس السر نفسه. ضع السر في ملف .env الخاص بـ Eternal بهذا الاسم.',
       duplicateKeys: 'يجب أن يكون كل مفتاح فريدا.',
       environmentHint: 'استخدم أسماء متغيرات البيئة المتاحة بالفعل لـ Eternal.',
       advancedConfig: 'يبقى إعداد JSON المتقدم متاحا في المحرر.',

@@ -22,6 +22,7 @@ manually against the reporter's live repro).
 from __future__ import annotations
 
 import asyncio
+import sys
 import time
 from unittest.mock import patch
 
@@ -67,7 +68,9 @@ class TestStdioInitializeTimeout:
         from tools import mcp_tool
 
         server = mcp_tool.MCPServerTask("leak-guard")
-        config = {"command": "fake-mcp", "args": [], "connect_timeout": 0.2}
+        # A real executable: the launch path rejects a command it cannot
+        # find before spawning; the transport itself is faked below.
+        config = {"command": sys.executable, "args": [], "connect_timeout": 0.2}
 
         async def drive():
             with patch.object(mcp_tool, "stdio_client", _fake_stdio_client), \
