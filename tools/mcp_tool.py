@@ -7548,13 +7548,24 @@ def _reinject_post_build_tools(agent, tools_list: list, name_set: set) -> set:
     return staged_engine_names
 
 
-def shutdown_mcp_servers():
+def shutdown_mcp_servers(*, for_reload: bool = False):
     """Close all MCP server connections and stop the background loop.
 
     Each server Task is signalled to exit its ``async with`` block so that
     the anyio cancel-scope cleanup happens in the same Task that opened it.
     All servers are shut down in parallel via ``asyncio.gather``.
+
+    ``for_reload=True`` (``/reload-mcp``, desktop save/toggle/install) keeps
+    the loop running while a standalone probe owns it. The dashboard OAuth
+    worker runs as such a probe and waits minutes for the browser callback;
+    stopping the loop drained it, so saving any other server mid sign-in
+    ended with "OAuth flow expired". Process exit leaves the default.
     """
+    def _stop_loop() -> None:
+        if for_reload:
+            _stop_mcp_loop_if_idle()
+        else:
+            _stop_mcp_loop()
     with _lock:
         servers_snapshot = list(_servers.values())
 
@@ -7568,7 +7579,7 @@ def shutdown_mcp_servers():
         with _lock:
             _server_connect_retry_after.clear()
             _server_connect_failures.clear()
-        _stop_mcp_loop()
+        _stop_loop()
         return
 
     async def _shutdown():
@@ -7612,7 +7623,7 @@ def shutdown_mcp_servers():
         _server_connect_retry_after.clear()
         _server_connect_failures.clear()
 
-    _stop_mcp_loop()
+    _stop_loop()
 
 
 def _kill_orphaned_mcp_children(

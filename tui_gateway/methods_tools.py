@@ -183,7 +183,7 @@ def _(rid, params: dict) -> dict:
 
             loaded = _compute_mcp_rev()
             for _ in range(_MCP_RELOAD_MAX_PASSES):
-                shutdown_mcp_servers()
+                shutdown_mcp_servers(for_reload=True)
                 discover_mcp_tools()
                 after = _compute_mcp_rev()
                 if after == loaded:

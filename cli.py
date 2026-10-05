@@ -13247,7 +13247,7 @@ class EternalCLI(CLIAgentSetupMixin, CLICommandsMixin):
                 print("🔄 Reloading MCP servers...")
 
             # Shutdown existing connections
-            shutdown_mcp_servers()
+            shutdown_mcp_servers(for_reload=True)
 
             # Reconnect (reads config.yaml fresh)
             new_tools = discover_mcp_tools()
