@@ -596,11 +596,16 @@ class EternalTokenStorage:
         return snap
 
     def restore(self, snapshot: dict[str, bytes], *, only_if_absent: bool = False) -> None:
-        """Revert to a snapshot without overwriting a concurrent successful write."""
-        if only_if_absent and any(
-            path.exists()
-            for path in (self._tokens_path(), self._client_info_path(), self._meta_path())
-        ):
+        """Revert to a snapshot without overwriting a concurrent successful write.
+
+        With ``only_if_absent``, only a tokens file counts as a successful
+        write. The SDK saves ``client.json`` during dynamic registration and
+        metadata during discovery, both *before* the browser step, so a
+        cancelled or timed-out sign-in leaves those behind with no tokens;
+        treating them as success skipped the rollback and destroyed a
+        sign-in that still worked.
+        """
+        if only_if_absent and self._tokens_path().exists():
             logger.info(
                 "Skipping OAuth rollback for %s because newer state exists",
                 self._server_name,

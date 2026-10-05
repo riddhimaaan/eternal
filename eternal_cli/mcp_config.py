@@ -824,12 +824,36 @@ def _reauth_oauth_server(name: str, server_config: dict) -> bool:
         return False
 
     # Wipe both disk and in-memory cache so the next probe forces a fresh
-    # OAuth flow.
+    # OAuth flow. Snapshot first: if the new flow is cancelled, times out or
+    # fails, the previous (possibly still valid) sign-in is put back, matching
+    # the dashboard re-auth path in web_server.py.
+    backup = None
+    previous_entry = None
     try:
+        from tools.mcp_oauth import EternalTokenStorage
         from tools.mcp_oauth_manager import get_manager
-        get_manager().remove(name)
+        backup = EternalTokenStorage(name).snapshot()
+        previous_entry = get_manager().remove(name)
     except Exception as exc:
         _warning(f"Could not clear existing OAuth state: {exc}")
+
+    succeeded = False
+    try:
+        succeeded = _run_oauth_login_probe(name, server_config, url)
+        return succeeded
+    finally:
+        if not succeeded and backup is not None:
+            try:
+                from tools.mcp_oauth import EternalTokenStorage
+                from tools.mcp_oauth_manager import get_manager
+                EternalTokenStorage(name).restore(backup, only_if_absent=True)
+                get_manager().restore_entry(name, previous_entry)
+            except Exception as exc:
+                _warning(f"Could not restore previous OAuth state: {exc}")
+
+
+def _run_oauth_login_probe(name: str, server_config: dict, url: str) -> bool:
+    """Run the interactive OAuth probe for ``_reauth_oauth_server``."""
 
     print()
     _info(f"Starting OAuth flow for '{name}'...")
