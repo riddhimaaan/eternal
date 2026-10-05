@@ -139,6 +139,17 @@ class OAuthNonInteractiveError(RuntimeError):
     """Raised when OAuth requires browser interaction in a non-interactive env."""
 
 
+class OAuthRefreshTransientError(RuntimeError):
+    """Raised when a token refresh fails for a reason a retry can fix.
+
+    A 5xx, 429, network error or unreadable body from the token endpoint says
+    nothing about whether the refresh token is still good. Raising (instead of
+    clearing tokens) keeps the refresh token on disk and lets the connection's
+    normal retry-with-backoff ladder try again, rather than falling through to
+    a full browser authorization.
+    """
+
+
 # ---------------------------------------------------------------------------
 # Module-level state
 # ---------------------------------------------------------------------------
@@ -1050,6 +1061,74 @@ def _paste_callback_reader(result: dict) -> None:
 
 EternalOAuthClientProvider: Any = None
 
+# Token-endpoint statuses that mean the server examined the refresh request
+# and rejected it (RFC 6749 §5.2 errors such as ``invalid_grant`` arrive as
+# 400; client-auth failures as 401). Anything else is treated as transient.
+_REFRESH_REJECTED_STATUSES = frozenset({400, 401, 403})
+
+
+async def handle_refresh_response(provider: Any, response: Any) -> bool:
+    """Shared ``_handle_refresh_response`` for Eternal's OAuth providers.
+
+    Differs from the SDK default in three ways, each of which used to force a
+    needless browser re-authorization:
+
+    * A refresh response without ``refresh_token`` keeps the previous one.
+      RFC 6749 §6 lets the server omit it when it is not rotated (Google
+      always does); saving the response as-is erased the only refresh token.
+    * A transient failure (5xx, 429, network, unreadable body) raises
+      :class:`OAuthRefreshTransientError` and leaves tokens untouched.
+    * Before clearing tokens on a real rejection, re-read storage: another
+      process (gateway, CLI, desktop backend) may have rotated the refresh
+      token already, in which case its fresh tokens are adopted.
+    """
+    context = provider.context
+    previous = context.current_tokens
+
+    if 200 <= response.status_code < 300:
+        from httpx import HTTPError
+        from mcp.shared.auth import OAuthToken as _OAuthToken
+        from pydantic import ValidationError
+
+        try:
+            content = await response.aread()
+            token = _OAuthToken.model_validate_json(content)
+        except (HTTPError, ValidationError):
+            logger.warning("Invalid refresh response: %s", response.status_code)
+            raise OAuthRefreshTransientError(
+                "Token endpoint returned an unreadable refresh response"
+            ) from None
+        if not token.refresh_token and previous is not None and previous.refresh_token:
+            token = token.model_copy(update={"refresh_token": previous.refresh_token})
+        context.current_tokens = token
+        context.update_token_expiry(token)
+        await context.storage.set_tokens(token)
+        return True
+
+    if response.status_code not in _REFRESH_REJECTED_STATUSES:
+        logger.warning("Token refresh failed (transient): %s", response.status_code)
+        raise OAuthRefreshTransientError(
+            f"Token refresh failed with HTTP {response.status_code}; will retry"
+        )
+
+    logger.warning("Token refresh rejected: %s", response.status_code)
+    try:
+        stored = await context.storage.get_tokens()
+    except Exception:  # pragma: no cover — storage read is best-effort here
+        stored = None
+    used_refresh = previous.refresh_token if previous is not None else None
+    if (
+        stored is not None
+        and stored.refresh_token
+        and stored.refresh_token != used_refresh
+    ):
+        logger.info("Token refresh rejected, but storage has newer tokens; using them")
+        context.current_tokens = stored
+        context.update_token_expiry(stored)
+        return True
+    context.clear_tokens()
+    return False
+
 
 def _get_eternal_oauth_provider_class() -> type | None:
     global EternalOAuthClientProvider
@@ -1109,26 +1188,7 @@ def _get_eternal_oauth_provider_class() -> type | None:
             raise OAuthTokenError(f"Token exchange failed ({response.status_code})")
 
         async def _handle_refresh_response(self, response) -> bool:
-            """Accept any 2xx refresh response and avoid logging token bodies."""
-            if not (200 <= response.status_code < 300):
-                logger.warning("Token refresh failed: %s", response.status_code)
-                self.context.clear_tokens()
-                return False
-
-            from pydantic import ValidationError
-            from httpx import HTTPError
-
-            try:
-                content = await response.aread()
-                token_response = OAuthToken.model_validate_json(content)
-                self.context.current_tokens = token_response
-                self.context.update_token_expiry(token_response)
-                await self.context.storage.set_tokens(token_response)
-                return True
-            except (HTTPError, ValidationError):
-                logger.warning("Invalid refresh response: %s", response.status_code)
-                self.context.clear_tokens()
-                return False
+            return await handle_refresh_response(self, response)
 
     _EternalOAuthClientProvider.__name__ = "EternalOAuthClientProvider"
     _EternalOAuthClientProvider.__qualname__ = "EternalOAuthClientProvider"
