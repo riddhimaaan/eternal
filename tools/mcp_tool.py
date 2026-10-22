@@ -3039,7 +3039,14 @@ class MCPServerTask:
 
     async def _run_http(self, config: dict):
         """Run the server using HTTP/StreamableHTTP transport."""
-        _ensure_mcp_sdk()
+        # A missing SDK is not an old one: say so, as _run_stdio does, instead
+        # of telling the user to upgrade a package they do not have.
+        if not _ensure_mcp_sdk():
+            raise ImportError(
+                f"MCP server '{self.name}' requires the 'mcp' Python SDK, but "
+                "it is not installed. Run `eternal setup` to install MCP support, "
+                "then retry."
+            )
         if not _MCP_HTTP_AVAILABLE:
             raise ImportError(
                 f"MCP server '{self.name}' requires HTTP transport but "

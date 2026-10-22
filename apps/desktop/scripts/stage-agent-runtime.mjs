@@ -18,9 +18,10 @@
  * and cannot be relocated; everything it is built FROM is bundled, so no step
  * needs a network.
  *
- * Only the 32 core dependencies are staged. The 44 extras stay lazy — see
- * tools/lazy_deps.py — so bundling them would add ~250 MB for features most
- * users never enable.
+ * The core dependencies are staged, plus the few extras in BUNDLED_EXTRAS that
+ * the desktop app cannot work without. Every other extra stays lazy — see
+ * tools/lazy_deps.py — because bundling them all would add ~250 MB for features
+ * most users never enable.
  *
  * Usage:
  *   node scripts/stage-agent-runtime.mjs [--skip-python] [--skip-wheels]
@@ -32,6 +33,9 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { compareVersions, formatVersion, GLIBC_CEILING } from './portable-glibc.mjs'
+import { isMain } from './utils.mjs'
 
 const APP_ROOT = path.resolve(fileURLToPath(new URL('..', import.meta.url)))
 const REPO_ROOT = path.resolve(APP_ROOT, '../..')
@@ -90,6 +94,19 @@ const SOURCE_EXCLUDE_DIRS = new Set([
   'website'
 ])
 
+// Extras from pyproject.toml's [project.optional-dependencies] that ship in the
+// bundle instead of being lazy-installed.
+//
+//  * mcp — the MCP client library. Without it every MCP server the user adds
+//    fails ("requires HTTP transport but mcp.client.streamable_http is not
+//    available"), and nothing installs it on demand: tools/mcp_tool.py only
+//    checks whether the package is present, it never asks lazy_deps for it.
+//    It is also small (~10 wheels, a few MB), unlike the extras kept lazy.
+//
+// The specs are read from pyproject.toml, never copied here, so bumping the
+// pin there is all it takes to bump what ships.
+export const BUNDLED_EXTRAS = Object.freeze(['mcp'])
+
 // Files copied alongside the code. LICENSE and NOTICE travel with the runtime
 // because the MIT notice must be present wherever the software is.
 const SOURCE_EXTRA_FILES = ['pyproject.toml', 'LICENSE', 'NOTICE', 'README.md']
@@ -143,7 +160,7 @@ function readPackagingMetadata() {
     'st=d.get("tool",{}).get("setuptools",{})',
     'inc=st.get("packages",{}).get("find",{}).get("include",[])',
     'pkgs=sorted({p.split(".")[0] for p in inc})',
-    'print(json.dumps({"dependencies":d["project"]["dependencies"],"packages":pkgs,"pyModules":st.get("py-modules",[])}))'
+    'print(json.dumps({"dependencies":d["project"]["dependencies"],"extras":d["project"].get("optional-dependencies",{}),"packages":pkgs,"pyModules":st.get("py-modules",[])}))'
   ].join(';')
 
   const result = spawnSync(pythonForBuild(), ['-c', script], {
@@ -155,7 +172,49 @@ function readPackagingMetadata() {
     fail(`could not read pyproject.toml:\n${result.stderr || result.stdout}`)
   }
 
-  return JSON.parse(result.stdout)
+  const meta = JSON.parse(result.stdout)
+
+  try {
+    meta.requested = requestedSpecs(meta)
+  } catch (err) {
+    fail(err.message)
+  }
+
+  return meta
+}
+
+/**
+ * The specs of the extras named in `names`, exactly as pyproject.toml lists
+ * them. Throws rather than skipping a missing extra: a renamed extra must fail
+ * the build, not quietly ship an app whose MCP support is gone again.
+ */
+export function bundledExtraSpecs(extras, names = BUNDLED_EXTRAS) {
+  const specs = []
+
+  for (const name of names) {
+    const list = extras?.[name]
+
+    if (!Array.isArray(list) || list.length === 0) {
+      throw new Error(`pyproject.toml has no [project.optional-dependencies] "${name}" extra to bundle`)
+    }
+
+    for (const spec of list) {
+      // A self-reference ("eternal-agent[...]") would make pip download the
+      // project itself, which is not on PyPI under that name.
+      if (/^eternal-agent\b/i.test(spec.trim())) {
+        throw new Error(`bundled extra "${name}" refers back to the project (${spec}); list its packages directly`)
+      }
+
+      specs.push(spec)
+    }
+  }
+
+  return specs
+}
+
+/** Everything pip is asked to download: the core dependencies plus the bundled extras. */
+export function requestedSpecs(meta, names = BUNDLED_EXTRAS) {
+  return [...meta.dependencies, ...bundledExtraSpecs(meta.extras, names)]
 }
 
 let cachedBuildPython = null
@@ -303,7 +362,10 @@ function stageSource(outDir, meta) {
 function stageWheels(outDir, meta, opts, stagedPython) {
   const dest = path.join(outDir, 'wheels')
 
-  log(`downloading ${meta.dependencies.length} core dependencies as wheels`)
+  log(
+    `downloading ${meta.dependencies.length} core dependencies + bundled extras ` +
+      `(${BUNDLED_EXTRAS.join(', ')}) as wheels`
+  )
   rmrf(dest)
   fs.mkdirSync(dest, { recursive: true })
 
@@ -314,7 +376,7 @@ function stageWheels(outDir, meta, opts, stagedPython) {
     '--dest',
     dest,
     '--only-binary=:all:',
-    ...meta.dependencies
+    ...meta.requested
   ]
 
   // Download WITH the interpreter the wheels will be installed into. The build
@@ -327,23 +389,36 @@ function stageWheels(outDir, meta, opts, stagedPython) {
   const canUseStaged = native && stagedPython && fs.existsSync(stagedPython)
   const interpreter = canUseStaged ? stagedPython : pythonForBuild()
 
+  const tags = targetPlatformTags(opts)
+
   if (canUseStaged) {
     log(`  resolving against the bundled interpreter (${PY_VERSION})`)
+
+    // Left to itself pip picks the newest wheel THIS machine can run. On a
+    // rolling distro that is a wheel needing a glibc no user has — it picked
+    // cryptography's manylinux_2_34 build here — and the offline install then
+    // fails on Debian 11 / Ubuntu 20.04 with nothing on disk to fall back to.
+    // Listing the platform tags caps it at GLIBC_CEILING instead.
+    if (opts.platform === 'linux') {
+      if (!tags) {
+        fail(`no manylinux platform tags for linux-${opts.arch}`)
+      }
+
+      log(`  capping wheels at glibc ${formatVersion(GLIBC_CEILING)}`)
+      args.push(...tags.flatMap(tag => ['--platform', tag]))
+    }
   } else {
     // Cross-staging, or no interpreter staged yet: pin the full target ABI by
     // hand. pip cannot build sdists for a foreign target, hence --only-binary.
-    const tag = wheelPlatformTag(opts)
-
-    if (!tag) {
+    if (!tags) {
       fail(`cannot cross-stage wheels for ${opts.platform}-${opts.arch}`)
     }
 
     const [major, minor] = PY_VERSION.split('.')
 
-    log(`  cross-resolving for ${tag} / cp${major}${minor}`)
+    log(`  cross-resolving for ${tags[0]} / cp${major}${minor}`)
     args.push(
-      '--platform',
-      tag,
+      ...tags.flatMap(tag => ['--platform', tag]),
       '--python-version',
       `${major}.${minor}`,
       '--implementation',
@@ -362,7 +437,22 @@ function stageWheels(outDir, meta, opts, stagedPython) {
   const wheels = fs.readdirSync(dest).filter(name => name.endsWith('.whl'))
 
   log(`  staged ${wheels.length} wheels`)
-  stageRequirements(outDir, wheels)
+
+  // The tags above decide what pip prefers; this proves what landed. A wheel
+  // published only for a newer glibc would otherwise ship and fail offline at
+  // the user's first launch.
+  if (opts.platform === 'linux') {
+    const tooNew = wheels.filter(name => !wheelFitsGlibcCeiling(name))
+
+    if (tooNew.length > 0) {
+      fail(
+        `these wheels need a newer glibc than ${formatVersion(GLIBC_CEILING)} (Debian 11 / Ubuntu 20.04):\n` +
+          tooNew.map(name => `  ${name}`).join('\n')
+      )
+    }
+  }
+
+  stageRequirements(outDir, wheels, bundledExtraSpecs(meta.extras))
 
   return wheels.length
 }
@@ -377,18 +467,17 @@ function stageWheels(outDir, meta, opts, stagedPython) {
  * filename is `{name}-{version}-{tags...}.whl`, so the first two
  * hyphen-separated fields are what we need.
  */
-function stageRequirements(outDir, wheels) {
-  const pins = wheels
-    .map(name => {
-      const parts = name.slice(0, -'.whl'.length).split('-')
-
-      return parts.length >= 2 ? `${parts[0]}==${parts[1]}` : null
-    })
-    .filter(Boolean)
-    .sort()
+function stageRequirements(outDir, wheels, mustInclude = []) {
+  const pins = pinsFromWheels(wheels)
 
   if (pins.length !== wheels.length) {
     fail(`could not derive a pin for every wheel (${pins.length} of ${wheels.length})`)
+  }
+
+  const missing = missingPins(pins, mustInclude)
+
+  if (missing.length > 0) {
+    fail(`requirements.txt would not pin the bundled extras' packages: ${missing.join(', ')}`)
   }
 
   fs.writeFileSync(
@@ -397,6 +486,109 @@ function stageRequirements(outDir, wheels) {
   )
 
   log(`  wrote requirements.txt (${pins.length} pins)`)
+}
+
+/** `name==version` for every wheel filename, sorted. Unparseable names are dropped. */
+export function pinsFromWheels(wheels) {
+  return wheels
+    .map(name => {
+      const parts = name.slice(0, -'.whl'.length).split('-')
+
+      return parts.length >= 2 ? `${parts[0]}==${parts[1]}` : null
+    })
+    .filter(Boolean)
+    .sort()
+}
+
+/** PEP 503 name normalisation, so `pydantic-settings` matches `pydantic_settings`. */
+function normalizeName(name) {
+  return name.toLowerCase().replace(/[-_.]+/g, '-')
+}
+
+/**
+ * The exact-version specs (`name==1.2.3`) in `specs` that `pins` does not
+ * contain. Range specs are skipped: only an exact pin says which wheel must be
+ * present.
+ */
+export function missingPins(pins, specs) {
+  const have = new Set(
+    pins.map(pin => {
+      const [name, version] = pin.split('==')
+
+      return `${normalizeName(name)}==${version}`
+    })
+  )
+
+  return specs
+    .map(spec => spec.split(';')[0].trim())
+    .map(spec => /^([A-Za-z0-9][A-Za-z0-9._-]*)(?:\[[^\]]*\])?\s*==\s*([^\s,]+)$/.exec(spec))
+    .filter(Boolean)
+    .filter(([, name, version]) => !have.has(`${normalizeName(name)}==${version}`))
+    .map(([, name, version]) => `${name}==${version}`)
+}
+
+/**
+ * Every Linux platform tag a wheel may carry and still run on GLIBC_CEILING,
+ * newest first. pip only widens the legacy `manylinux2014`/`2010` aliases on
+ * its own, so a `--platform manylinux_2_31_x86_64` alone would reject the many
+ * wheels tagged only manylinux_2_17 or manylinux_2_28.
+ */
+export function manylinuxPlatformTags(arch, ceiling = GLIBC_CEILING) {
+  const machine = { arm64: 'aarch64', x64: 'x86_64' }[arch]
+
+  if (!machine || ceiling[0] !== 2) {
+    return null
+  }
+
+  // manylinux on aarch64 starts at glibc 2.17; x86_64 goes back to 2.5.
+  const oldest = machine === 'x86_64' ? 5 : 17
+  const tags = []
+
+  for (let minor = ceiling[1]; minor >= oldest; minor -= 1) {
+    tags.push(`manylinux_2_${minor}_${machine}`)
+  }
+
+  tags.push(`manylinux2014_${machine}`)
+
+  if (machine === 'x86_64') {
+    tags.push(`manylinux2010_${machine}`, `manylinux1_${machine}`)
+  }
+
+  return tags
+}
+
+const LEGACY_MANYLINUX = { manylinux1: [2, 5], manylinux2010: [2, 12], manylinux2014: [2, 17] }
+
+/**
+ * True when a wheel can install on a glibc no newer than `ceiling`: it is pure
+ * Python, or at least one of its platform tags asks for that glibc or older.
+ * A wheel filename ends `-{python}-{abi}-{platform}.whl`, and the platform
+ * field may hold several tags joined with dots.
+ */
+export function wheelFitsGlibcCeiling(filename, ceiling = GLIBC_CEILING) {
+  const platforms = filename.slice(0, -'.whl'.length).split('-').pop().split('.')
+
+  return platforms.some(tag => {
+    if (tag === 'any') {
+      return true
+    }
+
+    const modern = /^manylinux_(\d+)_(\d+)_/.exec(tag)
+    const needed = modern ? [Number(modern[1]), Number(modern[2])] : LEGACY_MANYLINUX[tag.split('_')[0]]
+
+    return Boolean(needed) && compareVersions(needed, ceiling) <= 0
+  })
+}
+
+/** The platform tags pip should resolve for, or null when the target is unmapped. */
+function targetPlatformTags(opts) {
+  if (opts.platform === 'linux') {
+    return manylinuxPlatformTags(opts.arch)
+  }
+
+  const tag = wheelPlatformTag(opts)
+
+  return tag ? [tag] : null
 }
 
 function wheelPlatformTag(opts) {
@@ -625,11 +817,29 @@ function directorySize(target) {
 }
 
 /**
+ * Does a manifest describe wheels staged for this target AND this dependency
+ * list? The list is part of the key because wheels/ is reused on a cache hit:
+ * keyed on platform alone, a machine that staged once would keep shipping its
+ * old wheels forever, and adding mcp to the bundle would never reach a build
+ * there. Manifests written before the list was recorded never match.
+ */
+export function manifestMatches(manifest, opts, requested) {
+  return (
+    manifest.arch === opts.arch &&
+    manifest.platform === opts.platform &&
+    manifest.pythonVersion === PY_VERSION &&
+    Array.isArray(manifest.requested) &&
+    JSON.stringify([...manifest.requested].sort()) === JSON.stringify([...requested].sort()) &&
+    JSON.stringify(manifest.glibcCeiling) === JSON.stringify(GLIBC_CEILING)
+  )
+}
+
+/**
  * True when a previous run already staged this exact target. Packaging runs on
  * every `npm run dist`, and re-downloading ~220 MB each time would make routine
  * builds unusable. `--force` re-stages regardless.
  */
-function isAlreadyStaged(opts) {
+function isAlreadyStaged(opts, meta) {
   const manifestPath = path.join(opts.out, 'manifest.json')
 
   if (!fs.existsSync(manifestPath)) {
@@ -644,11 +854,7 @@ function isAlreadyStaged(opts) {
     return false
   }
 
-  if (
-    manifest.arch !== opts.arch ||
-    manifest.platform !== opts.platform ||
-    manifest.pythonVersion !== PY_VERSION
-  ) {
+  if (!manifestMatches(manifest, opts, meta.requested)) {
     return false
   }
 
@@ -694,17 +900,19 @@ async function main() {
     )
   }
 
-  if (!opts.force && isAlreadyStaged(opts)) {
-    // The cache key is platform/arch/pythonVersion only — it says nothing about
-    // the SOURCE. Returning here outright meant every Python change silently
+  const meta = readPackagingMetadata()
+
+  if (!opts.force && isAlreadyStaged(opts, meta)) {
+    // The cache key is platform/arch/pythonVersion plus the dependency list
+    // (see manifestMatches) — it says nothing about the SOURCE. Returning here outright meant every Python change silently
     // failed to reach the bundle: you could fix a backend bug, rebuild, ship,
     // and users would still run the tree that was staged first. That is how a
     // rebuilt AppImage kept serving a provider that had been deleted from the
     // repo hours earlier.
     //
     // Python and wheels are the expensive parts (an 80 MB interpreter download
-    // and 36 MB of wheels resolved against it), and they genuinely are keyed by
-    // platform/arch/version — keep caching those. Source is a 42 MB local copy
+    // and ~40 MB of wheels resolved against it), and they genuinely are keyed
+    // by platform/arch/version/dependency list — keep caching those. Source is a 42 MB local copy
     // that takes well under a second, so re-stage it unconditionally rather
     // than trying to guess whether it changed.
     if (opts.skipSource) {
@@ -715,15 +923,13 @@ async function main() {
     }
 
     log(`already staged for ${opts.platform}-${opts.arch} (Python ${PY_VERSION}) — refreshing source, reusing interpreter + wheels`)
-    stageSource(opts.out, readPackagingMetadata())
+    stageSource(opts.out, meta)
     verifyStagedInterpreter(opts)
 
     return
   }
 
   fs.mkdirSync(opts.out, { recursive: true })
-
-  const meta = readPackagingMetadata()
 
   if (!opts.skipSource) {
     stageSource(opts.out, meta)
@@ -756,13 +962,21 @@ async function main() {
     return
   }
 
+  // What wheels/ was resolved from is only recorded when this run resolved it.
+  // After --skip-wheels nobody knows what is in there, so leave it unrecorded
+  // and let the next run re-stage rather than vouch for it.
+  const wheelsKey = opts.skipWheels
+    ? {}
+    : { bundledExtras: [...BUNDLED_EXTRAS], glibcCeiling: [...GLIBC_CEILING], requested: meta.requested }
+
   const manifest = {
     arch: opts.arch,
-    dependencyCount: meta.dependencies.length,
+    dependencyCount: meta.requested.length,
     platform: opts.platform,
     pythonVersion: PY_VERSION,
     schemaVersion: 1,
-    stagedAt: new Date().toISOString()
+    stagedAt: new Date().toISOString(),
+    ...wheelsKey
   }
 
   fs.writeFileSync(path.join(opts.out, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`)
@@ -770,4 +984,6 @@ async function main() {
   log(`done — ${(directorySize(opts.out) / 1e6).toFixed(0)} MB at ${opts.out}`)
 }
 
-await main()
+if (isMain(import.meta.url)) {
+  await main()
+}
